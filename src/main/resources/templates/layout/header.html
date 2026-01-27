@@ -1,4 +1,4 @@
-<header id="header" th:fragment="header"  xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<header id="header" th:fragment="header"  xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
   <!-- Logo (top-left on every page) -->
   <h1 id="logo">
     <a href="/" style="border-bottom:0;">
@@ -9,7 +9,7 @@
 
   <nav id="nav">
     <ul>
-      <li><a href="/">Home</a></li>
+      <li><a href="/home">Home</a></li>
       <li><a href="/products">Products</a></li>
 
       <!-- Bookmarks only visible when signed in -->
@@ -20,10 +20,10 @@
       <!-- When NOT authenticated -->
       <!-- Show when NOT logged in -->
       <li sec:authorize="isAnonymous()">
-        <a href="/signup" class="button">Sign Up</a>
+        <a href="/auth/signup" class="button">Sign Up</a>
       </li>
       <li sec:authorize="isAnonymous()">
-        <a href="/login" class="button primary">Sign In</a>
+      <a href="/auth/login" class="button primary">Sign In</a>
       </li>
 
       <!-- Show when logged in -->

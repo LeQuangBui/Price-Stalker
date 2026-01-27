@@ -29,12 +29,12 @@ public class SecurityConfig {
                 .requestMatchers("/", "/home",
                                 "/css/**", "/js/**", "/images/**",
                                 "/auth/**", "/layouts/**",
-                                "/products", "/product/**").permitAll()
+                                "/products", "/product/**","/bookmarks").permitAll()
                 .anyRequest().authenticated()
             )
             .formLogin(form -> form
                 .loginPage("/auth/login")
-                .defaultSuccessUrl("/", true)
+                .defaultSuccessUrl("/home", true)
                 .failureUrl("/auth/login?error=true")
                 .permitAll()
             )
