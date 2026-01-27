@@ -1,0 +1,90 @@
+<div th:fragment="content">
+  <section id="main" class="wrapper">
+    <div class="inner">
+      <header class="major">
+        <h2 th:text="${product.name}">Product Name</h2>
+        <p>
+          Current price:
+          <strong th:text="${product.price}">$0.00</strong>
+          <span style="opacity:.75;" th:text="${product.site}">Site</span>
+        </p>
+      </header>
+
+      <!-- Product info -->
+      <div class="box">
+        <h3>Product Info</h3>
+        <p><strong>Original Link:</strong> <a th:href="${product.link}" th:text="${product.link}" target="_blank">link</a></p>
+        <p th:if="${product.description != null}" th:text="${product.description}">Description...</p>
+      </div>
+
+      <!-- Alternatives -->
+      <div class="box">
+        <h3>Cheaper Alternatives</h3>
+
+        <div th:if="${alternatives == null || #lists.isEmpty(alternatives)}">
+          <p style="margin:0;">No alternatives found yet.</p>
+        </div>
+
+        <table th:if="${alternatives != null && !#lists.isEmpty(alternatives)}">
+          <thead>
+            <tr>
+              <th>Site</th>
+              <th>Price</th>
+              <th>Link</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr th:each="a : ${alternatives}">
+              <td th:text="${a.site}">Site</td>
+              <td th:text="${a.price}">$0.00</td>
+              <td><a th:href="${a.link}" target="_blank">Open</a></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Graph placeholder -->
+      <div class="box">
+        <h3>Price Graph</h3>
+        <p style="margin:0; opacity:.8;">(Graph placeholder) You can later render a chart here (Chart.js / ApexCharts) using backend price history.</p>
+        <div style="height:240px; border:1px solid rgba(255,255,255,0.15); border-radius:8px;"></div>
+      </div>
+
+      <!-- Save to bookmarks -->
+      <div class="box">
+        <h3>Save</h3>
+
+        <div th:if="${!isAuthenticated}">
+          <p style="margin:0;">Sign in to save this product to bookmarks.</p>
+          <ul class="actions" style="margin-top:1rem;">
+            <li><a class="button primary" href="/login">Sign In</a></li>
+            <li><a class="button" href="/signup">Sign Up</a></li>
+          </ul>
+        </div>
+
+        <div th:if="${isAuthenticated}">
+          <form method="post" th:action="@{/bookmarks/add}">
+            <input type="hidden" name="productId" th:value="${product.id}" />
+
+            <div class="row gtr-uniform">
+              <div class="col-8 col-12-xsmall">
+                <select name="bookmarkId">
+                  <option value="">Save to new bookmark</option>
+                  <option th:each="b : ${bookmarks}" th:value="${b.id}" th:text="${b.name}">Bookmark</option>
+                </select>
+              </div>
+              <div class="col-4 col-12-xsmall">
+                <input type="submit" value="Save" class="fit primary" />
+              </div>
+
+              <div class="col-12" style="margin-top:.75rem;">
+                <input type="text" name="newBookmarkName" placeholder="New bookmark name (optional)" />
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+
+    </div>
+  </section>
+</div>

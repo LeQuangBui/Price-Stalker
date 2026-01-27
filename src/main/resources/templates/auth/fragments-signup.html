@@ -1,0 +1,36 @@
+<div th:fragment="content">
+  <section id="main" class="wrapper">
+    <div class="inner">
+      <header class="major">
+        <h2>Create Account</h2>
+        <p>Sign up to save products and manage bookmarks.</p>
+      </header>
+
+      <div class="box">
+        <form method="post" action="/signup">
+          <div class="row gtr-uniform">
+            <div class="col-12">
+              <input type="text" name="username" id="username" placeholder="Username" required />
+            </div>
+
+            <div class="col-12">
+              <input type="email" name="email" id="email" placeholder="Email" required />
+            </div>
+
+            <div class="col-12">
+              <input type="password" name="password" id="password" placeholder="Password" required />
+            </div>
+
+            <div class="col-12">
+              <ul class="actions">
+                <li><input type="submit" value="Sign Up" class="primary" /></li>
+                <li><a href="/login" class="button">Already have an account?</a></li>
+              </ul>
+            </div>
+          </div>
+        </form>
+      </div>
+
+    </div>
+  </section>
+</div>
