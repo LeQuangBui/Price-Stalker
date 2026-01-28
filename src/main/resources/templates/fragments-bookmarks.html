@@ -1,0 +1,43 @@
+<div th:fragment="content">
+  <section id="main" class="wrapper">
+    <div class="inner">
+      <header class="major">
+        <h2>Bookmarks</h2>
+        <p>Your saved products.</p>
+      </header>
+
+      <div th:if="${!isAuthenticated}" class="box">
+        <p style="margin:0;">You must sign in to view bookmarks.</p>
+        <ul class="actions" style="margin-top:1rem;">
+          <li><a class="button primary" href="/login">Sign In</a></li>
+        </ul>
+      </div>
+
+      <div th:if="${isAuthenticated}">
+        <div class="box" th:if="${bookmarks == null || #lists.isEmpty(bookmarks)}">
+          <p style="margin:0;">No bookmarks yet.</p>
+        </div>
+
+        <div class="row gtr-uniform" th:if="${bookmarks != null && !#lists.isEmpty(bookmarks)}">
+          <div class="col-6 col-12-medium" th:each="b : ${bookmarks}">
+            <div class="box">
+              <h3 th:text="${b.name}">Bookmark Name</h3>
+              <p style="opacity:.8;" th:text="${b.description}">Description...</p>
+
+              <ul>
+                <li th:each="p : ${b.products}">
+                  <a th:href="@{/product/{id}(id=${p.id})}" th:text="${p.name}">Product</a>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Future: create bookmark page -->
+        <ul class="actions">
+          <li><a class="button" href="/bookmark-create">Create Bookmark (Future)</a></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+</div>

@@ -1,0 +1,38 @@
+<header id="header" th:fragment="header"  xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+  <!-- Logo (top-left on every page) -->
+  <h1 id="logo">
+    <a href="/" style="border-bottom:0;">
+      <img src="/images/logo.png" alt="PriceScout" style="height:85px; vertical-align:middle; margin-right:.4rem;width: auto" />
+      <span>PriceScout</span>
+    </a>
+  </h1>
+
+  <nav id="nav">
+    <ul>
+      <li><a href="/home">Home</a></li>
+      <li><a href="/products">Products</a></li>
+
+      <!-- Bookmarks only visible when signed in -->
+      <li th:if="${isAuthenticated == true}">
+        <a href="/bookmarks">Bookmarks</a>
+      </li>
+
+      <!-- When NOT authenticated -->
+      <!-- Show when NOT logged in -->
+      <li sec:authorize="isAnonymous()">
+        <a href="/auth/signup" class="button">Sign Up</a>
+      </li>
+      <li sec:authorize="isAnonymous()">
+      <a href="/auth/login" class="button primary">Sign In</a>
+      </li>
+
+      <!-- Show when logged in -->
+      <li sec:authorize="isAuthenticated()">
+        <a href="/bookmarks">Bookmarks</a>
+      </li>
+      <li sec:authorize="isAuthenticated()">
+        <a href="/logout" class="button primary">Logout</a>
+      </li>
+    </ul>
+  </nav>
+</header>

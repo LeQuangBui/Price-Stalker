@@ -1,104 +1,26 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Products</title>
-
-  <!-- Put your CSS in static/css/products.css -->
-  <link rel="stylesheet" th:href="@{/css/products.css}" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+  <title>Products | PriceScout</title>
+  <link rel="stylesheet" href="/css/main.css" />
+  <noscript><link rel="stylesheet" href="/css/noscript.css" /></noscript>
 </head>
+<body class="is-preload ">
+  <div id="page-wrapper">
+    <div th:replace="layout/header :: header"></div>
+    <div th:replace="fragments-products :: content"></div>
+    <div th:replace="layout/footer :: footer"></div>
+  </div>
 
-<body>
-  <header class="topbar">
-    <h1>Products</h1>
-    <p class="subtitle" th:text="${products != null ? #lists.size(products) : 0} + ' items'">0 items</p>
-  </header>
-
-  <main class="container">
-    <section class="grid" th:if="${products != null and !#lists.isEmpty(products)}">
-
-      <article class="card"
-               th:each="p : ${products}"
-               th:attr="data-href=@{/products/{id}(id=${p.id})}">
-        <!-- Image slideshow area -->
-        <div class="media">
-          <img class="img"
-               th:if="${p.images != null and !#lists.isEmpty(p.images)}"
-               th:src="${p.images[0].url}"
-               th:attr="data-images=${#strings.listJoin(p.images.![url], '|')}"
-               th:alt="${p.name}" />
-
-          <div class="placeholder"
-               th:if="${p.images == null or #lists.isEmpty(p.images)}">
-            No image
-          </div>
-
-          <!-- Controls (stop propagation so clicking buttons doesn't navigate) -->
-          <div class="controls" th:if="${p.images != null and #lists.size(p.images) > 1}">
-            <button class="btn nav prev" type="button" aria-label="Previous image">‹</button>
-            <button class="btn nav next" type="button" aria-label="Next image">›</button>
-          </div>
-        </div>
-
-        <!-- Product name -->
-        <div class="info">
-          <h2 class="name" th:text="${p.name}">Product name</h2>
-          <p class="hint" th:if="${p.images != null}" th:text="${#lists.size(p.images)} + ' images'">0 images</p>
-        </div>
-      </article>
-
-    </section>
-
-    <section class="empty" th:if="${products == null or #lists.isEmpty(products)}">
-      <h2>No products found</h2>
-      <p>There are no products to display.</p>
-    </section>
-  </main>
-
-  <script>
-    // Click card to navigate; slideshow buttons swap images without navigating.
-    document.addEventListener("DOMContentLoaded", () => {
-      // Navigate on card click
-      document.querySelectorAll(".card[data-href]").forEach(card => {
-        card.addEventListener("click", () => {
-          const href = card.getAttribute("data-href");
-          if (href) window.location.href = href;
-        });
-      });
-
-      // Slideshow logic
-      document.querySelectorAll(".card").forEach(card => {
-        const img = card.querySelector("img[data-images]");
-        if (!img) return;
-
-        const raw = img.getAttribute("data-images") || "";
-        const images = raw.split("|").filter(Boolean);
-        if (images.length <= 1) return;
-
-        let idx = 0;
-        const setImage = (i) => {
-          idx = (i + images.length) % images.length;
-          img.src = images[idx];
-        };
-
-        const prevBtn = card.querySelector(".btn.prev");
-        const nextBtn = card.querySelector(".btn.next");
-
-        if (prevBtn) {
-          prevBtn.addEventListener("click", (e) => {
-            e.stopPropagation();
-            setImage(idx - 1);
-          });
-        }
-        if (nextBtn) {
-          nextBtn.addEventListener("click", (e) => {
-            e.stopPropagation();
-            setImage(idx + 1);
-          });
-        }
-      });
-    });
-  </script>
+  <script src="/js/jquery.min.js"></script>
+  <script src="/js/jquery.scrolly.min.js"></script>
+  <script src="/js/jquery.dropotron.min.js"></script>
+  <script src="/js/jquery.scrollex.min.js"></script>
+  <script src="/js/browser.min.js"></script>
+  <script src="/js/breakpoints.min.js"></script>
+  <script src="/js/util.js"></script>
+  <script src="/js/main.js"></script>
 </body>
 </html>

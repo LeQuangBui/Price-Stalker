@@ -1,0 +1,45 @@
+<div th:fragment="content">
+  <section id="main" class="wrapper">
+    <div class="inner">
+      <header class="major">
+        <h2>Products</h2>
+        <p>Browse products or search by keyword/link.</p>
+      </header>
+
+      <div class="box">
+        <form method="get" action="/products">
+          <div class="row gtr-uniform">
+            <div class="col-9 col-12-xsmall">
+              <input type="text" name="q" id="q" placeholder="Search products (name, brand, link...)" th:value="${q}" />
+            </div>
+            <div class="col-3 col-12-xsmall">
+              <input type="submit" value="Search" class="fit primary" />
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <div class="row gtr-uniform">
+        <div class="col-4 col-6-medium col-12-xsmall" th:each="p : ${products}">
+          <div class="box" style="height:100%;">
+            <h3 th:text="${p.name}">Product Name</h3>
+            <p style="margin-bottom:1rem;">
+              <strong th:text="${p.price}">$0.00</strong>
+              <span style="opacity:.75;" th:text="${p.site}">Site</span>
+            </p>
+            <ul class="actions">
+              <li><a class="button primary" th:href="@{/product/{id}(id=${p.id})}">View</a></li>
+              <li><a class="button" th:href="${p.link}" target="_blank">Open</a></li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="col-12" th:if="${products == null || #lists.isEmpty(products)}">
+          <div class="box">
+            <p style="margin:0;">No results. Try a different search.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
