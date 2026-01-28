@@ -12,8 +12,12 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
+@Getter @Setter @NoArgsConstructor
 public class Website {
 	@Id
 	@GeneratedValue(strategy = GenerationType.UUID)
@@ -44,59 +48,4 @@ public class Website {
 	@UpdateTimestamp
 	@Column(name = "UPDATED_AT", nullable = false)
 	private LocalDateTime updatedAt;
-	
-	public String getId() {
-		return id;
-	}
-	public void setId(String id) {
-		this.id = id;
-	}
-	public List<Product> getProducts() {
-		return this.products;
-	}
-	public void setProducts(List<Product> products) {
-		this.products = products;
-	}
-	public List<CssSelector> getCssSelectors() {
-		return this.cssSelectors;
-	}
-	public void setCssSelectors(List<CssSelector> cssSelectors) {
-		this.cssSelectors = cssSelectors;
-	}
-	public String getName() {
-		return name;
-	}
-	public void setName(String name) {
-		this.name = name;
-	}
-	public String getUrl() {
-		return url;
-	}
-	public void setUrl(String url) {
-		this.url = url;
-	}
-	public String getEmail() {
-		return email;
-	}
-	public void setEmail(String email) {
-		this.email = email;
-	}
-	public String getPhone() {
-		return phone;
-	}
-	public void setPhone(String phone) {
-		this.phone = phone;
-	}
-	public LocalDateTime getCreatedAt() {
-		return createdAt;
-	}
-	public void setCreatedAt(LocalDateTime createdAt) {
-		this.createdAt = createdAt;
-	}
-	public LocalDateTime getUpdatedAt() {
-		return updatedAt;
-	}
-	public void setUpdatedAt(LocalDateTime updatedAt) {
-		this.updatedAt = updatedAt;
-	}
 }

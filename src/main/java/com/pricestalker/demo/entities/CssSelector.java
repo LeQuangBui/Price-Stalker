@@ -13,8 +13,12 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
+@Getter @Setter @NoArgsConstructor
 public class CssSelector {
 	@Id
 	@GeneratedValue(strategy = GenerationType.UUID)
@@ -37,41 +41,4 @@ public class CssSelector {
 	@UpdateTimestamp
 	@Column(name = "UPDATED_AT", nullable = false)
 	private LocalDateTime updatedAt;
-	
-	public String getId() {
-		return id;
-	}
-	public void setId(String id) {
-		this.id = id;
-	}
-	public Website getWebsite() {
-		return website;
-	}
-	public void setWebsite(Website website) {
-		this.website = website;
-	}
-	public String getFieldName() {
-		return fieldName;
-	}
-	public void setFieldName(String fieldName) {
-		this.fieldName = fieldName;
-	}
-	public String getSelectorString() {
-		return selectorString;
-	}
-	public void setSelectorString(String selectorString) {
-		this.selectorString = selectorString;
-	}
-	public LocalDateTime getCreatedAt() {
-		return createdAt;
-	}
-	public void setCreatedAt(LocalDateTime createdAt) {
-		this.createdAt = createdAt;
-	}
-	public LocalDateTime getUpdatedAt() {
-		return updatedAt;
-	}
-	public void setUpdatedAt(LocalDateTime updatedAt) {
-		this.updatedAt = updatedAt;
-	}
 }

@@ -18,8 +18,12 @@ import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
+@Getter @Setter @NoArgsConstructor
 public class Product {
 	@Id
 	@GeneratedValue(strategy = GenerationType.UUID)
@@ -59,71 +63,4 @@ public class Product {
 	@UpdateTimestamp
 	@Column(name = "UPDATED_AT", nullable = false)
 	private LocalDateTime updatedAt;
-	
-	public String getId() {
-		return id;
-	}
-	public void setId(String id) {
-		this.id = id;
-	}	
-	public Website getWebsite() {
-		return website;
-	}	
-	public void setWebsite(Website website) {
-		this.website = website;
-	}
-	public List<PriceHistory> getPriceHistories() {
-		return this.priceHistories;
-	}
-	public void setPricesHistories(List<PriceHistory> priceHistories) {
-		this.priceHistories = priceHistories;
-	}
-	public List<ProductImage> getProductImages() {
-		return this.productImages;
-	}
-	public void setProductImages(List<ProductImage> productImages) {
-		this.productImages = productImages;
-	}
-	public List<Bookmark> getBookmarks() {
-		return this.bookmarks;
-	}
-	public void setBookmarks(List<Bookmark> bookmarks) {
-		this.bookmarks = bookmarks;
-	}
-	public String getName() {
-		return name;
-	}	
-	public void setName(String name) {
-		this.name = name;
-	}	
-	public String getUrl() {
-		return url;
-	}	
-	public void setUrl(String url) {
-		this.url = url;
-	}	
-	public int getCurrentPrice() {
-		return currentPrice;
-	}	
-	public void setCurrentPrice(int currentPrice) {
-		this.currentPrice = currentPrice;
-	}
-	public String getCurrency() {
-		return currency;
-	}
-	public void setCurrency(String currency) {
-		this.currency = currency;
-	}
-	public LocalDateTime getCreatedAt() {
-		return createdAt;
-	}
-	public void setCreatedAt(LocalDateTime createdAt) {
-		this.createdAt = createdAt;
-	}
-	public LocalDateTime getUpdatedAt() {
-		return updatedAt;
-	}
-	public void setUpdatedAt(LocalDateTime updatedAt) {
-		this.updatedAt = updatedAt;
-	}
 }
