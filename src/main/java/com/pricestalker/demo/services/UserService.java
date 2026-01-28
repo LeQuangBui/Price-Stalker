@@ -15,12 +15,12 @@ import com.pricestalker.demo.entities.User;
 public class UserService implements UserDetailsService {
     
     @Autowired
-    private UserRepository repository;
+    private UserRepository userRepository;
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
 
-        Optional<User> user = repository.findByUsername(username);
+        Optional<User> user = userRepository.findByUsername(username);
         if (user.isPresent()) {
 
             var userObj = user.get();

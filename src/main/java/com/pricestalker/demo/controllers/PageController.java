@@ -6,8 +6,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 
 @Controller
 public class PageController {
-
-
     @GetMapping("/bookmarks")
     public String bookmarks() {
         return "bookmarks";
@@ -18,22 +16,8 @@ public class PageController {
         return "bookmark-create";
     }
 
-    @GetMapping("/auth/login")
-    public String login() {
-        return "auth/login";
-    }
-
-    @GetMapping("/auth/signup")
-    public String signup() {
-        return "auth/signup";
-    }
-
     @GetMapping("/home")
     public String home() {
         return "home";
     }
-    
-
-    
-
 }

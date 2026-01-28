@@ -2,22 +2,21 @@ package com.pricestalker.demo.controllers;
 
 import com.pricestalker.demo.entities.User;
 import com.pricestalker.demo.repositories.UserRepository;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 @Controller
-public class RegistrationController {
-
-    private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
-
-    public RegistrationController(UserRepository userRepository,
-                                  PasswordEncoder passwordEncoder) {
-        this.userRepository = userRepository;
-        this.passwordEncoder = passwordEncoder;
-    }
+public class AuthController {
+	@Autowired
+    private UserRepository userRepository;
+	
+	@Autowired
+    private PasswordEncoder passwordEncoder;
 
     @PostMapping("/auth/signup")
     public String registerUser(
@@ -34,15 +33,20 @@ public class RegistrationController {
             return "redirect:/auth/signup?error=user_exists";
         }
 
-
-        User user = new User();
-        user.setUsername(username);
-        user.setEmail(email);
-        user.setPassword(passwordEncoder.encode(password));
-
+        User user = new User(username, email, passwordEncoder.encode(password));
         userRepository.save(user);
 
         // redirect to login page
         return "redirect:/auth/login";
+    }
+    
+    @GetMapping("/auth/signup")
+    public String signup() {
+        return "auth/signup";
+    }
+    
+    @GetMapping("/auth/login")
+    public String login() {
+        return "auth/login";
     }
 }

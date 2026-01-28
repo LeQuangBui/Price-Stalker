@@ -33,7 +33,6 @@ public class ProductController {
 		return "Products";
 	}
 	
-	
 	@GetMapping("/product/{id}")
 	public String getProduct(Model model, @PathVariable("id") String id) {
 		Product product = this.productService.getProduct(id);
