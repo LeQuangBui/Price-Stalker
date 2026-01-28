@@ -30,6 +30,8 @@ public class PriceHistory {
 	@Column(name = "RECORDED_AT", nullable = false)
 	private LocalDateTime recordedAt;
 	
+	public PriceHistory() {}
+	
 	public PriceHistory(Product product, int price) {
 		this.product = product;
 		this.price = price;

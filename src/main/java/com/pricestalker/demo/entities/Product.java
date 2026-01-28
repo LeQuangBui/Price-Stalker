@@ -69,7 +69,7 @@ public class Product {
 	public Website getWebsite() {
 		return website;
 	}	
-	public void setWebsiteId(Website website) {
+	public void setWebsite(Website website) {
 		this.website = website;
 	}
 	public List<PriceHistory> getPriceHistories() {

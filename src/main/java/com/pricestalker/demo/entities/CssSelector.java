@@ -50,7 +50,7 @@ public class CssSelector {
 	public void setWebsite(Website website) {
 		this.website = website;
 	}
-	public String getFieldMame() {
+	public String getFieldName() {
 		return fieldName;
 	}
 	public void setFieldName(String fieldName) {
