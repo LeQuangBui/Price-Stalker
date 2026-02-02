@@ -5,16 +5,15 @@
         <h2 th:text="${product.name}">Product Name</h2>
         <p>
           Current price:
-          <strong th:text="${product.price}">$0.00</strong>
-          <span style="opacity:.75;" th:text="${product.site}">Site</span>
+          <strong th:text="${product.currentPrice}">$0.00</strong>
+          <span style="opacity:.75;" th:text="${product.website.name}">Site</span>
         </p>
       </header>
 
       <!-- Product info -->
       <div class="box">
         <h3>Product Info</h3>
-        <p><strong>Original Link:</strong> <a th:href="${product.link}" th:text="${product.link}" target="_blank">link</a></p>
-        <p th:if="${product.description != null}" th:text="${product.description}">Description...</p>
+        <p><strong>Original Link:</strong> <a th:href="${product.url}" th:text="URL" target="${product.url}">link</a></p>
       </div>
 
       <!-- Alternatives -->
@@ -28,16 +27,14 @@
         <table th:if="${alternatives != null && !#lists.isEmpty(alternatives)}">
           <thead>
             <tr>
-              <th>Site</th>
               <th>Price</th>
               <th>Link</th>
             </tr>
           </thead>
           <tbody>
             <tr th:each="a : ${alternatives}">
-              <td th:text="${a.site}">Site</td>
-              <td th:text="${a.price}">$0.00</td>
-              <td><a th:href="${a.link}" target="_blank">Open</a></td>
+              <td th:text="${a.currentPrice}">$0.00</td>
+              <td><a th:href="${a.url}" target="${a.url}">Open</a></td>
             </tr>
           </tbody>
         </table>
