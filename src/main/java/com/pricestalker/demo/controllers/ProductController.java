@@ -6,6 +6,8 @@ import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -30,13 +32,15 @@ public class ProductController {
 	public String home(Model model) {
 		List<Product> products = this.productService.getAllProducts();
 		model.addAttribute("products", products);
-		return "Products";
+		return "home";
 	}
 	
 	@GetMapping("/product/{id}")
 	public String getProduct(Model model, @PathVariable("id") String id) {
+		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 		Product product = this.productService.getProduct(id);
 		model.addAttribute("product", product);
+		model.addAttribute("isAuthenticated", authentication.isAuthenticated());
 		return "Product";
 	}
 	

@@ -9,21 +9,35 @@ import java.util.Optional;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
+import org.openqa.selenium.By;
+import org.openqa.selenium.WebElement;
+import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.chrome.ChromeOptions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import com.pricestalker.demo.entities.CssSelector;
 import com.pricestalker.demo.entities.Product;
+import com.pricestalker.demo.entities.ProductImage;
 import com.pricestalker.demo.entities.Website;
+import com.pricestalker.demo.repositories.ProductImageRepository;
 import com.pricestalker.demo.repositories.ProductRepository;
 import com.pricestalker.demo.repositories.WebsiteRepository;
 
 @Component
 public class ProductService {
 	@Autowired
+    private ProductImageRepository productImageRepository;
+	
+	@Autowired
 	private ProductRepository productRepository;
 	
 	@Autowired WebsiteRepository websiteRepository;
+
+    ProductService(ProductImageRepository productImageRepository) {
+        this.productImageRepository = productImageRepository;
+    }
 	
 	public void addProduct(Product p) {
 		this.productRepository.save(p);
@@ -34,11 +48,19 @@ public class ProductService {
 		if (w == null) return;
 
 		Map<String, String> map = new HashMap<String, String>();
-        Document doc = Jsoup.connect(url).get();
+		String chromeDriverPath = "C:\\Users\\quang\\Downloads\\chromedriver-win64";
+		System.setProperty("webdrive.chrome.driver", chromeDriverPath);
+		ChromeOptions options = new ChromeOptions();
+		options.addArguments("--headless", "--disable-gpu", "--window-size=1920,1200", "ignore-certificate-errors");
+		ChromeDriver driver = new ChromeDriver(options);
+		driver.get(url);
         
         for (CssSelector s: w.getCssSelectors()) {
-        	Element e = doc.selectFirst(s.getSelectorString());
-        	map.put(s.getFieldName(), e.text().trim());
+        	WebElement e = driver.findElement(By.cssSelector(s.getSelectorString()));
+        	String data = null;
+        	if (s.getFieldName().equals("image")) data = e.getAttribute("src");
+        	else data = e.getText().trim();  	
+        	map.put(s.getFieldName(), data);
         }
         
 		Product p = new Product();
@@ -48,7 +70,12 @@ public class ProductService {
 		p.setCurrentPrice(Integer.parseInt(map.get("price_label").replaceAll("[^0-9]", "")));
 		p.setCurrency(map.get("price_label").replaceAll("[0-9., ]", ""));
 		
+		ProductImage img = new ProductImage();
+		img.setProduct(p);
+		img.setUrl(map.get("image"));
+		
 		this.productRepository.save(p);
+		this.productImageRepository.save(img);
 	}
 	
 	public List<Product> getAllProducts() {

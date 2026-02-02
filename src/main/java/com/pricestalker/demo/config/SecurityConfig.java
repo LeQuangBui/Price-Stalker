@@ -3,6 +3,7 @@ package com.pricestalker.demo.config;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -13,33 +14,34 @@ import org.springframework.security.web.SecurityFilterChain;
 @RequiredArgsConstructor
 public class SecurityConfig {
     @Bean
-    public PasswordEncoder passwordEncoder() {
+    PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
+    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        return http
             .csrf(AbstractHttpConfigurer::disable)
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/", "/home",
-                                "/css/**", "/js/**", "/images/**",
-                                "/auth/**", "/layouts/**",
-                                "/products", "/product/**","/bookmarks").permitAll()
-                .anyRequest().authenticated()
+            .authorizeHttpRequests(
+        		authorizeHttp -> {
+        			authorizeHttp.requestMatchers("/").permitAll();
+        			authorizeHttp.requestMatchers("/product/**").permitAll();
+        			authorizeHttp.requestMatchers("/auth/**").permitAll();
+	            	authorizeHttp.requestMatchers("/css/**", "/js/**", "/images/**", "/layouts/**").permitAll();
+	            	authorizeHttp.anyRequest().authenticated();
+	            }
             )
-            .formLogin(form -> form
+            .formLogin(l -> l
                 .loginPage("/auth/login")
-                .defaultSuccessUrl("/home", true)
+                .defaultSuccessUrl("/", true)
                 .failureUrl("/auth/login?error=true")
                 .permitAll()
             )
-            .logout(loutout -> loutout
-                .logoutUrl("/logout")
+            .logout(l -> l
+                .logoutUrl("/auth/logout")
                 .logoutSuccessUrl("/")
                 .permitAll()
-            );
-        return http.build();
-        
+            )
+            .build();
     }
 }

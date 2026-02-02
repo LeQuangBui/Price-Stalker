@@ -41,12 +41,9 @@
         <div class="row gtr-uniform">
           <!-- Example cards; replace with th:each -->
           <section class="col-4 col-6-medium col-12-xsmall" th:each="p : ${products}">
-            <span class="icon solid alt major fa-tag"></span>
+            <span class="icon solid alt major fa-tag" th:if="${p.productImages.size() == 0}"></span>
+            <img class="icon solid alt major fa-tag" th:src="${p.productImages.get(0).url}" alt="product image" th:if="${p.productImages.size() > 0}">
             <h3 th:text="${p.name}">Product Name</h3>
-            <p>
-              <strong th:text="${p.price}">$0.00</strong>
-              <span style="opacity:.75;" th:text="${p.site}">Site</span>
-            </p>
             <p>
               <a class="button" th:href="@{/product/{id}(id=${p.id})}">View</a>
             </p>
