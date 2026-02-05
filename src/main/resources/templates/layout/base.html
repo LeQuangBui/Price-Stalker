@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<html lang="en" xmlns:th="~{http://www.thymeleaf.org}">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
@@ -10,12 +10,12 @@
 <body class="is-preload" th:classappend="${bodyClass}">
   <div id="page-wrapper">
 
-    <div th:replace="layout/header :: header"></div>
+    <div th:replace="Layout/header :: header"></div>
 
     <!-- Page Content -->
     <div th:replace="${content}"></div>
 
-    <div th:replace="layout/footer :: footer"></div>
+    <div th:replace="Layout/footer :: footer"></div>
 
   </div>
 

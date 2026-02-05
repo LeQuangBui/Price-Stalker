@@ -1,44 +1,54 @@
 package com.pricestalker.demo.config;
-
-import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
+
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
+import com.pricestalker.demo.repositories.UserRepository;
+
 @Configuration
-@RequiredArgsConstructor
 public class SecurityConfig {
+
+    private final UserRepository userRepository;
+
+    public SecurityConfig(UserRepository userRepository) {
+        this.userRepository = userRepository;
+    }
     @Bean
     PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
+
+    
+
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http
-            .csrf(AbstractHttpConfigurer::disable)
+            .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(
         		authorizeHttp -> {
-        			authorizeHttp.requestMatchers("/").permitAll();
-        			authorizeHttp.requestMatchers("/product/**").permitAll();
-        			authorizeHttp.requestMatchers("/auth/**").permitAll();
-	            	authorizeHttp.requestMatchers("/css/**", "/js/**", "/images/**", "/layouts/**").permitAll();
+        			authorizeHttp.requestMatchers("/Home/**").permitAll();	
+        			authorizeHttp.requestMatchers("/Auth/**").permitAll();
+	            	authorizeHttp.requestMatchers("/css/**", "/js/**", "/images/**", "/Layouts/**").permitAll();
+                    authorizeHttp.requestMatchers("/EachProduct/**","/ManyProducts/**").permitAll();
+                    authorizeHttp.requestMatchers("/Bookmark/**").permitAll();
 	            	authorizeHttp.anyRequest().authenticated();
 	            }
             )
             .formLogin(l -> l
-                .loginPage("/auth/login")
+                .loginPage("/Auth/login")
+                .loginProcessingUrl("/Auth/login")
                 .defaultSuccessUrl("/", true)
-                .failureUrl("/auth/login?error=true")
+                .failureUrl("/Auth/login?error=true")
                 .permitAll()
             )
             .logout(l -> l
-                .logoutUrl("/auth/logout")
+                .logoutUrl("/Auth/logout")
                 .logoutSuccessUrl("/")
                 .permitAll()
             )

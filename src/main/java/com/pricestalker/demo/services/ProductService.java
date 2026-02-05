@@ -92,6 +92,11 @@ public class ProductService {
 	public List<Product> getProductBySearchText(String searchText) {
 		return this.productRepository.findBySearchText(searchText);
 	}
+
+	//Search product via product link
+	public List<Product> getProductBySearchLink(String searchLink) {
+		return this.productRepository.findBySearchLink(searchLink);
+	}
 	
 	public void updateProduct(Product p, String id) {
 		p.setId(id);
