@@ -28,20 +28,13 @@ public class ProductController {
 		this.productService.addProduct(url);
 	}
 	
-	@GetMapping("/")
-	public String home(Model model) {
-		List<Product> products = this.productService.getAllProducts();
-		model.addAttribute("products", products);
-		return "home";
-	}
-	
 	@GetMapping("/product/{id}")
 	public String getProduct(Model model, @PathVariable("id") String id) {
 		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 		Product product = this.productService.getProduct(id);
 		model.addAttribute("product", product);
 		model.addAttribute("isAuthenticated", authentication.isAuthenticated());
-		return "Product";
+		return "EachProduct/product";
 	}
 	
 	@GetMapping("/product/search")
@@ -57,4 +50,19 @@ public class ProductController {
 			return ResponseEntity.noContent().build();
 		}
 	}
+	
+	@GetMapping("/product/search-link")
+	public ResponseEntity<ArrayList<String>> searchProductsViaLink(@RequestParam String searchLink) {
+		List<Product> foundProducts = this.productService.getProductBySearchLink(searchLink);
+		ArrayList<String> names = new ArrayList<String>();
+		if (!foundProducts.isEmpty()) {
+			for (Product p : foundProducts) {
+				names.add(p.getName());
+			}
+			return ResponseEntity.ok(names);
+		}else {
+			return ResponseEntity.noContent().build();
+		}
+	}
+	
 }

@@ -1,0 +1,111 @@
+<div th:fragment="content">
+  <!-- Banner / Hero -->
+  <section id="banner">
+    <div class="content">
+      <header>
+        <h3>Find your cheapest deal to save your money</h3>
+      </header>
+
+      <!-- Search bar in middle -->
+      <section id="search">
+        <form th:action="@{/products/search}" method="get" class="search-form">
+          <div class="import-wrapper">
+            <button class="import-btn" type="button" aria-haspopup="true" aria-expanded="false">+</button>
+            <ul class="import-menu" role="menu">
+              <li role="menuitem" data-mode="link">Import Link</li>
+              <li role="menuitem" data-mode="keyword">Add Product</li>
+            </ul> 
+          </div>
+
+              <input id="heroSerachInput" class="search-input" type="text" name="keyword" placeholder="Search products..." required autocomplete="off">
+              <button id="button" class="button primary" type="submit" aria-label="Search">Search</button>
+        </form>
+      </section>
+    </div>
+    <a href="#one" class="goto-next scrolly">Next</a>
+  </section>
+
+  <!-- Products under search: user can scroll and click -->
+  <section id="one" class="wrapper style1 special fade-up">
+    <div class="container">
+      <header class="major">
+        <h2>Trending Products</h2>
+        <p>Scroll and click a product, or use the search bar above.</p>
+      </header>
+
+      <div class="box alt">
+        <div class="row gtr-uniform">
+          <!-- Example cards; replace with th:each -->
+          <section class="col-4 col-6-medium col-12-xsmall" th:each="p : ${product}">
+            <a th:href="@{/product/{id}(id=${p.id})}">
+              <img class="icon solid alt major fa-tag" th:src="${p.productImages.get(0).url}" alt="product image" th:if="${p.productImages != null and !#lists.isEmpty(p.productImages)}">
+              <h3 th:text="${p.name}">Product Name</h3>
+            </a>
+          </section>
+
+          <!-- Fallback when no products -->
+          <section class="col-12" th:if="${products == null || #lists.isEmpty(products)}">
+            <div class="box">
+              <p style="margin:0;">No products to show yet. Try searching!</p>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    const importBtn = document.querySelector('#heroSearchForm .import-btn');
+    const importMenu = document.querySelector('#heroSearchForm .import-menu');
+    const form = document.querySelector('#heroSearchForm');
+    const input = document.querySelector('#heroSearchInput');
+    const submitBtn = document.querySelector('#heroSearchSubmit');
+
+    function setMode(mode) {
+      if (mode === 'link') {
+        // Link import mode (UI only, but ready for backend later)
+        form.setAttribute('action', '/product/search-link');   // e.g. GET /products?link=...
+        input.setAttribute('name', 'link');
+        input.setAttribute('type', 'url');
+        input.setAttribute('placeholder', 'Paste product link (https://...)');
+        input.value = '';
+        input.focus();
+        // optional: change icon/label if you want later
+      } else {
+        // Product name search mode
+        form.setAttribute('action', '/product/search'); // GET /products/search?keyword=...
+        input.setAttribute('name', 'keyword');
+        input.setAttribute('type', 'text');
+        input.setAttribute('placeholder', 'Search product name...');
+        input.value = '';
+        input.focus();
+      }
+    }
+
+    if (importBtn && importMenu) {
+      importBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isOpen = importMenu.style.display === 'block';
+        importMenu.style.display = isOpen ? 'none' : 'block';
+        importBtn.setAttribute('aria-expanded', String(!isOpen));
+      });
+
+      importMenu.addEventListener('click', (e) => {
+        const item = e.target.closest('li[data-mode]');
+        if (!item) return;
+
+        setMode(item.dataset.mode);
+        importMenu.style.display = 'none';
+        importBtn.setAttribute('aria-expanded', 'false');
+      });
+
+      document.addEventListener('click', () => {
+        importMenu.style.display = 'none';
+        importBtn.setAttribute('aria-expanded', 'false');
+      });
+    }
+
+    // Default mode on load
+    setMode('keyword');
+  </script>
+</div>

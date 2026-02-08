@@ -17,8 +17,11 @@ public class AuthController {
 	
 	@Autowired
     private PasswordEncoder passwordEncoder;
-
-    @PostMapping("/auth/signup")
+    public AuthController(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+    }
+    @PostMapping("/Auth/signup")
     public String registerUser(
             @RequestParam String username,
             @RequestParam String email,
@@ -26,27 +29,27 @@ public class AuthController {
     ) {
        
         if (userRepository.existsByUsername(username)) {
-            return "redirect:/auth/signup?error=user_exists";
+            return "redirect:/Auth/signup?error=user_exists";
         }
 
         if (userRepository.existsByEmail(email)) {
-            return "redirect:/auth/signup?error=user_exists";
+            return "redirect:/Auth/signup?error=user_exists";
         }
 
         User user = new User(username, email, passwordEncoder.encode(password));
         userRepository.save(user);
 
         // redirect to login page
-        return "redirect:/auth/login";
+        return "redirect:/Auth/login";
     }
-    
-    @GetMapping("/auth/signup")
+    @GetMapping("/Auth/signup")
     public String signup() {
-        return "auth/signup";
+        return "Auth/signup";
     }
     
-    @GetMapping("/auth/login")
+    @GetMapping("/Auth/login")
     public String login() {
-        return "auth/login";
+        return "Auth/login";
     }
+    
 }

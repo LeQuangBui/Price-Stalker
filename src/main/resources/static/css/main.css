@@ -3496,12 +3496,11 @@ input, select, textarea {
 	}
 
 	/* Search */
-			/* SEARCH BAR */
 	#banner #search {
 		position: relative;
   		z-index: 2;
 		}
-	#banner #search .search-container {
+	#banner #search .search-form {
 		display: flex;
 		align-items: center;
 		height: 42px;
@@ -3509,8 +3508,9 @@ input, select, textarea {
 		background: #fff;
 		border: 1px solid #ccc;
 		border-radius: 40px;
+		flex:1;
 		}
-
+		
 		/* INPUT */
 		#banner #search .search-input {
 			color: #000109;
@@ -3530,6 +3530,7 @@ input, select, textarea {
 			background: transparent;
 			cursor: pointer;
 			border-radius: 50%;
+			margin-right: 8px;
 			}
 
 		#banner#search .search-btn:hover {
@@ -4293,10 +4294,117 @@ input, select, textarea {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: calc(100vh - 120px); /* accounts for header/footer */
+  min-height: calc(100vh - 120px); 
 }
 
 .auth-box {
   width: 100%;
   max-width: 420px;
+}
+
+
+
+#one .box.alt > .row.gtr-uniform {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.5rem;
+  margin-left: 0;
+}
+
+/* Remove the template column padding/widths inside the product grid */
+#one .box.alt > .row.gtr-uniform > section {
+  width: auto !important;
+  padding: 1.25rem;
+  margin: 0 !important;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* Square product images */
+#one .box.alt > .row.gtr-uniform > section img {
+  width: 100%;                 /* <-- image size line */
+  aspect-ratio: 1 / 1;         /* <-- forces square */
+  object-fit: cover;
+  display: block;
+  border-radius: 10px;
+  margin: 0 auto 0.9rem auto;
+}
+
+/* If there's no image and you show the icon placeholder, keep it square-ish too */
+#one .box.alt > .row.gtr-uniform > section .icon.major {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  height: auto;
+  display: grid;
+  place-items: center;
+  margin: 0 auto 0.9rem auto;
+}
+
+/* Reduce product title text size */
+#one .box.alt > .row.gtr-uniform > section h3 {
+  font-size: 1.05em;           /* <-- product name text size line */
+  line-height: 1.25em;
+  margin: 0 0 0.75rem 0;
+}
+
+/* Make the 'View' button slightly smaller in cards */
+#one .box.alt > .row.gtr-uniform > section a.button {
+  font-size: 0.85em;
+  padding: 0 1.1rem;
+  height: 2.4em;
+  line-height: 2.4em;
+}
+
+/* Responsive: tighten spacing on small screens */
+@media screen and (max-width: 736px) {
+  #one .box.alt > .row.gtr-uniform {
+    gap: 1rem;
+  }
+  #one .box.alt > .row.gtr-uniform > section {
+    padding: 1rem;
+  }
+}
+
+#header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 3.5em;            
+  padding: 0 1.5em;
+}
+
+
+#logo {
+  margin: 0;
+}
+#logo a {
+  display: flex;
+  align-items: center;
+  border-bottom: 0;
+}
+
+
+#logo img {
+  height: 4.2em;            
+  width: auto;
+  max-width: 300px;        
+  display: block;
+}
+
+
+#nav ul, 
+#nav ul li {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  margin-top: 0.9em;
+  
+}
+
+
+#nav a.button {
+  height: 4.2em;            
+  line-height: 2.4em;       
+  padding: 0 1.25em;
+  font-size: 0.85em;
 }

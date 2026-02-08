@@ -21,6 +21,7 @@ import jakarta.persistence.OneToMany;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import java.util.ArrayList;
 
 @Entity
 @Getter @Setter @NoArgsConstructor
@@ -36,8 +37,8 @@ public class Product {
 	@OneToMany(mappedBy = "product")
 	private List<PriceHistory> priceHistories;
 	
-	@OneToMany(mappedBy = "product")
-	private List<ProductImage> productImages;
+	@OneToMany(mappedBy = "product", fetch = FetchType.LAZY)
+	private List<ProductImage> productImages = new ArrayList<>();
 	
 	@ManyToMany
 	@JoinTable(
@@ -63,4 +64,7 @@ public class Product {
 	@UpdateTimestamp
 	@Column(name = "UPDATED_AT", nullable = false)
 	private LocalDateTime updatedAt;
+		
+	
+
 }
