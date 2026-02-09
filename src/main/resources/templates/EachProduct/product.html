@@ -9,9 +9,9 @@
 </head>
 <body class="is-preload ">
   <div id="page-wrapper">
-    <div th:replace="layout/header :: header"></div>
-    <div th:replace="fragments-product :: content"></div>
-    <div th:replace="layout/footer :: footer"></div>
+    <div th:replace="~{Layout/header :: header}"></div>
+    <div th:replace="~{EachProduct/fragments-product :: content}"></div>
+    <div th:replace="~{Layout/footer :: footer}"></div>
   </div>
 
   <script src="/js/jquery.min.js"></script>

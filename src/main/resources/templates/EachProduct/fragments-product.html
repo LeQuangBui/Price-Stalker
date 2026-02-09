@@ -1,86 +1,120 @@
 <div th:fragment="content">
   <section id="main" class="wrapper">
     <div class="inner">
-      <header class="major">
-        <h2 th:text="${product.name}">Product Name</h2>
-        <p>
-          Current price:
-          <strong th:text="${product.currentPrice}">$0.00</strong>
-          <span style="opacity:.75;" th:text="${product.website.name}">Site</span>
-        </p>
-      </header>
 
-      <!-- Product info -->
-      <div class="box">
-        <h3>Product Info</h3>
-        <p><strong>Original Link:</strong> <a th:href="${product.url}" th:text="URL" target="${product.url}">link</a></p>
-      </div>
+      <div class="amz-layout">
 
-      <!-- Alternatives -->
-      <div class="box">
-        <h3>Cheaper Alternatives</h3>
+        <!-- LEFT: Image gallery (placeholders only, no new fields) -->
+        <div class="amz-gallery">
+          <div class="amz-thumbs">
+            <div class="amz-thumb is-active"></div>
+            <div class="amz-thumb"></div>
+            <div class="amz-thumb"></div>
+            <div class="amz-thumb"></div>
+            <div class="amz-thumb"></div>
+          </div>
 
-        <div th:if="${alternatives == null || #lists.isEmpty(alternatives)}">
-          <p style="margin:0;">No alternatives found yet.</p>
+          <div class="amz-main-image">
+            <img th:if="${!#lists.isEmpty(product.productImages)}"
+                  th:src="${product.productImages.get(0).url}"
+                  alt="Product Image" />
+
+          </div>
         </div>
 
-        <table th:if="${alternatives != null && !#lists.isEmpty(alternatives)}">
-          <thead>
-            <tr>
-              <th>Price</th>
-              <th>Link</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr th:each="a : ${alternatives}">
-              <td th:text="${a.currentPrice}">$0.00</td>
-              <td><a th:href="${a.url}" target="${a.url}">Open</a></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+        <!-- MIDDLE: Title / price / info -->
+        <div class="amz-details">
+          <h2 class="amz-title" th:text="${product.name}">Product Name</h2>
 
-      <!-- Graph placeholder -->
-      <div class="box">
-        <h3>Price Graph</h3>
-        <p style="margin:0; opacity:.8;">(Graph placeholder) You can later render a chart here (Chart.js / ApexCharts) using backend price history.</p>
-        <div style="height:240px; border:1px solid rgba(255,255,255,0.15); border-radius:8px;"></div>
-      </div>
+          <div class="amz-subline">
+            <span>Sold on: </span>
+            <strong th:text="${product.website.name}">Site</strong>
+          </div>
 
-      <!-- Save to bookmarks -->
-      <div class="box">
-        <h3>Save</h3>
+          <div class="amz-price-row">
+            <span class="amz-price-label">Price:</span>
+            <span class="amz-price" th:text="${product.currentPrice}">$0.00</span>
+          </div>
 
-        <div th:if="${!isAuthenticated}">
-          <p style="margin:0;">Sign in to save this product to bookmarks.</p>
-          <ul class="actions" style="margin-top:1rem;">
-            <li><a class="button primary" href="/login">Sign In</a></li>
-            <li><a class="button" href="/signup">Sign Up</a></li>
-          </ul>
-        </div>
+          <div class="box amz-info-box">
+            <h3 style="margin-bottom:.5rem;">Product Info</h3>
+            <p style="margin:0;">
+              <strong>Original Link:</strong>
+              <a th:href="${product.url}" th:text="${product.url}" target="${product.url}">link</a>
+            </p>
+          </div>
 
-        <div th:if="${isAuthenticated}">
-          <form method="post" th:action="@{/bookmarks/add}">
-            <input type="hidden" name="productId" th:value="${product.id}" />
+          <!-- keep these below like Amazon (details then extras below) -->
+          <div class="box">
+            <h3>Price Graph</h3>
+            <p style="margin:0; opacity:.8;">(Graph placeholder) You can later render a chart here.</p>
+            <div style="height:240px; border:1px solid rgba(255,255,255,0.15); border-radius:8px;"></div>
+          </div>
 
-            <div class="row gtr-uniform">
-              <div class="col-8 col-12-xsmall">
-                <select name="bookmarkId">
-                  <option value="">Save to new bookmark</option>
-                  <option th:each="b : ${bookmarks}" th:value="${b.id}" th:text="${b.name}">Bookmark</option>
-                </select>
-              </div>
-              <div class="col-4 col-12-xsmall">
-                <input type="submit" value="Save" class="fit primary" />
-              </div>
+          <div class="box">
+            <h3>Cheaper Alternatives</h3>
 
-              <div class="col-12" style="margin-top:.75rem;">
-                <input type="text" name="newBookmarkName" placeholder="New bookmark name (optional)" />
-              </div>
+            <div th:if="${alternatives == null || #lists.isEmpty(alternatives)}">
+              <p style="margin:0;">No alternatives found yet.</p>
             </div>
-          </form>
+
+            <table th:if="${alternatives != null && !#lists.isEmpty(alternatives)}">
+              <thead>
+                <tr>
+                  <th>Price</th>
+                  <th>Link</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr th:each="a : ${alternatives}">
+                  <td th:text="${a.currentPrice}">$0.00</td>
+                  <td><a th:href="${a.url}" target="${a.url}">Open</a></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+
+        <!-- RIGHT: Amazon-like buy box = your existing Save box -->
+        <div class="amz-buybox">
+          <div class="box amz-buybox-inner">
+            <h3>Save</h3>
+
+            <div th:if="${!isAuthenticated}">
+              <p style="margin:0;">Sign in to save this product to bookmarks.</p>
+              <ul class="actions" style="margin-top:1rem;">
+                <li><a class="button primary" href="/login">Sign In</a></li>
+                <li><a class="button" href="/signup">Sign Up</a></li>
+              </ul>
+            </div>
+
+            <div th:if="${isAuthenticated}">
+              <form method="post" th:action="@{/bookmarks/add}">
+                <input type="hidden" name="productId" th:value="${product.id}" />
+
+                <div class="row gtr-uniform">
+                  <div class="col-12">
+                    <select name="bookmarkId">
+                      <option value="">Save to new bookmark</option>
+                      <option th:each="b : ${bookmarks}" th:value="${b.id}" th:text="${b.name}">Bookmark</option>
+                    </select>
+                  </div>
+
+                  <div class="col-12" style="margin-top:.75rem;">
+                    <input type="text" name="newBookmarkName" placeholder="New bookmark name (optional)" />
+                  </div>
+
+                  <div class="col-12" style="margin-top:.75rem;">
+                    <input type="submit" value="Save" class="fit primary" />
+                  </div>
+                </div>
+              </form>
+            </div>
+
+          </div>
+        </div>
+
+      </div><!-- /amz-layout -->
 
     </div>
   </section>
