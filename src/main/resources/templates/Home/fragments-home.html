@@ -18,6 +18,7 @@
           </div>
 
               <input id="heroSerachInput" class="search-input" type="text" name="keyword" placeholder="Search products..." required autocomplete="off">
+              <input id="linkInput" class="search-input" type="url" name="link" placeholder="Paste product link (https://...)" style="display:none;" autocomplete="off" disabled>
               <button id="button" class="button primary" type="submit" aria-label="Search">Search</button>
         </form>
       </section>
@@ -55,57 +56,78 @@
   </section>
 
   <script>
-    const importBtn = document.querySelector('#heroSearchForm .import-btn');
-    const importMenu = document.querySelector('#heroSearchForm .import-menu');
+    const importBtn = document.querySelector('#banner #search .import-btn');
+    const importMenu = document.querySelector('#banner #search .import-menu');
     const form = document.querySelector('#heroSearchForm');
-    const input = document.querySelector('#heroSearchInput');
-    const submitBtn = document.querySelector('#heroSearchSubmit');
+
+    const keywordInput = document.querySelector('#keywordInput');
+    const linkInput = document.querySelector('#linkInput');
+
+    function openMenu() {
+      importMenu.style.display = 'block';
+      importBtn.setAttribute('aria-expanded', 'true');
+    }
+
+    function closeMenu() {
+      importMenu.style.display = 'none';
+      importBtn.setAttribute('aria-expanded', 'false');
+    }
 
     function setMode(mode) {
       if (mode === 'link') {
-        // Link import mode (UI only, but ready for backend later)
-        form.setAttribute('action', '/product/search-link');   // e.g. GET /products?link=...
-        input.setAttribute('name', 'link');
-        input.setAttribute('type', 'url');
-        input.setAttribute('placeholder', 'Paste product link (https://...)');
-        input.value = '';
-        input.focus();
-        // optional: change icon/label if you want later
+        // Link mode: GET /products?link=...
+        form.setAttribute('action', '/product/search-link');
+
+        keywordInput.style.display = 'none';
+        keywordInput.disabled = true;
+        keywordInput.required = false;
+        keywordInput.value = '';
+
+        linkInput.style.display = 'block';
+        linkInput.disabled = false;
+        linkInput.required = true;
+        linkInput.value = '';
+        linkInput.focus();
       } else {
-        // Product name search mode
-        form.setAttribute('action', '/product/search'); // GET /products/search?keyword=...
-        input.setAttribute('name', 'keyword');
-        input.setAttribute('type', 'text');
-        input.setAttribute('placeholder', 'Search product name...');
-        input.value = '';
-        input.focus();
+        // Keyword mode: GET /products/search?keyword=...
+        form.setAttribute('action', '/products/search');
+
+        linkInput.style.display = 'none';
+        linkInput.disabled = true;
+        linkInput.required = false;
+        linkInput.value = '';
+
+        keywordInput.style.display = 'block';
+        keywordInput.disabled = false;
+        keywordInput.required = true;
+        keywordInput.value = '';
+        keywordInput.focus();
       }
     }
 
+    // + button toggles menu
     if (importBtn && importMenu) {
       importBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         const isOpen = importMenu.style.display === 'block';
-        importMenu.style.display = isOpen ? 'none' : 'block';
-        importBtn.setAttribute('aria-expanded', String(!isOpen));
+        isOpen ? closeMenu() : openMenu();
       });
 
+      // Click menu item -> switch mode
       importMenu.addEventListener('click', (e) => {
         const item = e.target.closest('li[data-mode]');
         if (!item) return;
 
         setMode(item.dataset.mode);
-        importMenu.style.display = 'none';
-        importBtn.setAttribute('aria-expanded', 'false');
+        closeMenu();
       });
 
-      document.addEventListener('click', () => {
-        importMenu.style.display = 'none';
-        importBtn.setAttribute('aria-expanded', 'false');
-      });
+      // Click outside closes menu
+      document.addEventListener('click', closeMenu);
     }
 
-    // Default mode on load
+    // Default mode
     setMode('keyword');
   </script>
+
 </div>

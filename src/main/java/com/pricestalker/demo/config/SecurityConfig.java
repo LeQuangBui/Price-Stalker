@@ -36,7 +36,7 @@ public class SecurityConfig {
         			authorizeHttp.requestMatchers("/Auth/**").permitAll();
 	            	authorizeHttp.requestMatchers("/css/**", "/js/**", "/images/**", "/Layouts/**").permitAll();
                     authorizeHttp.requestMatchers("/EachProduct/**","/ManyProducts/**").permitAll();
-                    authorizeHttp.requestMatchers("/Bookmark/**").permitAll();
+                    authorizeHttp.requestMatchers("/Bookmark/**", "/product/**").permitAll();
 	            	authorizeHttp.anyRequest().authenticated();
 	            }
             )
