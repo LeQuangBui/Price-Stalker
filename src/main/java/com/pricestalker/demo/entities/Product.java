@@ -55,6 +55,8 @@ public class Product {
 	
 	@Column(name = "CURRENT_PRICE", nullable = false)
 	private int currentPrice;
+	
+	@Column(name = "CURRENCY", nullable = false)
 	private String currency;
 	
 	@CreationTimestamp
@@ -64,7 +66,4 @@ public class Product {
 	@UpdateTimestamp
 	@Column(name = "UPDATED_AT", nullable = false)
 	private LocalDateTime updatedAt;
-		
-	
-
 }

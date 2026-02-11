@@ -8,17 +8,17 @@
 
       <!-- Search bar in middle -->
       <section id="search">
-        <form th:action="@{/products/search}" method="get" class="search-form">
+        <form id="heroSearchForm" th:action="@{/product/search}" method="get" class="search-form">
           <div class="import-wrapper">
-            <button class="import-btn" type="button" aria-haspopup="true" aria-expanded="false">+</button>
-            <ul class="import-menu" role="menu">
-              <li role="menuitem" data-mode="link">Import Link</li>
-              <li role="menuitem" data-mode="keyword">Add Product</li>
+            <button id="searchToggle" class="import-btn" type="button" aria-haspopup="true" aria-expanded="false">+</button>
+            <ul id="searchMenu" class="import-menu" role="menu">
+              <li role="menuitem" data-mode="url">Url</li>
+              <li role="menuitem" data-mode="text">Keywords</li>
             </ul> 
           </div>
 
-              <input id="heroSerachInput" class="search-input" type="text" name="keyword" placeholder="Search products..." required autocomplete="off">
-              <input id="linkInput" class="search-input" type="url" name="link" placeholder="Paste product link (https://...)" style="display:none;" autocomplete="off" disabled>
+              <input id="keywordsInput" class="search-input" type="text" name="text" placeholder="Search products..." required autocomplete="off">
+              <input id="urlInput" class="search-input" type="url" name="url" placeholder="Paste product link (https://...)" style="display:none;" autocomplete="off" disabled>
               <button id="button" class="button primary" type="submit" aria-label="Search">Search</button>
         </form>
       </section>
@@ -37,15 +37,15 @@
       <div class="box alt">
         <div class="row gtr-uniform">
           <!-- Example cards; replace with th:each -->
-          <section class="col-4 col-6-medium col-12-xsmall" th:each="p : ${product}">
+          <section class="col-4 col-6-medium col-12-xsmall product-card" th:each="p : ${product}">
             <a th:href="@{/product/{id}(id=${p.id})}">
               <img class="icon solid alt major fa-tag" th:src="${p.productImages.get(0).url}" alt="product image" th:if="${p.productImages != null and !#lists.isEmpty(p.productImages)}">
-              <h3 th:text="${p.name}">Product Name</h3>
+              <h3 class="product-name" th:text="${p.name}">Product Name</h3>
             </a>
           </section>
 
           <!-- Fallback when no products -->
-          <section class="col-12" th:if="${products == null || #lists.isEmpty(products)}">
+          <section class="col-12" th:if="${product == null || #lists.isEmpty(product)}">
             <div class="box">
               <p style="margin:0;">No products to show yet. Try searching!</p>
             </div>
@@ -56,78 +56,74 @@
   </section>
 
   <script>
-    const importBtn = document.querySelector('#banner #search .import-btn');
-    const importMenu = document.querySelector('#banner #search .import-menu');
-    const form = document.querySelector('#heroSearchForm');
-
-    const keywordInput = document.querySelector('#keywordInput');
-    const linkInput = document.querySelector('#linkInput');
+  	const form = document.getElementById('heroSearchForm');
+    const searchToggle = document.getElementById('searchToggle');
+    const searchMenu = document.getElementById('searchMenu');
+    
+    const keywordsInput = document.getElementById('keywordsInput');
+    const urlInput = document.getElementById('urlInput');
 
     function openMenu() {
-      importMenu.style.display = 'block';
-      importBtn.setAttribute('aria-expanded', 'true');
+ 	  	searchMenu.style.display = 'block';
+ 	  	searchToggle.setAttribute('aria-expanded', 'true');
     }
 
     function closeMenu() {
-      importMenu.style.display = 'none';
-      importBtn.setAttribute('aria-expanded', 'false');
+    	searchMenu.style.display = 'none';
+      	searchToggle.setAttribute('aria-expanded', 'false');
     }
 
     function setMode(mode) {
-      if (mode === 'link') {
+      if (mode === 'url') {
         // Link mode: GET /products?link=...
-        form.setAttribute('action', '/product/search-link');
+        form.setAttribute('action', '/product/search_url');
 
-        keywordInput.style.display = 'none';
-        keywordInput.disabled = true;
-        keywordInput.required = false;
-        keywordInput.value = '';
+        keywordsInput.style.display = 'none';
+        keywordsInput.disabled = true;
+        keywordsInput.required = false;
 
-        linkInput.style.display = 'block';
-        linkInput.disabled = false;
-        linkInput.required = true;
-        linkInput.value = '';
+        urlInput.style.display = 'block';
+        urlInput.disabled = false;
+        urlInput.required = true;
         linkInput.focus();
       } else {
         // Keyword mode: GET /products/search?keyword=...
-        form.setAttribute('action', '/products/search');
+        form.setAttribute('action', '/product/search');
 
-        linkInput.style.display = 'none';
-        linkInput.disabled = true;
-        linkInput.required = false;
-        linkInput.value = '';
+        urlInput.style.display = 'none';
+        urlInput.disabled = true;
+        urlInput.required = false;
 
-        keywordInput.style.display = 'block';
-        keywordInput.disabled = false;
-        keywordInput.required = true;
-        keywordInput.value = '';
-        keywordInput.focus();
+        keywordsInput.style.display = 'block';
+        keywordsInput.disabled = false;
+        keywordsInput.required = true;
+        keywordsInput.focus();
       }
     }
 
     // + button toggles menu
-    if (importBtn && importMenu) {
-      importBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const isOpen = importMenu.style.display === 'block';
-        isOpen ? closeMenu() : openMenu();
-      });
+    if (searchToggle && searchMenu) {
+   		searchToggle.addEventListener('click', (e) => {
+        	e.stopPropagation();
+        	const isOpen = searchMenu.style.display === 'block';
+        	isOpen ? closeMenu() : openMenu();
+      	});
 
       // Click menu item -> switch mode
-      importMenu.addEventListener('click', (e) => {
-        const item = e.target.closest('li[data-mode]');
-        if (!item) return;
-
-        setMode(item.dataset.mode);
-        closeMenu();
-      });
+      searchMenu.addEventListener('click', (e) => {
+	        const item = e.target.closest('li[data-mode]');
+	        if (!item) return;
+	
+	        setMode(item.dataset.mode);
+	        closeMenu();
+      	});
 
       // Click outside closes menu
       document.addEventListener('click', closeMenu);
     }
 
     // Default mode
-    setMode('keyword');
+    setMode('text');
   </script>
 
 </div>

@@ -5,11 +5,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
-import org.jsoup.select.Elements;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
@@ -33,19 +28,16 @@ public class ProductService {
 	@Autowired
 	private ProductRepository productRepository;
 	
-	@Autowired WebsiteRepository websiteRepository;
-
-    ProductService(ProductImageRepository productImageRepository) {
-        this.productImageRepository = productImageRepository;
-    }
+	@Autowired
+	private WebsiteRepository websiteRepository;
 	
 	public void addProduct(Product p) {
 		this.productRepository.save(p);
 	}
 	
-	public void addProduct(String url) throws IOException {
+	public Product addProduct(String url) throws IOException {
 		Website w = this.websiteRepository.findOneByUrl(url);
-		if (w == null) return;
+		if (w == null) return null;
 
 		Map<String, String> map = new HashMap<String, String>();
 		String chromeDriverPath = "C:\\Users\\quang\\Downloads\\chromedriver-win64";
@@ -76,6 +68,8 @@ public class ProductService {
 		
 		this.productRepository.save(p);
 		this.productImageRepository.save(img);
+		
+		return p;
 	}
 	
 	public List<Product> getAllProducts() {
@@ -93,9 +87,8 @@ public class ProductService {
 		return this.productRepository.findBySearchText(searchText);
 	}
 
-	//Search product via product link
-	public List<Product> getProductBySearchLink(String searchLink) {
-		return this.productRepository.findBySearchLink(searchLink);
+	public Product getProductByUrl(String url) {
+		return this.productRepository.findOneByUrl(url);
 	}
 	
 	public void updateProduct(Product p, String id) {

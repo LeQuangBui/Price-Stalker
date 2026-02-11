@@ -1,4 +1,5 @@
 package com.pricestalker.demo.config;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -12,19 +13,14 @@ import com.pricestalker.demo.repositories.UserRepository;
 
 @Configuration
 public class SecurityConfig {
+	@Autowired
+    private UserRepository userRepository;
 
-    private final UserRepository userRepository;
-
-    public SecurityConfig(UserRepository userRepository) {
-        this.userRepository = userRepository;
-    }
     @Bean
     PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
-
-    
 
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -32,23 +28,22 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(
         		authorizeHttp -> {
-        			authorizeHttp.requestMatchers("/Home/**").permitAll();	
-        			authorizeHttp.requestMatchers("/Auth/**").permitAll();
+        			authorizeHttp.requestMatchers("/**").permitAll();	
+        			authorizeHttp.requestMatchers("/auth/**").permitAll();
+        			authorizeHttp.requestMatchers("/product/**").permitAll();
 	            	authorizeHttp.requestMatchers("/css/**", "/js/**", "/images/**", "/Layouts/**").permitAll();
-                    authorizeHttp.requestMatchers("/EachProduct/**","/ManyProducts/**").permitAll();
-                    authorizeHttp.requestMatchers("/Bookmark/**", "/product/**").permitAll();
 	            	authorizeHttp.anyRequest().authenticated();
 	            }
             )
             .formLogin(l -> l
-                .loginPage("/Auth/login")
-                .loginProcessingUrl("/Auth/login")
+                .loginPage("/auth/login")
+                .loginProcessingUrl("/auth/login")
                 .defaultSuccessUrl("/", true)
-                .failureUrl("/Auth/login?error=true")
+                .failureUrl("/auth/login?error=true")
                 .permitAll()
             )
             .logout(l -> l
-                .logoutUrl("/Auth/logout")
+                .logoutUrl("/auth/logout")
                 .logoutSuccessUrl("/")
                 .permitAll()
             )

@@ -24,12 +24,12 @@
           <div class="box" style="height:100%;">
             <h3 th:text="${p.name}">Product Name</h3>
             <p style="margin-bottom:1rem;">
-              <strong th:text="${p.price}">$0.00</strong>
-              <span style="opacity:.75;" th:text="${p.site}">Site</span>
+              <strong th:text="${p.currentPrice}">$0.00</strong>
+              <span style="opacity:.75;" th:text="${p.url}">Site</span>
             </p>
             <ul class="actions">
               <li><a class="button primary" th:href="@{/product/{id}(id=${p.id})}">View</a></li>
-              <li><a class="button" th:href="${p.link}" target="_blank">Open</a></li>
+              <li><a class="button" th:href="${p.url}" target="_blank">Open</a></li>
             </ul>
           </div>
         </div>

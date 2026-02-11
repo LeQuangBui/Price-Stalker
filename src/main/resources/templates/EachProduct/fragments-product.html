@@ -24,24 +24,22 @@
 
         <!-- MIDDLE: Title / price / info -->
         <div class="amz-details">
-          <h2 class="amz-title" th:text="${product.name}">Product Name</h2>
+          
+   		<h2 class="amz-title">
+   			<a th:href="${product.url}" th:text="${product.name}" target="_blank">Product Name</a>
+       	</h2>
+         
 
           <div class="amz-subline">
             <span>Sold on: </span>
-            <strong th:text="${product.website.name}">Site</strong>
+            <a th:href="${product.website.url}" target="_blank">
+            	<strong th:text="${product.website.name}">Site</strong>
+            </a>
           </div>
 
           <div class="amz-price-row">
             <span class="amz-price-label">Price:</span>
-            <span class="amz-price" th:text="${product.currentPrice}">$0.00</span>
-          </div>
-
-          <div class="box amz-info-box">
-            <h3 style="margin-bottom:.5rem;">Product Info</h3>
-            <p style="margin:0;">
-              <strong>Original Link:</strong>
-              <a th:href="${product.url}" th:text="${product.url}" target="${product.url}">link</a>
-            </p>
+            <span class="amz-price" th:text="${#numbers.formatDecimal(product.currentPrice,0,'POINT',0,'COMMA') + product.currency}">$0.00</span>
           </div>
 
           <!-- keep these below like Amazon (details then extras below) -->

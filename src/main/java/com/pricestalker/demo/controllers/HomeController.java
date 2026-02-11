@@ -6,10 +6,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Controller;
 
-
-
-
-
 @Controller
 public class HomeController {
     private ProductRepository productRepository;
@@ -20,7 +16,7 @@ public class HomeController {
 
     @GetMapping({"/","/home"})
     public String home(Model model) {
-        model.addAttribute("product", productRepository.findTrending(PageRequest.of(0,9))
+        model.addAttribute("product", productRepository.findTrending(PageRequest.of(0,20))
         );
         return "Home/home";
     }

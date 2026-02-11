@@ -18,12 +18,8 @@ public interface ProductRepository extends JpaRepository<Product, String> {
 			"LOWER(a.website.name) LIKE LOWER(CONCAT('%', :searchText, '%')) OR " +
 			"LOWER(a.currency) LIKE LOWER(CONCAT('%', :searchText, '%'))")
 	List<Product> findBySearchText(@Param("searchText") String searchText);
-
-
-	@Query("SELECT p from Product p WHERE LOWER(p.url) = LOWER(:searchLink)")
-	List<Product> findBySearchLink(@Param("searchLink") String searchLink);
 	
-	
+	Product findOneByUrl(String url);
 	
 	@Query("""
     SELECT DISTINCT p
