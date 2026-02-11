@@ -17,10 +17,7 @@ public class AuthController {
 	
 	@Autowired
     private PasswordEncoder passwordEncoder;
-    public AuthController(UserRepository userRepository, PasswordEncoder passwordEncoder) {
-        this.userRepository = userRepository;
-        this.passwordEncoder = passwordEncoder;
-    }
+
     @PostMapping("/auth/signup")
     public String registerUser(
             @RequestParam String username,
@@ -42,14 +39,15 @@ public class AuthController {
         // redirect to login page
         return "redirect:/auth/login";
     }
-    @GetMapping("/Auth/signup")
+    
+    @GetMapping("/auth/signup")
     public String signup() {
-        return "auth/signup";
+        return "Auth/signup";
     }
     
     @GetMapping("/auth/login")
     public String login() {
-        return "auth/login";
+        return "Auth/login";
     }
     
 }
