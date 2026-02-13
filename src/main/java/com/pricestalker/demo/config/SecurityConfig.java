@@ -32,6 +32,7 @@ public class SecurityConfig {
         			authorizeHttp.requestMatchers("/auth/**").permitAll();
         			authorizeHttp.requestMatchers("/product/**").permitAll();
 	            	authorizeHttp.requestMatchers("/css/**", "/js/**", "/images/**", "/Layouts/**").permitAll();
+	            	authorizeHttp.requestMatchers("/api/**");
 	            	authorizeHttp.anyRequest().authenticated();
 	            }
             )
