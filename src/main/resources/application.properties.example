@@ -5,3 +5,7 @@ spring.datasource.username=
 spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
 spring.jpa.hibernate.ddl-auto=validate
 server.port=
+jwt.secret=
+jwt.expiration=
+cors.allowed.origin=
+chrome.driver.path=
