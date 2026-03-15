@@ -1,53 +1,57 @@
 package com.pricestalker.demo.controllers;
 
-import com.pricestalker.demo.entities.User;
-import com.pricestalker.demo.repositories.UserRepository;
-
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-@Controller
+import com.pricestalker.demo.dtos.AuthResponseDto;
+import com.pricestalker.demo.dtos.LoginRequestDto;
+import com.pricestalker.demo.dtos.SignupRequestDto;
+import com.pricestalker.demo.services.UserService;
+import com.pricestalker.demo.utils.JwtUtil;
+
+@RestController
+@RequestMapping("/auth")
 public class AuthController {
-	@Autowired
-    private UserRepository userRepository;
-	
-	@Autowired
-    private PasswordEncoder passwordEncoder;
+    @Autowired
+    private AuthenticationManager authenticationManager;
 
-    @PostMapping("/auth/signup")
-    public String registerUser(
-            @RequestParam String username,
-            @RequestParam String email,
-            @RequestParam String password
-    ) {
-       
-        if (userRepository.existsByUsername(username)) {
-            return "redirect:/auth/signup?error=user_exists";
+    @Autowired
+    private JwtUtil jwtUtil;
+
+    @Autowired
+    private UserService userService;
+
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@RequestBody LoginRequestDto request) {
+        try {
+            authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
+            );
+
+            String token = jwtUtil.generateToken(request.getUsername());
+            return ResponseEntity.ok(new AuthResponseDto(token, request.getUsername()));
+        } catch (BadCredentialsException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");
+        }
+    }
+
+    @PostMapping("/signup")
+    public ResponseEntity<?> signup(@RequestBody SignupRequestDto request) {
+        if (userService.existsByUsername(request.getUsername())) {
+            return ResponseEntity.badRequest().body("Username already exists");
         }
 
-        if (userRepository.existsByEmail(email)) {
-            return "redirect:/auth/signup?error=user_exists";
-        }
-
-        User user = new User(username, email, passwordEncoder.encode(password));
-        userRepository.save(user);
-
-        // redirect to login page
-        return "redirect:/auth/login";
+        userService.addUser(request);
+        String token = jwtUtil.generateToken(request.getUsername());
+        return ResponseEntity.ok(new AuthResponseDto(token, request.getUsername()));
     }
-    
-    @GetMapping("/auth/signup")
-    public String signup() {
-        return "Auth/signup";
-    }
-    
-    @GetMapping("/auth/login")
-    public String login() {
-        return "Auth/login";
-    }
-    
 }
+

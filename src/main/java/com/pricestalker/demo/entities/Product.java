@@ -14,7 +14,6 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
@@ -40,11 +39,7 @@ public class Product {
 	@OneToMany(mappedBy = "product", fetch = FetchType.LAZY)
 	private List<ProductImage> productImages = new ArrayList<>();
 	
-	@ManyToMany
-	@JoinTable(
-		name = "product_tag",
-		joinColumns = @JoinColumn(name = "PRODUCT_ID", nullable = false),
-		inverseJoinColumns = @JoinColumn(name = "BOOKMARK_ID", nullable = false))
+	@ManyToMany(mappedBy = "bookmarkedProducts")
 	private List<Bookmark> bookmarks;
 	
 	@Column(name = "NAME", nullable = false)

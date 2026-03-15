@@ -13,6 +13,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import lombok.Getter;
@@ -26,8 +27,13 @@ public class Bookmark {
 	@GeneratedValue(strategy = GenerationType.UUID)
 	private String id;
 	
-	@ManyToMany(mappedBy = "bookmarks")
-	List<Product> products;
+	@ManyToMany
+	@JoinTable(
+		name = "product_tag",
+		joinColumns = @JoinColumn(name = "BOOKMARK_ID", nullable = false),
+		inverseJoinColumns = @JoinColumn(name = "PRODUCT_ID", nullable = false)
+	)
+	List<Product> bookmarkedProducts;
 	
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "USER_ID", nullable = false)

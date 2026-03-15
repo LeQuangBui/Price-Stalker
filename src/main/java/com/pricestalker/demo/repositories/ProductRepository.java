@@ -1,32 +1,28 @@
 package com.pricestalker.demo.repositories;
 
-import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import com.pricestalker.demo.entities.Product;
 import com.pricestalker.demo.entities.Website;
 
 public interface ProductRepository extends JpaRepository<Product, String> {
-	List<Product> findByWebsite(Website website);
-	
 	@Query("SELECT a FROM Product a WHERE " +
-			"LOWER(a.name) LIKE LOWER(CONCAT('%', :searchText, '%')) OR " +
-			"LOWER(a.url) LIKE LOWER(CONCAT('%', :searchText, '%')) OR " +
-			"LOWER(a.website.name) LIKE LOWER(CONCAT('%', :searchText, '%')) OR " +
-			"LOWER(a.currency) LIKE LOWER(CONCAT('%', :searchText, '%'))")
-	List<Product> findBySearchText(@Param("searchText") String searchText);
+			"LOWER(a.name) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+			"LOWER(a.url) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+			"LOWER(a.website.name) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+			"LOWER(a.currency) LIKE LOWER(CONCAT('%', :search, '%'))")
+	Page<Product> findBySearchText(@Param("search") Optional<String> search, Pageable pageable);
 	
-	Product findOneByUrl(String url);
+	Page<Product> findByUrl(Optional<String> url, Pageable pageable);
 	
-	@Query("""
-    SELECT DISTINCT p
-    FROM Product p
-    LEFT JOIN FETCH p.productImages
-    ORDER BY p.updatedAt DESC
-	""")
-	List<Product> findTrending(Pageable pageable);
-
+	@Query("SELECT a FROM Product a WHERE LOWER(a.website.name) LIKE LOWER(CONCAT('%', :website, '%'))")
+	Page<Product> findByWebsite(Optional<String> website, Pageable pageable);
+	
+	Page<Product> findByWebsite(Website website, Pageable pageable);
+	Boolean existsByUrl(String url);
 }

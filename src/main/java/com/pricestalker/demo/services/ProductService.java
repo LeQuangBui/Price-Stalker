@@ -2,7 +2,6 @@ package com.pricestalker.demo.services;
 
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.openqa.selenium.By;
@@ -10,8 +9,12 @@ import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
 
+import com.pricestalker.demo.dtos.ProductRequestDto;
 import com.pricestalker.demo.entities.CssSelector;
 import com.pricestalker.demo.entities.Product;
 import com.pricestalker.demo.entities.ProductImage;
@@ -20,8 +23,11 @@ import com.pricestalker.demo.repositories.ProductImageRepository;
 import com.pricestalker.demo.repositories.ProductRepository;
 import com.pricestalker.demo.repositories.WebsiteRepository;
 
-@Component
+@Service
 public class ProductService {
+  @Value("${chrome.driver.path}")
+  private String chromeDriverPath;
+	
 	@Autowired
     private ProductImageRepository productImageRepository;
 	
@@ -31,16 +37,17 @@ public class ProductService {
 	@Autowired
 	private WebsiteRepository websiteRepository;
 	
-	public void addProduct(Product p) {
-		this.productRepository.save(p);
+	public Product addProduct(Product product) {
+		return this.productRepository.save(product);
 	}
 	
-	public Product addProduct(String url) throws IOException {
+	public Product addProduct(ProductRequestDto productRequestDto) throws IOException {
+		String url = productRequestDto.getUrl();
+		if (this.productRepository.existsByUrl(url)) return null;
 		Website w = this.websiteRepository.findOneByUrl(url);
 		if (w == null) return null;
 
 		Map<String, String> map = new HashMap<String, String>();
-		String chromeDriverPath = "C:\\Users\\quang\\Downloads\\chromedriver-win64";
 		System.setProperty("webdrive.chrome.driver", chromeDriverPath);
 		ChromeOptions options = new ChromeOptions();
 		options.addArguments("--headless", "--disable-gpu", "--window-size=1920,1200", "ignore-certificate-errors");
@@ -72,33 +79,28 @@ public class ProductService {
 		return p;
 	}
 	
-	public List<Product> getAllProducts() {
-		List<Product> products = (List<Product>) this.productRepository.findAll();
-		return products;
-	}
-	
 	public Product getProduct(String id) {
-		Optional<Product> optional = this.productRepository.findById(id);
-		Product product = optional.get();
-		return product;
+		return this.productRepository.findById(id).orElse(null);
 	}
 	
-	public List<Product> getProductBySearchText(String searchText) {
-		return this.productRepository.findBySearchText(searchText);
+	public Page<Product> getAllProducts(Pageable pageable) {
+		return this.productRepository.findAll(pageable);
+	}
+	
+	public Page<Product> searchProduct(Optional<String> search, Pageable pageable) {
+		return this.productRepository.findBySearchText(search, pageable);
 	}
 
-	public Product getProductByUrl(String url) {
-		return this.productRepository.findOneByUrl(url);
+	public Page<Product> searchProductByUrl(Optional<String> url, Pageable pageable) {
+		return this.productRepository.findByUrl(url, pageable);
 	}
 	
-	public void updateProduct(Product p, String id) {
-		p.setId(id);
-		Optional<Product> optional = this.productRepository.findById(id);
-		Product product = optional.get();
-		
-		if (product.getId() == id) {
-			this.productRepository.save(p);
-		}
+	public Page<Product> searchProductByWebsite(Optional<String> website, Pageable pageable) {
+		return this.productRepository.findByWebsite(website, pageable);
+	}
+	
+	public Product updateProduct(Product product) {
+		return this.productRepository.save(product);
 	}
 	
 	public void deleteProduct(String id) {
