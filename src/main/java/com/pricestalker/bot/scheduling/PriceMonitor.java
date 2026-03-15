@@ -33,7 +33,7 @@ public class PriceMonitor {
 	@Autowired
 	private CssSelectorRepository cssSelectorRepository;
 	
-	@Scheduled(fixedRate = 3, initialDelay = 3, timeUnit = TimeUnit.HOURS)
+	@Scheduled(fixedRate = 3, initialDelay = 1, timeUnit = TimeUnit.HOURS)
 	public void Monitor() {
 		List<Website> websites = (List<Website>) this.websiteRepository.findAll();
 		

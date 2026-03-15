@@ -95,3 +95,32 @@ local.properties
 .classpath
 
 # End of https://www.gitignore.io/api/eclipse
+
+# Dependencies
+node_modules/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+
+# Coverage
+coverage/
+
+# Build outputs
+dist/
+build/
+.next/
+
+# Environment variables
+.env
+.env.local
+
+# IDE/Editor settings
+.vscode/
+.DS_Store

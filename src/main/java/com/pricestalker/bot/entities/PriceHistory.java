@@ -12,8 +12,12 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
+@Getter @Setter @NoArgsConstructor
 public class PriceHistory {
 	@Id
 	@GeneratedValue(strategy = GenerationType.UUID)
@@ -33,30 +37,5 @@ public class PriceHistory {
 	public PriceHistory(Product product, int price) {
 		this.product = product;
 		this.price = price;
-	}
-	
-	public String getId() {
-		return id;
-	}
-	public void setId(String id) {
-		this.id = id;
-	}
-	public Product getProduct() {
-		return product;
-	}
-	public void setProduct(Product product) {
-		this.product = product;
-	}
-	public int getPrice() {
-		return price;
-	}
-	public void setPrice(int price) {
-		this.price = price;
-	}
-	public LocalDateTime getRecordedAt() {
-		return recordedAt;
-	}
-	public void setRecordedAt(LocalDateTime recordedAt) {
-		this.recordedAt = recordedAt;
 	}
 }
