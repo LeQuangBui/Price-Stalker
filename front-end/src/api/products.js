@@ -71,7 +71,7 @@ export async function getPriceHistory(productId, timeRange = '1d') {
       after = new Date(now.getTime() - 24 * 60 * 60 * 1000)
   }
 
-  if (after) queryParams.append("after", after.toISOString())
+  if (after) queryParams.append("after", after.toISOString().replace('Z', ''))
   queryParams.append("all", all)
 
   const res = await fetch(`${BASE_URL}/products/${productId}/price-histories?${queryParams}`, {

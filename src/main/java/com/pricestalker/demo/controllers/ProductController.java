@@ -11,6 +11,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -51,7 +52,8 @@ public class ProductController {
 	
 	@GetMapping("/products/{id}/price-histories")
 	public ResponseEntity<List<PriceHistoryResponseDto>> getPriceHistories(
-			@RequestParam(defaultValue = "0000-00-00 00:00:00") LocalDateTime after,
+			@RequestParam(defaultValue = "1970-01-01T00:00:00")
+			@DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime after,
 			@RequestParam boolean all,
 			@PathVariable String id
 	) {
