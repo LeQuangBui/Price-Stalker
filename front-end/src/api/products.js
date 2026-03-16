@@ -43,6 +43,7 @@ export async function createProductByUrl(url) {
 }
 
 export async function getPriceHistory(productId, timeRange = '1d') {
+  const queryParams = new URLSearchParams()
   const now = new Date()
   let after = null
   let all = false
@@ -70,19 +71,11 @@ export async function getPriceHistory(productId, timeRange = '1d') {
       after = new Date(now.getTime() - 24 * 60 * 60 * 1000)
   }
 
-  const body = {
-    productId,
-    all
-  }
+  if (after) queryParams.append("after", after.toISOString())
+  queryParams.append("all", all)
 
-  if (after) {
-    body.after = after.toISOString()
-  }
-
-  const res = await fetch(`${BASE_URL}/products/${productId}/price-histories`, {
-    method: 'POST',
-    headers: getHeaders(),
-    body: JSON.stringify(body)
+  const res = await fetch(`${BASE_URL}/products/${productId}/price-histories?${queryParams}`, {
+    headers: getHeaders()
   })
   if (!res.ok) throw new Error('Failed to fetch price history')
   return res.json()
