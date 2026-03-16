@@ -1,6 +1,7 @@
 package com.pricestalker.demo.controllers;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -48,10 +49,15 @@ public class ProductController {
 		return ResponseEntity.status(HttpStatus.CREATED).body(ProductResponseDto.from(product));
 	}
 	
-	@PostMapping("/products/{id}/price-histories")
-	public ResponseEntity<List<PriceHistoryResponseDto>> getPriceHistories(@RequestBody PriceHistoryRequestDto priceHistoryRequestDto) {
+	@GetMapping("/products/{id}/price-histories")
+	public ResponseEntity<List<PriceHistoryResponseDto>> getPriceHistories(
+			@RequestParam(defaultValue = "0000-00-00 00:00:00") LocalDateTime after,
+			@RequestParam boolean all,
+			@PathVariable String id
+	) {
+		PriceHistoryRequestDto priceHistoryRequestDto = new PriceHistoryRequestDto(id, after, all);
 		List<PriceHistory> priceHistories = this.priceHistoryService.getPriceHistories(priceHistoryRequestDto);
-		List<PriceHistoryResponseDto> dtoList = new ArrayList<PriceHistoryResponseDto>();
+		List<PriceHistoryResponseDto> dtoList = new ArrayList<>();
 		for (PriceHistory priceHistory: priceHistories) {
 			dtoList.add(PriceHistoryResponseDto.from(priceHistory));
 		}
