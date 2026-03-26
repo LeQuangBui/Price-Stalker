@@ -1,6 +1,6 @@
 package com.pricestalker.demo.controllers;
 
-import java.io.IOException;
+import java.io.IOException; 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -27,6 +27,7 @@ import com.pricestalker.demo.entities.PriceHistory;
 import com.pricestalker.demo.entities.Product;
 import com.pricestalker.demo.services.PriceHistoryService;
 import com.pricestalker.demo.services.ProductService;
+
 
 @RestController
 public class ProductController {

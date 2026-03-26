@@ -38,6 +38,7 @@ public class SecurityConfig {
         		authorizeHttp -> {
         			authorizeHttp.requestMatchers("/products/**").permitAll();	
         			authorizeHttp.requestMatchers("/auth/**").permitAll();
+        			authorizeHttp.requestMatchers("/chat").permitAll();
 	            	authorizeHttp.anyRequest().authenticated();
             })
             .sessionManagement(session -> session

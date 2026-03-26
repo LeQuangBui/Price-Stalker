@@ -4,6 +4,7 @@ import ProductList from '../../components/ProductList/ProductList'
 import AddByUrl from '../../components/AddByUrl/AddByUrl'
 import { getProducts } from '../../api/products'
 import './Home.css'
+import ChatWidget from '../../components/ChatWidget/ChatWidget'
 
 export default function Home() {
   const [searchParams, setSearchParams] = useState({})
@@ -65,6 +66,8 @@ export default function Home() {
           )}
         </>
       )}
+
+      <ChatWidget/>
     </>
   )
 }
