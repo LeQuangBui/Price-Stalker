@@ -55,23 +55,7 @@ Remeber to run the docker file
 
 ### Setting up the backend
 From `src/main/resources`
-create a `application.properties` file and copy all the fields from `application.properties.example` and insert necessary details. Here is the sample:
-
-```
-spring.application.name=demo
-spring.datasource.url=jdbc:mysql://localhost:3306/price_stalker
-spring.datasource.password=root
-spring.datasource.username=root
-spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
-spring.jpa.hibernate.ddl-auto=validate
-server.port=8000
-jwt.secret={SECRET}
-jwt.expiration=86400000
-cors.allowed.origin=http://localhost:3000/
-chrome.driver.path=C:\Users\b0xb0x\Downloads\chromedriver-win64\chromedriver-win64
-spring.ai.anthropic.api-key={API_KEY}
-
-```
+create a `application.properties` file and copy all the fields from `application.properties.example` and insert necessary details. 
 After that we can now run the backend
 
 ```
