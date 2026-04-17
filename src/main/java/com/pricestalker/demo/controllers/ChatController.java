@@ -1,12 +1,12 @@
 package com.pricestalker.demo.controllers;
-import java.util.Map;
+import java.util.Map; 
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import com.pricestalker.demo.services.ChatService;
-import org.springframework.web.bind.annotation.CrossOrigin;
 
-@CrossOrigin(origins = "http://localhost:5173")
+
+
 @RestController
 public class ChatController {
 	private final ChatService chatService;
@@ -18,7 +18,7 @@ public class ChatController {
 		
 		
 		@PostMapping("/chat")
-		public Map<String, String> chat(@RequestParam Map<String, String> body) {
+		public Map<String, String> chat(@RequestBody Map<String, String> body) {
 			String message = body.get("message");
 			
 			if (message == null || message.trim().isEmpty()) {

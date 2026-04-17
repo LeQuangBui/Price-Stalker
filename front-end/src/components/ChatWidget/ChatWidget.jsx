@@ -28,9 +28,11 @@ export default function AIChatBox() {
     setInput('')
     setLoading(true)
 
+    const API_URL = import.meta.env.VITE_API_URL
+    
     // Modify the endpoint later 
     try {
-      const response = await fetch('http://localhost:8080/chat', { 
+      const response = await fetch('${API_URL}/chat', { 
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

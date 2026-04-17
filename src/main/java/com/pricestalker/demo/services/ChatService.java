@@ -1,6 +1,6 @@
 package com.pricestalker.demo.services;
 
-import java.util.UUID; 
+import java.util.UUID;  
 
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
@@ -26,7 +26,7 @@ public class ChatService {
 	    }
 		return chatClient.prompt()
 				.user(userMessage -> userMessage.text(prompt))
-				.advisors(a -> a.param(ChatMemory.CONVERSATION_ID, conversationId))
+				.advisors(a -> a.param("chat_memory_conversation_id", conversationId))
 				.call()
 				.content();
 	}
