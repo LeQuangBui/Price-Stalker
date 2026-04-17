@@ -69,7 +69,7 @@ jwt.secret=N9f348j09f8jjfoi38hg4985jg98ufh8943fj7hf4uyf87as76g34f0837hybf83ufh08
 jwt.expiration=86400000
 cors.allowed.origin=http://localhost:3000/
 chrome.driver.path=C:\Users\b0xb0x\Downloads\chromedriver-win64\chromedriver-win64
-spring.ai.anthropic.api-key=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
+spring.ai.anthropic.api-key={API_KEY}
 
 ```
 After that we can now run the backend
