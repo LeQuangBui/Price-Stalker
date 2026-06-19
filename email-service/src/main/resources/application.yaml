@@ -1,0 +1,29 @@
+spring:
+  application:
+    name: email-service
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3305/price_stalker_test}
+    username: ${SPRING_DATASOURCE_USERNAME:root}
+    password: ${SPRING_DATASOURCE_PASSWORD:root}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: false
+  rabbitmq:
+    host: ${SPRING_RABBITMQ_HOST:localhost}
+    port: ${SPRING_RABBITMQ_PORT:5672}
+    username: ${SPRING_RABBITMQ_USERNAME:guest}
+    password: ${SPRING_RABBITMQ_PASSWORD:guest}
+
+server:
+  port: ${SERVER_PORT:8091}
+
+mail:
+  from: ${MAIL_FROM:PUT_YOUR_FROM_EMAIL_HERE}
+  reply-to: ${MAIL_REPLY_TO:PUT_YOUR_REPLY_TO_EMAIL_HERE}
+  resend:
+    api-key: ${RESEND_API_KEY:PUT_YOUR_API_KEY_HERE}
+    base-url: ${RESEND_BASE_URL:https://api.resend.com}
+    connect-timeout-seconds: ${RESEND_CONNECT_TIMEOUT_SECONDS:10}

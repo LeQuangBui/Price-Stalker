@@ -1,20 +1,29 @@
+.search-layer {
+  position: relative;
+  z-index: 40;
+}
+
 .add-by-url-section {
   display: flex;
+  flex-direction: column;
+  justify-content: center;
   align-items: center;
-  gap: 16px;
-  margin-bottom: 32px;
-  padding: 20px 24px;
-  background: var(--bg-primary);
+  gap: 14px;
+  min-height: 100%;
+  padding: 22px;
+  background: var(--surface-raised);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-sm);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(18px);
 }
 
 .add-by-url-label {
   font-size: 15px;
-  color: var(--text-secondary);
+  color: var(--text-primary);
   white-space: nowrap;
-  font-weight: 600;
+  font-weight: 800;
+  align-self: flex-start;
 }
 
 .pagination {
@@ -28,16 +37,19 @@
   padding: 10px 20px;
   font-size: 14px;
   font-weight: 600;
-  border: none;
+  border: 1px solid color-mix(in srgb, var(--primary) 42%, var(--border));
   border-radius: var(--radius-sm);
   background: var(--primary);
   color: white;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
+  box-shadow: var(--shadow-sm);
 }
 
 .pagination button:hover:not(:disabled) {
   background: var(--primary-dark);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow);
 }
 
 .pagination button:disabled {
@@ -59,6 +71,10 @@
   text-align: center;
   padding: 60px 20px;
   font-size: 16px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow-sm);
 }
 
 .error-text {
@@ -66,9 +82,10 @@
   text-align: center;
   padding: 60px 20px;
   font-size: 16px;
-  background: var(--bg-primary);
-  border-radius: var(--radius);
-  border: 1px solid var(--danger);
+  background: var(--surface-raised);
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--danger) 44%, var(--border));
+  box-shadow: var(--shadow-sm);
 }
 
 @media (max-width: 768px) {

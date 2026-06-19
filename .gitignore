@@ -109,6 +109,7 @@ yarn-debug.log*
 .env
 .env.local
 .env.*.local
+.env.prod
 
 # Build and Coverage
 dist/

@@ -1,64 +1,71 @@
-const BASE_URL = import.meta.env.VITE_API_URL
+import {
+  apiRequest,
+  getToken,
+  hasToken,
+  isUnauthorizedError,
+  removeToken,
+  setToken
+} from './client'
 
-// Token management
-export const getToken = () => localStorage.getItem('token')
-export const setToken = (token) => localStorage.setItem('token', token)
-export const removeToken = () => localStorage.removeItem('token')
-
-// Helper to create headers with auth token
-export const getHeaders = () => {
-  const headers = {
-    'Content-Type': 'application/json'
-  }
-  const token = getToken()
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`
-  }
-  return headers
-}
-
-// Auth APIs
 export async function login(username, password) {
-  const res = await fetch(`${BASE_URL}/auth/login`, {
+  const data = await apiRequest('/auth/login', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password })
+    auth: false,
+    body: { username, password }
   })
-  if (!res.ok) {
-    const error = await res.text()
-    throw new Error(error || 'Login failed')
-  }
-  const data = await res.json()
   setToken(data.token)
   return data
 }
 
-export async function signup(username, password, email) {
-  const res = await fetch(`${BASE_URL}/auth/signup`, {
+export function signup(username, password, email) {
+  return apiRequest('/auth/signup', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password, email })
+    auth: false,
+    body: { username, password, email }
   })
-  if (!res.ok) {
-    const error = await res.text()
-    throw new Error(error || 'Signup failed')
-  }
-  const data = await res.json()
+}
+
+export async function verifyEmail(email, code) {
+  const data = await apiRequest('/auth/email-verification/verify', {
+    method: 'POST',
+    auth: false,
+    body: { email, code }
+  })
   setToken(data.token)
   return data
+}
+
+export function resendEmailVerification(email) {
+  return apiRequest('/auth/email-verification/resend', {
+    method: 'POST',
+    auth: false,
+    body: { email }
+  })
+}
+
+export function requestPasswordReset(email) {
+  return apiRequest('/auth/password-reset/request', {
+    method: 'POST',
+    auth: false,
+    body: { email }
+  })
+}
+
+export function confirmPasswordReset(token, newPassword) {
+  return apiRequest('/auth/password-reset/confirm', {
+    method: 'POST',
+    auth: false,
+    parse: false,
+    body: { token, newPassword }
+  })
 }
 
 export function logout() {
   removeToken()
 }
 
-// User API
-export async function getUserProfile() {
-  const res = await fetch(`${BASE_URL}/users/me`, {
-    headers: getHeaders()
-  })
-  if (!res.ok) {
-    throw new Error('Failed to fetch user profile')
-  }
-  return res.json()
+export function getUserProfile() {
+  return apiRequest('/users/me')
 }
+
+export { getToken, hasToken, isUnauthorizedError }

@@ -1,0 +1,31 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:price-stalker;MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE;NON_KEYWORDS=USER
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+  flyway:
+    enabled: false
+  rabbitmq:
+    dynamic: false
+    listener:
+      simple:
+        auto-startup: false
+
+cors:
+  allowed:
+    origin: http://localhost:3000
+
+scraper:
+  api:
+    url: http://localhost:8000
+
+app:
+  frontend-base-url: http://localhost:3000
+
+jwt:
+  secret: N9f348j09f8jjfoi38hg4985jg98ufh8943fj7hf4uyf87as76g34f0837hybf83ufh087y3b4uyf
+  expiration: 86400000

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body style="margin:0;background:#e2e8f0;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#e2e8f0;padding:24px 0;">
+    <tr>
+        <td align="center">
+            <table role="presentation" width="640" cellpadding="0" cellspacing="0" style="max-width:640px;background:#ffffff;border-radius:16px;overflow:hidden;">
+                <tr>
+                    <td th:replace="~{fragments/header :: header('Welcome to Price Stalker')}"></td>
+                </tr>
+                <tr>
+                    <td style="padding:32px;color:#0f172a;font-family:Arial,sans-serif;font-size:16px;line-height:1.7;">
+                        <p style="margin:0 0 16px 0;">
+                            Hello <strong th:text="${user.username}">user</strong>,
+                        </p>
+                        <p style="margin:0 0 16px 0;">
+                            Your account is ready. You can now bookmark products, set price alerts, and get notified when tracked items drop to your target price.
+                        </p>
+                        <p style="margin:0 0 16px 0;">
+                            We will send notifications to <strong th:text="${user.email}">user@example.com</strong>.
+                        </p>
+                        <p style="margin:0;">
+                            Next step: add a product, choose a threshold, and let the background services watch the price for you.
+                        </p>
+                    </td>
+                </tr>
+                <tr>
+                    <td th:replace="~{fragments/footer :: footer()}"></td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+</table>
+</body>
+</html>

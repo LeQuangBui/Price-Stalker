@@ -1,0 +1,17 @@
+.git
+.github
+.idea
+.vscode
+planning
+**/target
+**/node_modules
+**/dist
+**/__pycache__
+**/.pytest_cache
+**/.venv
+**/venv
+**/*.pyc
+**/*.pyo
+**/.env
+front-end/npm-debug.log*
+crawler/*.log

@@ -1,0 +1,187 @@
+# Production stack for a single VPS — build on the server (no external registry).
+#
+#   cp .env.prod.example .env.prod   # then fill in real values
+#   docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+#
+# Only Caddy publishes ports (80/443). Every other service is internal to the
+# pricestalker_net network. The api owns the Flyway schema, so cron-service and
+# email-service wait for it to become healthy before they start (their
+# ddl-auto=validate fails if the tables don't exist yet).
+
+name: price-stalker
+
+services:
+  mysql:
+    image: mysql:8.3
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD in .env.prod}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-price_stalker}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    networks: [pricestalker_net]
+
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    networks: [pricestalker_net]
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    restart: unless-stopped
+    depends_on:
+      mysql: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-price_stalker}
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD in .env.prod}
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: "5672"
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER:-guest}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
+      SERVER_PORT: "8080"
+      CORS_ALLOWED_ORIGIN: ${PUBLIC_BASE_URL:?set PUBLIC_BASE_URL in .env.prod}
+      APP_FRONTEND_BASE_URL: ${PUBLIC_BASE_URL:?set PUBLIC_BASE_URL in .env.prod}
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env.prod}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
+    # eclipse-temurin (Ubuntu based) ships bash; /dev/tcp confirms the port is
+    # bound, which for Spring Boot means context startup + Flyway migration done.
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8080"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 120s
+    networks: [pricestalker_net]
+
+  cron-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.cron-service
+    restart: unless-stopped
+    depends_on:
+      mysql: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+      api: { condition: service_healthy }   # api runs the Flyway migrations first
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-price_stalker}
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD in .env.prod}
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: "5672"
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER:-guest}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
+      SERVER_PORT: "8090"
+    networks: [pricestalker_net]
+
+  email-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.email-service
+    restart: unless-stopped
+    depends_on:
+      mysql: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+      api: { condition: service_healthy }
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-price_stalker}
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD in .env.prod}
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: "5672"
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER:-guest}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
+      SERVER_PORT: "8091"
+      MAIL_FROM: ${MAIL_FROM:?set MAIL_FROM in .env.prod}
+      MAIL_REPLY_TO: ${MAIL_REPLY_TO:?set MAIL_REPLY_TO in .env.prod}
+      RESEND_API_KEY: ${RESEND_API_KEY:?set RESEND_API_KEY in .env.prod}
+      RESEND_BASE_URL: ${RESEND_BASE_URL:-https://api.resend.com}
+    networks: [pricestalker_net]
+
+  crawler:
+    build:
+      context: .
+      dockerfile: crawler/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      rabbitmq: { condition: service_healthy }
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: "5672"
+      RABBITMQ_USERNAME: ${RABBITMQ_USER:-guest}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
+      PROXY_URL: ${PROXY_URL:-}
+      # Optional S3-compatible storage for product images (e.g. DigitalOcean
+      # Spaces). Leave blank to disable. Not related to the AWS deploy you dropped.
+      AWS_REGION: ${AWS_REGION:-}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_BUCKET_NAME: ${AWS_BUCKET_NAME:-}
+      AWS_IMAGES_FOLDER_URI: ${AWS_IMAGES_FOLDER_URI:-}
+      AWS_IMAGES_FOLDER_URL: ${AWS_IMAGES_FOLDER_URL:-}
+      AWS_KEY_PREFIX: ${AWS_KEY_PREFIX:-}
+      LOCAL_TEMP_FOLDER: ${LOCAL_TEMP_FOLDER:-/tmp/crawler}
+    networks: [pricestalker_net]
+
+  frontend:
+    build:
+      context: .
+      dockerfile: front-end/Dockerfile
+      args:
+        # Baked into the SPA at build time. The browser calls the API at this URL;
+        # Caddy routes /api/* to the api container (stripping the /api prefix).
+        # PUBLIC_BASE_URL presence is enforced by the api service's :? check above.
+        VITE_API_URL: ${PUBLIC_BASE_URL}/api
+    restart: unless-stopped
+    depends_on:
+      - api
+    networks: [pricestalker_net]
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - frontend
+      - api
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      # A real domain (price-stalker.example.com) => automatic HTTPS.
+      # Use ":80" to serve plain HTTP when testing against a bare IP.
+      DOMAIN: ${DOMAIN:?set DOMAIN in .env.prod}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks: [pricestalker_net]
+
+volumes:
+  mysql_data:
+  rabbitmq_data:
+  caddy_data:
+  caddy_config:
+
+networks:
+  pricestalker_net:
+    driver: bridge

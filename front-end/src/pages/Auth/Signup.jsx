@@ -3,21 +3,21 @@ import { Link, useNavigate } from 'react-router-dom'
 import { signup } from '../../api/auth'
 import './Auth.css'
 
-export default function Signup({ onSignup }) {
+export default function Signup() {
   const [formData, setFormData] = useState({
     username: '',
     password: '',
     email: '',
     confirmPassword: ''
-  });
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
+  })
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+  const navigate = useNavigate()
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    if (!formData.username || !formData.password) {
-      setError('Username and password are required')
+  const handleSubmit = async (event) => {
+    event.preventDefault()
+    if (!formData.username || !formData.password || !formData.email) {
+      setError('Username, email, and password are required')
       return
     }
     if (formData.password !== formData.confirmPassword) {
@@ -30,8 +30,7 @@ export default function Signup({ onSignup }) {
 
     try {
       const data = await signup(formData.username, formData.password, formData.email)
-      onSignup(data.username)
-      navigate('/')
+      navigate(`/verify-email?email=${encodeURIComponent(data.email)}`)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -39,9 +38,9 @@ export default function Signup({ onSignup }) {
     }
   }
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prevData => ({ ...prevData, [name]: value }));
+  const handleChange = (event) => {
+    const { name, value } = event.target
+    setFormData((prevData) => ({ ...prevData, [name]: value }))
   }
 
   return (
@@ -94,7 +93,7 @@ export default function Signup({ onSignup }) {
         </div>
         {error && <p className="form-error">{error}</p>}
         <button type="submit" className="form-button" disabled={loading}>
-          {loading ? 'Signing up...' : 'Sign Up'}
+          {loading ? 'Creating account...' : 'Sign Up'}
         </button>
       </form>
       <p className="auth-footer">

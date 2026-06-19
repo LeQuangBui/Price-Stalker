@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body style="margin:0;background:#e2e8f0;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#e2e8f0;padding:24px 0;">
+    <tr>
+        <td align="center">
+            <table role="presentation" width="640" cellpadding="0" cellspacing="0" style="max-width:640px;background:#ffffff;border-radius:16px;overflow:hidden;">
+                <tr>
+                    <td th:replace="~{fragments/header :: header('Price Drop Detected')}"></td>
+                </tr>
+                <tr>
+                    <td style="padding:32px;color:#0f172a;font-family:Arial,sans-serif;font-size:16px;line-height:1.7;">
+                        <p style="margin:0 0 16px 0;">
+                            Hello <strong th:text="${user.username}">user</strong>,
+                        </p>
+                        <p style="margin:0 0 16px 0;">
+                            <strong th:text="${product.name}">Tracked product</strong> has dropped in price and reached your alert threshold.
+                        </p>
+                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 16px 0;border:1px solid #cbd5e1;border-radius:12px;overflow:hidden;">
+                            <tr>
+                                <td style="padding:14px 18px;background:#f8fafc;color:#475569;font-family:Arial,sans-serif;font-size:14px;">Previous price</td>
+                                <td style="padding:14px 18px;background:#f8fafc;color:#0f172a;font-family:Arial,sans-serif;font-size:16px;font-weight:700;" th:text="${oldPrice}">
+                                    0
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding:14px 18px;color:#475569;font-family:Arial,sans-serif;font-size:14px;">New price</td>
+                                <td style="padding:14px 18px;color:#0f172a;font-family:Arial,sans-serif;font-size:16px;font-weight:700;" th:text="${newPrice}">
+                                    0
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding:14px 18px;background:#f8fafc;color:#475569;font-family:Arial,sans-serif;font-size:14px;">Alert threshold</td>
+                                <td style="padding:14px 18px;background:#f8fafc;color:#0f172a;font-family:Arial,sans-serif;font-size:16px;font-weight:700;" th:text="${alert.thresholdPrice}">
+                                    0
+                                </td>
+                            </tr>
+                        </table>
+                        <p style="margin:0 0 16px 0;">
+                            Product URL:
+                            <a th:href="${product.url}" th:text="${product.url}" style="color:#2563eb;">https://example.com/product</a>
+                        </p>
+                        <p style="margin:0;">
+                            This notification was generated from event <span th:text="${detectedAt}">timestamp</span>.
+                        </p>
+                    </td>
+                </tr>
+                <tr>
+                    <td th:replace="~{fragments/footer :: footer()}"></td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+</table>
+</body>
+</html>
