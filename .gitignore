@@ -126,3 +126,4 @@ coverage/
 # OS/Editor
 .DS_Store
 .vscode/
+.gstack/

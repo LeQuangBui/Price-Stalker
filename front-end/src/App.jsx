@@ -10,6 +10,7 @@ import UserProfile from './pages/User/UserProfile'
 import Bookmarks from './pages/Bookmarks/Bookmarks'
 import ProductDetail from './pages/Product/ProductDetail'
 import Alerts from './pages/Alerts/Alerts'
+import Landing from './pages/Landing/Landing'
 import { hasToken, logout } from './api/auth'
 import { useThemeMode } from './theme/useThemeMode'
 import './App.css'
@@ -37,7 +38,8 @@ export default function App() {
           />
           <main className="pb-12">
             <Routes>
-              <Route path="/" element={<Home />} />
+              <Route path="/" element={isSignedIn ? <Home /> : <Landing />} />
+              <Route path="/browse" element={<Home />} />
               <Route path="/login" element={<Login onLogin={handleLogin} />} />
               <Route path="/signup" element={<Signup />} />
               <Route path="/verify-email" element={<VerifyEmail onVerified={handleLogin} />} />
