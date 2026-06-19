@@ -10,6 +10,7 @@ import {
 } from '../../api/bookmarks'
 import { isUnauthorizedError } from '../../api/auth'
 import { formatDate, formatPrice, getPrimaryImage, getTrackedPrice } from '../../utils/formatters'
+import { useConfirm } from '../../components/ConfirmDialog/useConfirm'
 import './Bookmarks.css'
 
 export default function Bookmarks() {
@@ -24,6 +25,7 @@ export default function Bookmarks() {
   const [newBookmarkName, setNewBookmarkName] = useState('')
   const [savingBookmarkId, setSavingBookmarkId] = useState(null)
   const navigate = useNavigate()
+  const [confirm, confirmDialog] = useConfirm()
 
   useEffect(() => {
     fetchBookmarks()
@@ -94,7 +96,12 @@ export default function Bookmarks() {
   }
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Delete this bookmark?')) {
+    const confirmed = await confirm({
+      title: 'Delete this bookmark?',
+      message: 'This permanently removes the bookmark and its product list.',
+      confirmLabel: 'Delete'
+    })
+    if (!confirmed) {
       return
     }
 
@@ -112,7 +119,7 @@ export default function Bookmarks() {
         return next
       })
     } catch (err) {
-      alert(`Failed to delete bookmark: ${err.message}`)
+      setError(`Failed to delete bookmark: ${err.message}`)
     }
   }
 
@@ -137,7 +144,7 @@ export default function Bookmarks() {
       setNewBookmarkName('')
       setShowCreateForm(false)
     } catch (err) {
-      alert(`Failed to create bookmark: ${err.message}`)
+      setError(`Failed to create bookmark: ${err.message}`)
     }
   }
 
@@ -215,11 +222,32 @@ export default function Bookmarks() {
     [bookmarks.length, collapsedIds]
   )
 
-  if (loading) return <div className="bookmarks-container">Loading...</div>
-  if (error && bookmarks.length === 0) return <div className="bookmarks-container error">{error}</div>
+  if (loading) {
+    return (
+      <div className="bookmarks-container">
+        <p className="sr-only" role="status">Loading bookmarks…</p>
+        <div className="bookmarks-grid" aria-hidden="true">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div key={index} className="skeleton bookmark-card-skeleton" />
+          ))}
+        </div>
+      </div>
+    )
+  }
+  if (error && bookmarks.length === 0) {
+    return (
+      <div className="bookmarks-container">
+        <div className="page-error">
+          <span>{error}</span>
+          <button type="button" className="retry-btn" onClick={fetchBookmarks}>Retry</button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="bookmarks-container">
+      {confirmDialog}
       <div className="bookmarks-header">
         <div>
           <h2>My Bookmarks</h2>
@@ -261,7 +289,11 @@ export default function Bookmarks() {
       {error && bookmarks.length > 0 && <p className="save-error">{error}</p>}
 
       {bookmarks.length === 0 ? (
-        <p className="no-bookmarks">No bookmarks yet.</p>
+        <div className="empty-state">
+          <h3>No bookmarks yet</h3>
+          <p>Bookmarks group products you want to watch together. Create one, then add products by search or by pasting a URL.</p>
+          <button type="button" className="empty-state-cta" onClick={() => setShowCreateForm(true)}>New Bookmark</button>
+        </div>
       ) : (
         <>
           <div className="bookmarks-grid">
@@ -330,35 +362,30 @@ export default function Bookmarks() {
                       {draft.products.length > 0 ? (
                         <div className="bookmark-products">
                           {draft.products.map((product) => (
-                            <Link
-                              key={product.id}
-                              to={`/products/${product.id}`}
-                              className="product-preview"
-                            >
-                              {getPrimaryImage(product) ? (
-                                <img src={getPrimaryImage(product)} alt={product.name} />
-                              ) : (
-                                <div className="product-preview-placeholder">No image</div>
-                              )}
+                            <div key={product.id} className="product-preview">
+                              <Link to={`/products/${product.id}`} className="product-preview-link">
+                                {getPrimaryImage(product) ? (
+                                  <img src={getPrimaryImage(product)} alt={product.name} />
+                                ) : (
+                                  <div className="product-preview-placeholder">No image</div>
+                                )}
 
-                              <div className="product-preview-info">
-                                <span className="product-name">{product.name}</span>
-                                <span className="product-price">
-                                  {formatPrice(getTrackedPrice(product))} {product.currency || ''}
-                                </span>
-                              </div>
+                                <div className="product-preview-info">
+                                  <span className="product-name">{product.name}</span>
+                                  <span className="product-price">
+                                    {formatPrice(getTrackedPrice(product), product.currency)}
+                                  </span>
+                                </div>
+                              </Link>
 
                               <button
                                 type="button"
                                 className="remove-product-btn"
-                                onClick={(event) => {
-                                  event.preventDefault()
-                                  handleProductRemove(bookmark.id, product.id)
-                                }}
+                                onClick={() => handleProductRemove(bookmark.id, product.id)}
                               >
                                 Remove
                               </button>
-                            </Link>
+                            </div>
                           ))}
                         </div>
                       ) : (

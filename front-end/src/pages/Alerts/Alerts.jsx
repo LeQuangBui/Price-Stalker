@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { deleteAlert, getAlerts, updateAlert } from '../../api/alerts'
 import { isUnauthorizedError } from '../../api/auth'
 import { formatPrice, getTrackedPrice } from '../../utils/formatters'
+import { useConfirm } from '../../components/ConfirmDialog/useConfirm'
 import './Alerts.css'
 
 export default function Alerts() {
@@ -14,6 +15,7 @@ export default function Alerts() {
   const [error, setError] = useState('')
   const [savingId, setSavingId] = useState(null)
   const navigate = useNavigate()
+  const [confirm, confirmDialog] = useConfirm()
 
   useEffect(() => {
     loadAlerts()
@@ -102,7 +104,12 @@ export default function Alerts() {
   }
 
   const handleDelete = async (alertId) => {
-    if (!window.confirm('Delete this alert?')) {
+    const confirmed = await confirm({
+      title: 'Delete this alert?',
+      message: 'This removes the price alert. You can recreate it from the product page.',
+      confirmLabel: 'Delete'
+    })
+    if (!confirmed) {
       return
     }
 
@@ -127,6 +134,7 @@ export default function Alerts() {
 
   return (
     <div className="alerts-page">
+      {confirmDialog}
       <div className="alerts-header">
         <div>
           <h2>My Alerts</h2>
@@ -135,9 +143,30 @@ export default function Alerts() {
         <Link to="/" className="alerts-home-link">Browse products</Link>
       </div>
 
-      {loading && <p className="alerts-state">Loading...</p>}
-      {error && <p className="alerts-state error">{error}</p>}
-      {emptyState && <p className="alerts-state">No alerts yet.</p>}
+      {loading && (
+        <>
+          <p className="sr-only" role="status">Loading alerts…</p>
+          <div className="alerts-list" aria-hidden="true">
+            {Array.from({ length: 3 }).map((_, index) => (
+              <div key={index} className="skeleton alert-card-skeleton" />
+            ))}
+          </div>
+        </>
+      )}
+      {error && (
+        <div className="alerts-state error">
+          <span>{error}</span>
+          <button type="button" className="retry-btn" onClick={loadAlerts}>Retry</button>
+        </div>
+      )}
+
+      {emptyState && (
+        <div className="empty-state">
+          <h3>No price alerts yet</h3>
+          <p>Set an alert on any product and we&apos;ll email you when the price drops below your target.</p>
+          <Link to="/" className="empty-state-cta">Browse products</Link>
+        </div>
+      )}
 
       {!loading && alerts.length > 0 && (
         <>
@@ -154,7 +183,7 @@ export default function Alerts() {
                         {alert.product?.name || 'Unknown product'}
                       </Link>
                       <p className="alert-product-meta">
-                        Current price: {formatPrice(trackedPrice)} {alert.product?.currency || ''}
+                        Current price: {formatPrice(trackedPrice, alert.product?.currency)}
                       </p>
                     </div>
 
@@ -170,7 +199,7 @@ export default function Alerts() {
                         />
                       </label>
 
-                      <label className="alert-checkbox">
+                      <label className="alert-checkbox" title="When off, this alert is paused and won't send emails.">
                         <input
                           type="checkbox"
                           checked={draft.active}
@@ -190,7 +219,7 @@ export default function Alerts() {
                       {savingId === alert.id ? 'Saving...' : 'Save'}
                     </button>
                     <button
-                      className="alert-action-button secondary"
+                      className="alert-action-button danger"
                       onClick={() => handleDelete(alert.id)}
                     >
                       Delete

@@ -48,8 +48,9 @@ export default function Signup() {
       <h2>Sign Up</h2>
       <form onSubmit={handleSubmit} className="auth-form">
         <div className="form-group">
-          <label className="form-label">Username</label>
+          <label className="form-label" htmlFor="signup-username">Username</label>
           <input
+            id="signup-username"
             type="text"
             name="username"
             value={formData.username}
@@ -59,8 +60,9 @@ export default function Signup() {
           />
         </div>
         <div className="form-group">
-          <label className="form-label">Email</label>
+          <label className="form-label" htmlFor="signup-email">Email</label>
           <input
+            id="signup-email"
             type="email"
             name="email"
             value={formData.email}
@@ -70,8 +72,9 @@ export default function Signup() {
           />
         </div>
         <div className="form-group">
-          <label className="form-label">Password</label>
+          <label className="form-label" htmlFor="signup-password">Password</label>
           <input
+            id="signup-password"
             type="password"
             name="password"
             value={formData.password}
@@ -81,8 +84,9 @@ export default function Signup() {
           />
         </div>
         <div className="form-group">
-          <label className="form-label">Confirm Password</label>
+          <label className="form-label" htmlFor="signup-confirm-password">Confirm Password</label>
           <input
+            id="signup-confirm-password"
             type="password"
             name="confirmPassword"
             value={formData.confirmPassword}

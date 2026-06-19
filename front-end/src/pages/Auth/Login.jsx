@@ -61,8 +61,9 @@ export default function Login({ onLogin }) {
       <h2>Login</h2>
       <form onSubmit={handleSubmit} className="auth-form">
         <div className="form-group">
-          <label className="form-label">Username</label>
+          <label className="form-label" htmlFor="login-username">Username</label>
           <input
+            id="login-username"
             type="text"
             value={username}
             onChange={(event) => setUsername(event.target.value)}
@@ -71,8 +72,9 @@ export default function Login({ onLogin }) {
           />
         </div>
         <div className="form-group">
-          <label className="form-label">Password</label>
+          <label className="form-label" htmlFor="login-password">Password</label>
           <input
+            id="login-password"
             type="password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
@@ -100,8 +102,9 @@ export default function Login({ onLogin }) {
       {showResetForm && (
         <form onSubmit={handlePasswordReset} className="auth-form auth-secondary-form">
           <div className="form-group">
-            <label className="form-label">Account email</label>
+            <label className="form-label" htmlFor="login-reset-email">Account email</label>
             <input
+              id="login-reset-email"
               type="email"
               value={resetEmail}
               onChange={(event) => setResetEmail(event.target.value)}

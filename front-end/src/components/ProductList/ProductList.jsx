@@ -25,7 +25,7 @@ export default function ProductList({ products }) {
           <Link
             key={product.id}
             to={`/products/${product.id}`}
-            className="product-card group focus:outline-none focus:ring-4 focus:ring-teal-500/20"
+            className="product-card group"
           >
             <div className="product-image-container">
               {primaryImage ? (
@@ -44,16 +44,16 @@ export default function ProductList({ products }) {
               </span>
               <div className="product-price">
                 <span className={showFlash ? 'product-price-flash' : 'product-price-current'}>
-                  {formatPrice(trackedPrice)} {product.currency || ''}
+                  {formatPrice(trackedPrice, product.currency)}
                 </span>
                 {showFlash && product.price !== null && product.price !== undefined && (
                   <span className="product-price-original">
-                    {formatPrice(product.price)} {product.currency || ''}
+                    {formatPrice(product.price, product.currency)}
                   </span>
                 )}
                 {!showFlash && showOriginal && (
                   <span className="product-price-original">
-                    {formatPrice(product.originalPrice)} {product.currency || ''}
+                    {formatPrice(product.originalPrice, product.currency)}
                   </span>
                 )}
               </div>

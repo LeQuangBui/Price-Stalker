@@ -5,6 +5,7 @@ import { isUnauthorizedError } from '../../api/auth'
 import { getProduct } from '../../api/products'
 import AddToBookmark from '../../components/AddToBookmark/AddToBookmark'
 import PriceHistoryChart from '../../components/PriceHistoryChart/PriceHistoryChart'
+import { useConfirm } from '../../components/ConfirmDialog/useConfirm'
 import {
   formatDate,
   formatDateTime,
@@ -23,6 +24,8 @@ export default function ProductDetail({ isSignedIn }) {
   const [slide, setSlide] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [reloadKey, setReloadKey] = useState(0)
+  const [confirm, confirmDialog] = useConfirm()
 
   const [currentAlert, setCurrentAlert] = useState(null)
   const [alertThreshold, setAlertThreshold] = useState('')
@@ -48,7 +51,7 @@ export default function ProductDetail({ isSignedIn }) {
     }
 
     fetchProduct()
-  }, [id])
+  }, [id, reloadKey])
 
   useEffect(() => {
     if (!isSignedIn) {
@@ -141,7 +144,16 @@ export default function ProductDetail({ isSignedIn }) {
   }
 
   const handleDeleteAlert = async () => {
-    if (!currentAlert || !window.confirm('Delete this alert?')) {
+    if (!currentAlert) {
+      return
+    }
+
+    const confirmed = await confirm({
+      title: 'Delete this alert?',
+      message: 'This removes the price alert for this product.',
+      confirmLabel: 'Delete'
+    })
+    if (!confirmed) {
       return
     }
 
@@ -167,11 +179,30 @@ export default function ProductDetail({ isSignedIn }) {
   }
 
   if (loading) {
-    return <div className="product-detail-container">Loading...</div>
+    return (
+      <div className="product-detail-container">
+        <p className="sr-only" role="status">Loading product…</p>
+        <div className="product-detail">
+          <div className="skeleton" style={{ aspectRatio: '1', borderRadius: 'var(--radius)' }} />
+          <div className="product-info">
+            <div className="skeleton" style={{ height: '36px', width: '70%' }} />
+            <div className="skeleton" style={{ height: '90px' }} />
+            <div className="skeleton" style={{ height: '140px' }} />
+          </div>
+        </div>
+      </div>
+    )
   }
 
   if (error) {
-    return <div className="product-detail-container error">{error}</div>
+    return (
+      <div className="product-detail-container">
+        <div className="page-error">
+          <span>{error}</span>
+          <button type="button" className="retry-btn" onClick={() => setReloadKey((value) => value + 1)}>Retry</button>
+        </div>
+      </div>
+    )
   }
 
   if (!product) {
@@ -180,7 +211,13 @@ export default function ProductDetail({ isSignedIn }) {
 
   return (
     <div className="product-detail-container">
-      <Link to="/" className="back-link">&lt;- Back to products</Link>
+      {confirmDialog}
+      <Link to="/" className="back-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="16" height="16" aria-hidden="true">
+          <path d="M15 18l-6-6 6-6" />
+        </svg>
+        Back to products
+      </Link>
 
       <div className="product-detail">
         <div className="product-images">
@@ -229,13 +266,13 @@ export default function ProductDetail({ isSignedIn }) {
 
           <div className="product-price">
             {showFlash && (
-              <span className="price-flash">{formatPrice(product.flash_sale_price)} {product.currency || ''}</span>
+              <span className="price-flash">{formatPrice(product.flash_sale_price, product.currency)}</span>
             )}
             <span className={`price-amount${showFlash ? ' price-struck' : ''}`}>
-              {formatPrice(product.price)} {product.currency || ''}
+              {formatPrice(product.price, product.currency)}
             </span>
-            {showOriginal && (
-              <span className="price-original">{formatPrice(product.originalPrice)} {product.currency || ''}</span>
+            {!showFlash && showOriginal && (
+              <span className="price-original">{formatPrice(product.originalPrice, product.currency)}</span>
             )}
           </div>
 
@@ -275,6 +312,7 @@ export default function ProductDetail({ isSignedIn }) {
 
                 <form className="alert-form" onSubmit={handleAlertSubmit}>
                   <label className="panel-label" htmlFor="threshold-price">Threshold price</label>
+                  <p className="panel-hint">Current price: {formatPrice(trackedPrice, product.currency)}</p>
                   <input
                     id="threshold-price"
                     type="number"
@@ -333,7 +371,7 @@ export default function ProductDetail({ isSignedIn }) {
           <div className="product-meta">
             <div className="meta-item">
               <span className="meta-label">Threshold:</span>
-              <span className="meta-value">{formatPrice(currentAlert.thresholdPrice)} {product.currency || ''}</span>
+              <span className="meta-value">{formatPrice(currentAlert.thresholdPrice, product.currency)}</span>
             </div>
             <div className="meta-item">
               <span className="meta-label">Status:</span>
@@ -341,13 +379,13 @@ export default function ProductDetail({ isSignedIn }) {
             </div>
             <div className="meta-item">
               <span className="meta-label">Last known price:</span>
-              <span className="meta-value">{formatPrice(trackedPrice)} {product.currency || ''}</span>
+              <span className="meta-value">{formatPrice(trackedPrice, product.currency)}</span>
             </div>
           </div>
         </section>
       )}
 
-      <PriceHistoryChart productId={product.id} />
+      <PriceHistoryChart productId={product.id} currency={product.currency} />
 
       <section className="product-panel compact">
         <h2>Tracking Notes</h2>

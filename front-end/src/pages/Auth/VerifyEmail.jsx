@@ -60,8 +60,9 @@ export default function VerifyEmail({ onVerified }) {
       <h2>Verify Email</h2>
       <form onSubmit={handleSubmit} className="auth-form">
         <div className="form-group">
-          <label className="form-label">Email</label>
+          <label className="form-label" htmlFor="verify-email">Email</label>
           <input
+            id="verify-email"
             type="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
@@ -70,8 +71,9 @@ export default function VerifyEmail({ onVerified }) {
           />
         </div>
         <div className="form-group">
-          <label className="form-label">Verification code</label>
+          <label className="form-label" htmlFor="verify-code">Verification code</label>
           <input
+            id="verify-code"
             type="text"
             inputMode="numeric"
             maxLength="6"

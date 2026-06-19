@@ -57,17 +57,14 @@
   font-weight: 600;
   border: none;
   border-radius: var(--radius-sm);
-  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  background: var(--primary);
   color: white;
   cursor: pointer;
-  box-shadow: var(--shadow-sm);
-  transition: transform 0.2s, filter 0.2s, box-shadow 0.2s;
+  transition: background-color 0.2s;
 }
 
 .search-button:hover {
-  filter: brightness(1.04);
-  box-shadow: var(--shadow);
-  transform: translateY(-1px);
+  background: var(--primary-dark);
 }
 
 .search-dropdown {
@@ -83,7 +80,6 @@
   overflow: hidden;
   max-height: 400px;
   overflow-y: auto;
-  backdrop-filter: blur(18px);
 }
 
 .search-status {

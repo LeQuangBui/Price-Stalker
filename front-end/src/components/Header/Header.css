@@ -51,14 +51,6 @@
   background: var(--bg-tertiary);
 }
 
-.header-link::after {
-  content: none;
-}
-
-.header-link:hover::after {
-  width: 0;
-}
-
 .signout-button {
   background: var(--bg-tertiary);
   border: 1px solid var(--border);

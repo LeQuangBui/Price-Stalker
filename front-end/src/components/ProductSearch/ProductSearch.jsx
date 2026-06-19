@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getProducts } from '../../api/products'
 import { formatPrice, getTrackedPrice } from '../../utils/formatters'
@@ -17,8 +17,10 @@ export default function ProductSearch({
   const [searching, setSearching] = useState(false)
   const [showDropdown, setShowDropdown] = useState(false)
   const [activeIndex, setActiveIndex] = useState(-1)
+  const [searchError, setSearchError] = useState(false)
   const debounceRef = useRef(null)
   const navigate = useNavigate()
+  const listboxId = useId()
 
   useEffect(() => () => clearTimeout(debounceRef.current), [])
 
@@ -34,6 +36,7 @@ export default function ProductSearch({
 
     if (!value.trim()) {
       setResults([])
+      setSearchError(false)
       setShowDropdown(false)
       setSearching(false)
       return
@@ -41,6 +44,7 @@ export default function ProductSearch({
 
     debounceRef.current = setTimeout(async () => {
       setSearching(true)
+      setSearchError(false)
       try {
         const params = buildParams(value)
         const data = await getProducts({ ...params, size: 6 })
@@ -48,6 +52,7 @@ export default function ProductSearch({
         setShowDropdown(true)
       } catch {
         setResults([])
+        setSearchError(true)
         setShowDropdown(true)
       } finally {
         setSearching(false)
@@ -116,6 +121,7 @@ export default function ProductSearch({
             value={searchType}
             onChange={(event) => setSearchType(event.target.value)}
             className="search-select"
+            aria-label="Search by"
           >
             <option value="all">All</option>
             <option value="url">URL</option>
@@ -133,7 +139,13 @@ export default function ProductSearch({
             setActiveIndex(-1)
           }, 150)}
           placeholder={placeholder}
+          aria-label="Search products"
           className="search-input"
+          role="combobox"
+          aria-expanded={showDropdown}
+          aria-controls={listboxId}
+          aria-autocomplete="list"
+          aria-activedescendant={activeIndex >= 0 ? `${listboxId}-opt-${activeIndex}` : undefined}
         />
         {showSearchButton && (
           <button onClick={handleSearchClick} className="search-button">
@@ -143,9 +155,12 @@ export default function ProductSearch({
       </div>
 
       {showDropdown && (
-        <div className="search-dropdown">
+        <div className="search-dropdown" role="listbox" id={listboxId}>
           {searching && <p className="search-status">Searching...</p>}
-          {!searching && results.length === 0 && (
+          {!searching && searchError && (
+            <p className="search-status">Search failed. Try again.</p>
+          )}
+          {!searching && !searchError && results.length === 0 && (
             <p className="search-status">No results found</p>
           )}
           {results.map((product, index) => {
@@ -153,6 +168,9 @@ export default function ProductSearch({
             return (
               <div
                 key={product.id}
+                id={`${listboxId}-opt-${index}`}
+                role="option"
+                aria-selected={activeIndex === index}
                 className={`search-dropdown-item${activeIndex === index ? ' active' : ''}`}
                 onMouseEnter={() => setActiveIndex(index)}
                 onMouseDown={() => handleSelect(product)}
@@ -163,7 +181,7 @@ export default function ProductSearch({
                 <div className="search-dropdown-info">
                   <span className="search-dropdown-name">{product.name}</span>
                   <span className="search-dropdown-price">
-                    {formatPrice(getTrackedPrice(product))} {product.currency || ''}
+                    {formatPrice(getTrackedPrice(product), product.currency)}
                   </span>
                 </div>
                 {onSelect && (

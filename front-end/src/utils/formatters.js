@@ -1,14 +1,22 @@
-export function formatPrice(value) {
+export function formatPrice(value, currency) {
   if (value === null || value === undefined || value === '') {
-    return 'N/A'
+    return '—'
   }
 
   const numeric = Number(value)
-  if (Number.isFinite(numeric)) {
-    return numeric.toLocaleString('en-US')
+  if (!Number.isFinite(numeric)) {
+    return String(value)
   }
 
-  return String(value)
+  if (currency) {
+    try {
+      return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(numeric)
+    } catch {
+      // Unknown currency code — fall through to plain number formatting.
+    }
+  }
+
+  return numeric.toLocaleString(undefined)
 }
 
 export function formatDate(value, options = {}) {
@@ -16,7 +24,7 @@ export function formatDate(value, options = {}) {
     return 'N/A'
   }
 
-  return new Date(value).toLocaleDateString('en-US', options)
+  return new Date(value).toLocaleDateString(undefined, options)
 }
 
 export function formatDateTime(value, options = {}) {
@@ -24,7 +32,7 @@ export function formatDateTime(value, options = {}) {
     return 'N/A'
   }
 
-  return new Date(value).toLocaleString('en-US', options)
+  return new Date(value).toLocaleString(undefined, options)
 }
 
 export function getPrimaryImage(product) {

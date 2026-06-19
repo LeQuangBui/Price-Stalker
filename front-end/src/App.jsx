@@ -28,7 +28,6 @@ export default function App() {
   return (
     <BrowserRouter>
       <div className="min-h-screen bg-[var(--bg-secondary)] text-[var(--text-primary)] transition-colors duration-300">
-        <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(circle_at_15%_10%,rgba(20,184,166,0.14),transparent_26%),radial-gradient(circle_at_85%_0%,rgba(244,63,94,0.10),transparent_24%),linear-gradient(180deg,var(--bg-secondary),var(--bg-primary))]" />
         <div className="app-container">
           <Header
             isSignedIn={isSignedIn}

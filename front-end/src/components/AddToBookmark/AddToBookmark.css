@@ -125,7 +125,8 @@
 
 .bookmark-existing-action:disabled,
 .bookmark-create-btn:disabled {
-  background: var(--text-muted);
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
   cursor: not-allowed;
 }
 
@@ -140,5 +141,5 @@
 .bookmark-name-input:focus {
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent);
 }

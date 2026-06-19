@@ -91,6 +91,14 @@
   padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.alert-field input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent);
 }
 
 .alert-checkbox {
@@ -118,13 +126,24 @@
 }
 
 .alert-action-button:disabled {
-  background: var(--text-muted);
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
   cursor: not-allowed;
 }
 
-.alert-action-button.secondary {
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
+.alert-action-button.danger {
+  background: transparent;
+  border: 1px solid var(--danger);
+  color: var(--danger);
+}
+
+.alert-action-button.danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+}
+
+.alert-card-skeleton {
+  height: 150px;
+  border-radius: var(--radius);
 }
 
 .alerts-state {
@@ -137,6 +156,10 @@
 .alerts-state.error {
   color: var(--danger);
   border-color: var(--danger);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 @media (max-width: 768px) {

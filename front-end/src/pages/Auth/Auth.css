@@ -20,7 +20,6 @@
   border-radius: 16px;
   border: 1px solid var(--border);
   box-shadow: var(--shadow-lg);
-  backdrop-filter: blur(18px);
 }
 
 .auth-form h2 {
@@ -83,19 +82,23 @@
   padding: 14px;
   font-size: 16px;
   font-weight: 600;
-  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  background: var(--primary);
   color: white;
   border: none;
   border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: filter 0.2s, box-shadow 0.2s, transform 0.2s;
+  transition: background-color 0.2s;
   margin-top: 8px;
 }
 
-.form-button:hover {
-  filter: brightness(1.04);
-  box-shadow: var(--shadow);
-  transform: translateY(-1px);
+.form-button:hover:not(:disabled) {
+  background: var(--primary-dark);
+}
+
+.form-button:disabled {
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
+  cursor: not-allowed;
 }
 
 .auth-footer {

@@ -13,6 +13,7 @@ export default function Home() {
   const [totalPages, setTotalPages] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [reloadKey, setReloadKey] = useState(0)
   const navigate = useNavigate()
 
   const handleSearch = (params) => {
@@ -34,12 +35,12 @@ export default function Home() {
       })
       .catch(err => setError(err.message))
       .finally(() => setLoading(false))
-  }, [searchParams, page])
+  }, [searchParams, page, reloadKey])
 
   return (
     <>
       <section className="search-layer mb-7 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(340px,0.42fr)]">
-        <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-raised)] p-4 shadow-[var(--shadow)] backdrop-blur-xl sm:p-5">
+        <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-raised)] p-4 shadow-[var(--shadow)] sm:p-5">
           <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="m-0 text-sm font-bold text-[var(--primary)]">Product radar</p>
@@ -58,8 +59,22 @@ export default function Home() {
           <AddByUrl onAdded={handleProductAdded} />
         </div>
       </section>
-      {loading && <p className="loading-text">Loading...</p>}
-      {error && <p className="error-text">{error}</p>}
+      {loading && (
+        <>
+          <p className="sr-only" role="status">Loading products…</p>
+          <div className="product-grid" aria-hidden="true">
+            {Array.from({ length: 8 }).map((_, index) => (
+              <div key={index} className="skeleton product-card-skeleton" />
+            ))}
+          </div>
+        </>
+      )}
+      {error && (
+        <div className="error-text">
+          <span>{error}</span>
+          <button type="button" className="retry-btn" onClick={() => setReloadKey((value) => value + 1)}>Retry</button>
+        </div>
+      )}
       {!loading && !error && (
         <>
           <ProductList products={products} />

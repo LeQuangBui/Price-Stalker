@@ -8,6 +8,7 @@ export default function UserProfile() {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [reloadKey, setReloadKey] = useState(0)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -26,14 +27,26 @@ export default function UserProfile() {
     }
 
     fetchUserProfile()
-  }, [navigate])
+  }, [navigate, reloadKey])
 
   if (loading) {
-    return <div className="user-profile-container">Loading...</div>
+    return (
+      <div className="user-profile-container">
+        <div className="skeleton" style={{ height: '32px', width: '40%', marginBottom: '20px' }} />
+        <div className="skeleton" style={{ height: '160px' }} />
+      </div>
+    )
   }
 
   if (error) {
-    return <div className="user-profile-container error">{error}</div>
+    return (
+      <div className="user-profile-container">
+        <div className="page-error">
+          <span>{error}</span>
+          <button type="button" className="retry-btn" onClick={() => setReloadKey((value) => value + 1)}>Retry</button>
+        </div>
+      </div>
+    )
   }
 
   if (!user) {

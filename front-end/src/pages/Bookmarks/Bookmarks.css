@@ -55,7 +55,8 @@
 }
 
 .save-btn:disabled {
-  background: var(--text-muted);
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
   cursor: not-allowed;
 }
 
@@ -68,7 +69,6 @@
   border-radius: 16px;
   border: 1px solid var(--border);
   box-shadow: var(--shadow-sm);
-  backdrop-filter: blur(14px);
 }
 
 .bookmark-name-input {
@@ -93,7 +93,6 @@
   border-radius: 16px;
   padding: 24px;
   box-shadow: var(--shadow);
-  backdrop-filter: blur(14px);
 }
 
 .bookmark-header {
@@ -143,6 +142,11 @@
   font-weight: 600;
 }
 
+.delete-btn:hover,
+.remove-product-btn:hover {
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+}
+
 .bookmark-editor {
   display: flex;
   flex-direction: column;
@@ -189,6 +193,11 @@
   gap: 12px;
 }
 
+.bookmark-card-skeleton {
+  height: 200px;
+  border-radius: 16px;
+}
+
 .product-preview {
   display: flex;
   gap: 12px;
@@ -196,9 +205,17 @@
   background: color-mix(in srgb, var(--bg-secondary) 78%, var(--bg-primary));
   border: 1px solid var(--border-light);
   border-radius: var(--radius-sm);
+  align-items: center;
+}
+
+.product-preview-link {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
   text-decoration: none;
   color: inherit;
-  align-items: center;
 }
 
 .product-preview:hover {
@@ -289,7 +306,8 @@
 }
 
 .pagination button:disabled {
-  background: var(--text-muted);
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
   cursor: not-allowed;
 }
 

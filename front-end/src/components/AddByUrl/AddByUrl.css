@@ -31,7 +31,7 @@
 
 .add-by-url-btn {
   padding: 12px 24px;
-  background: linear-gradient(135deg, var(--accent), var(--primary));
+  background: var(--primary);
   color: white;
   border: none;
   border-radius: var(--radius-sm);
@@ -39,18 +39,15 @@
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 0.2s;
+  transition: background-color 0.2s;
   min-width: 72px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: var(--shadow-sm);
 }
 
 .add-by-url-btn:hover:not(:disabled) {
-  filter: brightness(1.05);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow);
+  background: var(--primary-dark);
 }
 
 .add-by-url-btn:disabled {
@@ -102,46 +99,6 @@
   border-top-color: white;
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
-}
-
-/* ── Full-page overlay ───────────────────────────────── */
-.add-url-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.45);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
-  backdrop-filter: blur(2px);
-}
-
-.add-url-spinner-box {
-  background: var(--bg-primary);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 40px 56px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 20px;
-  box-shadow: var(--shadow-lg);
-}
-
-.add-url-spinner {
-  width: 48px;
-  height: 48px;
-  border: 4px solid var(--border);
-  border-top-color: var(--primary);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-
-.add-url-spinner-msg {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text-secondary);
 }
 
 @keyframes spin {
