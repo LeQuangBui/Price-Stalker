@@ -9,6 +9,8 @@ import com.pricestalker.core.repository.UserRepository;
 import com.pricestalker.emailservice.provider.MailMessage;
 import com.pricestalker.emailservice.provider.MailProvider;
 import com.pricestalker.emailservice.service.TemplateRenderService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +21,8 @@ import java.util.Map;
 
 @Component
 public class AlertEmailListener {
+    private static final Logger log = LoggerFactory.getLogger(AlertEmailListener.class);
+
     private final NotificationLogRepository notificationLogRepository;
     private final UserRepository userRepository;
     private final TemplateRenderService templateRenderService;
@@ -58,23 +62,35 @@ public class AlertEmailListener {
         model.put("requestedAt", event.requestedAt());
 
         String html = this.templateRenderService.render(templateName, model);
-        String providerMessageId = this.mailProvider.send(new MailMessage(
-            user.getEmail(),
-            subject,
-            html,
-            null
-        ));
+        String text = this.templateRenderService.renderText(templateName, model);
 
-        NotificationLog log = new NotificationLog();
-        log.setAlert(null);
-        log.setUser(user);
-        log.setProduct(null);
-        log.setSentAt(LocalDateTime.now());
-        log.setChannel(NotificationLog.Channel.EMAIL);
-        log.setStatus(NotificationLog.Status.SENT);
-        log.setProviderMessageId(providerMessageId);
-        log.setMessageUuid(messageUuid);
-        this.notificationLogRepository.save(log);
+        String providerMessageId;
+        try {
+            providerMessageId = this.mailProvider.send(new MailMessage(
+                user.getEmail(),
+                subject,
+                html,
+                text,
+                null
+            ));
+            log.info("email_sent template={} outcome=success messageUuid={}", event.template(), messageUuid);
+        } catch (RuntimeException ex) {
+            // structured send-failure counter (E1, log-based); rethrow so retry/dead-letter still applies (1A)
+            log.warn("email_sent template={} outcome=failure messageUuid={} error={}",
+                event.template(), messageUuid, ex.toString());
+            throw ex;
+        }
+
+        NotificationLog notificationLog = new NotificationLog();
+        notificationLog.setAlert(null);
+        notificationLog.setUser(user);
+        notificationLog.setProduct(null);
+        notificationLog.setSentAt(LocalDateTime.now());
+        notificationLog.setChannel(NotificationLog.Channel.EMAIL);
+        notificationLog.setStatus(NotificationLog.Status.SENT);
+        notificationLog.setProviderMessageId(providerMessageId);
+        notificationLog.setMessageUuid(messageUuid);
+        this.notificationLogRepository.save(notificationLog);
     }
 
     private String resolveTemplateName(String template) {

@@ -35,6 +35,19 @@
             <artifactId>spring-boot-starter-amqp</artifactId>
         </dependency>
 
+        <!-- JavaMailSender for the self-hosted SMTP provider (SmtpMailProvider). -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+
+        <!-- Enables the Spring AMQP retry interceptor (RetryInterceptorBuilder) in RabbitConfig.
+             Version is managed by the Spring Boot dependencies BOM. -->
+        <dependency>
+            <groupId>org.springframework.retry</groupId>
+            <artifactId>spring-retry</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-thymeleaf</artifactId>
@@ -70,6 +83,15 @@
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- In-memory SMTP server for the SmtpMailProvider integration test. Not managed by the
+             Spring Boot BOM, so the version is pinned (verify the latest on Maven Central). -->
+        <dependency>
+            <groupId>com.icegreen</groupId>
+            <artifactId>greenmail-junit5</artifactId>
+            <version>2.1.2</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

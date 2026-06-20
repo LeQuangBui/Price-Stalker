@@ -13,6 +13,8 @@ import com.pricestalker.core.repository.UserRepository;
 import com.pricestalker.emailservice.provider.MailMessage;
 import com.pricestalker.emailservice.provider.MailProvider;
 import com.pricestalker.emailservice.service.TemplateRenderService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +24,8 @@ import java.util.Map;
 
 @Component
 public class PriceDropListener {
+    private static final Logger log = LoggerFactory.getLogger(PriceDropListener.class);
+
     private final NotificationLogRepository notificationLogRepository;
     private final PriceAlertRepository priceAlertRepository;
     private final UserRepository userRepository;
@@ -60,31 +64,57 @@ public class PriceDropListener {
         PriceAlert alert = this.priceAlertRepository.findById(event.alertId())
             .orElseThrow(() -> new IllegalStateException("Price alert not found: " + event.alertId()));
 
-        String html = this.templateRenderService.render("price-drop", Map.of(
+        Map<String, Object> model = Map.of(
             "user", user,
             "product", product,
             "alert", alert,
             "oldPrice", event.oldPrice(),
             "newPrice", event.newPrice(),
             "detectedAt", event.detectedAt()
-        ));
+        );
+        String html = this.templateRenderService.render("price-drop", model);
+        String text = this.templateRenderService.renderText("price-drop", model);
+        String subject = "Price drop: " + sanitizeSubjectText(product.getName());
 
-        String providerMessageId = this.mailProvider.send(new MailMessage(
-            user.getEmail(),
-            "Price drop: " + product.getName(),
-            html,
-            null
-        ));
+        String providerMessageId;
+        try {
+            providerMessageId = this.mailProvider.send(new MailMessage(
+                user.getEmail(),
+                subject,
+                html,
+                text,
+                null
+            ));
+            log.info("email_sent template=price-drop outcome=success messageUuid={}", messageUuid);
+        } catch (RuntimeException ex) {
+            log.warn("email_sent template=price-drop outcome=failure messageUuid={} error={}",
+                messageUuid, ex.toString());
+            throw ex;
+        }
 
-        NotificationLog log = new NotificationLog();
-        log.setAlert(alert);
-        log.setUser(user);
-        log.setProduct(product);
-        log.setSentAt(LocalDateTime.now());
-        log.setChannel(NotificationLog.Channel.EMAIL);
-        log.setStatus(NotificationLog.Status.SENT);
-        log.setProviderMessageId(providerMessageId);
-        log.setMessageUuid(messageUuid);
-        this.notificationLogRepository.save(log);
+        NotificationLog notificationLog = new NotificationLog();
+        notificationLog.setAlert(alert);
+        notificationLog.setUser(user);
+        notificationLog.setProduct(product);
+        notificationLog.setSentAt(LocalDateTime.now());
+        notificationLog.setChannel(NotificationLog.Channel.EMAIL);
+        notificationLog.setStatus(NotificationLog.Status.SENT);
+        notificationLog.setProviderMessageId(providerMessageId);
+        notificationLog.setMessageUuid(messageUuid);
+        this.notificationLogRepository.save(notificationLog);
+    }
+
+    /**
+     * Scraped product names are attacker-influenceable (a malicious listing title) and flow into
+     * the email subject. JavaMail encodes the Subject header, but we defensively null-guard, strip
+     * control/newline characters, collapse whitespace, and clamp length (eng review Issue 3A).
+     */
+    private static String sanitizeSubjectText(String value) {
+        if (value == null || value.isBlank()) {
+            return "your tracked product";
+        }
+        String cleaned = value.replaceAll("\\p{Cntrl}", " ").replaceAll("\\s+", " ").trim();
+        int max = 200;
+        return cleaned.length() > max ? cleaned.substring(0, max) + "…" : cleaned;
     }
 }

@@ -16,11 +16,25 @@ spring:
     port: ${SPRING_RABBITMQ_PORT:5672}
     username: ${SPRING_RABBITMQ_USERNAME:guest}
     password: ${SPRING_RABBITMQ_PASSWORD:guest}
+  # JavaMailSender config, used when mail.provider=smtp. When SMTP_HOST is unset the host is blank
+  # and this path is simply never selected. mail.smtp.from sets the envelope sender so SPF is
+  # DMARC-aligned (Issue 7A); the timeouts stop a hung Postfix from freezing the consumer (Issue 4A).
+  mail:
+    host: ${SMTP_HOST:}
+    port: ${SMTP_PORT:25}
+    properties:
+      mail:
+        smtp:
+          from: ${MAIL_FROM:}
+          connectiontimeout: 5000
+          timeout: 10000
+          writetimeout: 10000
 
 server:
   port: ${SERVER_PORT:8091}
 
 mail:
+  provider: ${MAIL_PROVIDER:resend}
   from: ${MAIL_FROM:PUT_YOUR_FROM_EMAIL_HERE}
   reply-to: ${MAIL_REPLY_TO:PUT_YOUR_REPLY_TO_EMAIL_HERE}
   resend:

@@ -8,6 +8,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.util.UUID;
 
 public class ResendMailProvider implements MailProvider {
@@ -46,6 +47,7 @@ public class ResendMailProvider implements MailProvider {
                 .uri(URI.create(this.baseUrl + "/emails"))
                 .header("Authorization", "Bearer " + this.apiKey)
                 .header("Content-Type", "application/json")
+                .timeout(Duration.ofSeconds(10))
                 .POST(HttpRequest.BodyPublishers.ofString(payload))
                 .build();
 
@@ -75,6 +77,10 @@ public class ResendMailProvider implements MailProvider {
             .put("subject", message.subject())
             .put("html", message.htmlBody());
         ((com.fasterxml.jackson.databind.node.ObjectNode) root).putArray("to").add(message.to());
+
+        if (hasText(message.textBody())) {
+            ((com.fasterxml.jackson.databind.node.ObjectNode) root).put("text", message.textBody());
+        }
 
         if (hasText(replyTo)) {
             ((com.fasterxml.jackson.databind.node.ObjectNode) root).put("reply_to", replyTo);

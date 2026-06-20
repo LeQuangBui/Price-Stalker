@@ -9,8 +9,10 @@ import org.springframework.amqp.core.DirectExchange;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.core.QueueBuilder;
 import org.springframework.amqp.core.TopicExchange;
+import org.springframework.amqp.rabbit.config.RetryInterceptorBuilder;
 import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
+import org.springframework.amqp.rabbit.retry.RejectAndDontRequeueRecoverer;
 import org.springframework.amqp.support.converter.JacksonJsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.context.annotation.Bean;
@@ -108,6 +110,29 @@ public class RabbitConfig {
         factory.setConnectionFactory(connectionFactory);
         factory.setMessageConverter(jsonMessageConverter);
         factory.setDefaultRequeueRejected(false);
+
+        // Process one message at a time. The email send is synchronous and Spring AMQP's default
+        // prefetch is 250 — setting it to 1 bounds the duplicate-send exposure and matches the
+        // timeout rationale (eng review Issue 2C, surfaced by the outside voice).
+        factory.setPrefetchCount(1);
+
+        // Retry transient failures (e.g. a brief Postfix restart) in-process with exponential
+        // backoff before giving up; on exhaustion RejectAndDontRequeueRecoverer rejects the message
+        // so it dead-letters via the queue's DLX instead of requeue-looping. Pairs with 1A and the
+        // defaultRequeueRejected(false) DLQ setup above.
+        // NOTE (Issue 2C): retry re-runs the whole @Transactional listener, which sends before it
+        // writes notification_log, so a post-accept timeout can re-send. Accepted for Phase A
+        // (same code, low harm); the outbox/claim fix is tracked in TODOS for Phase B.
+        factory.setAdviceChain(
+            RetryInterceptorBuilder.stateless()
+                // Spring AMQP 4.x renamed maxAttempts → maxRetries (confirmed against the 4.x Javadoc):
+                // maxRetries(2) = 2 retries after the initial attempt = 3 total attempts.
+                .maxRetries(2)
+                .backOffOptions(1000, 2.0, 10000)
+                .recoverer(new RejectAndDontRequeueRecoverer())
+                .build()
+        );
+
         return factory;
     }
 }
