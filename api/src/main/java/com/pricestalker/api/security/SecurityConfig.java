@@ -44,6 +44,7 @@ public class SecurityConfig {
                     authorizeHttp.requestMatchers("/healthz").permitAll();
         			authorizeHttp.requestMatchers("/products/**").permitAll();	
         			authorizeHttp.requestMatchers("/auth/**").permitAll();
+        			authorizeHttp.requestMatchers(org.springframework.http.HttpMethod.GET, "/push/vapid-public-key").permitAll();
 	            	authorizeHttp.anyRequest().authenticated();
             })
             .sessionManagement(session -> session

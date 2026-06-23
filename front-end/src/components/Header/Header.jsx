@@ -1,4 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom'
+import NotificationBell from '../NotificationBell/NotificationBell'
 import './Header.css'
 
 export default function Header({ isSignedIn, onSignOut, theme, onToggleTheme }) {
@@ -25,6 +26,7 @@ export default function Header({ isSignedIn, onSignOut, theme, onToggleTheme }) 
       <nav className="header-nav">
         {isSignedIn ? (
           <>
+            <NotificationBell />
             <Link to="/profile" className="header-link">
               Profile
             </Link>

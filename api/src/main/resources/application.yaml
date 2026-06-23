@@ -31,3 +31,7 @@ app:
 jwt:
   secret: ${JWT_SECRET:N9f348j09f8jjfoi38hg4985jg98ufh8943fj7hf4uyf87as76g34f0837hybf83ufh087y3b4uyf}
   expiration: ${JWT_EXPIRATION:86400000}
+
+# Web Push (E4). Public key is served to the SPA; the private key lives in email-service (the sender).
+vapid:
+  public-key: ${VAPID_PUBLIC_KEY:}

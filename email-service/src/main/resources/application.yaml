@@ -41,3 +41,10 @@ mail:
     api-key: ${RESEND_API_KEY:PUT_YOUR_API_KEY_HERE}
     base-url: ${RESEND_BASE_URL:https://api.resend.com}
     connect-timeout-seconds: ${RESEND_CONNECT_TIMEOUT_SECONDS:10}
+
+# Web Push (E4). When vapid.public-key is blank, push is DISABLED (listeners no-op) so the
+# service still boots in dev without push configured — like the optional S3 image path.
+vapid:
+  public-key: ${VAPID_PUBLIC_KEY:}
+  private-key: ${VAPID_PRIVATE_KEY:}
+  subject: ${VAPID_SUBJECT:mailto:admin@price-stalker.com}

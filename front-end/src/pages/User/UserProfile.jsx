@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { getUserProfile, isUnauthorizedError } from '../../api/auth'
 import { formatDate } from '../../utils/formatters'
+import NotificationSettings from '../../components/NotificationSettings/NotificationSettings'
 import './UserProfile.css'
 
 export default function UserProfile() {
@@ -77,6 +78,10 @@ export default function UserProfile() {
       <div className="profile-actions">
         <Link to="/bookmarks" className="profile-action-link">View Bookmarks</Link>
         <Link to="/alerts" className="profile-action-link">Manage Alerts</Link>
+      </div>
+
+      <div className="profile-section">
+        <NotificationSettings />
       </div>
 
       <div className="bookmarks-section">

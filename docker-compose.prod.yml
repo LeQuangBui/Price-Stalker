@@ -64,6 +64,9 @@ services:
       APP_FRONTEND_BASE_URL: ${PUBLIC_BASE_URL:?set PUBLIC_BASE_URL in .env.prod}
       JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env.prod}
       JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
+      # Web Push (E4): api serves this public key to the SPA for PushManager.subscribe.
+      # Blank = push UI disabled in the browser (the toggle hides). See SETUP-AND-DEPLOY.md keygen.
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
     # eclipse-temurin (Ubuntu based) ships bash; /dev/tcp confirms the port is
     # bound, which for Spring Boot means context startup + Flyway migration done.
     healthcheck:
@@ -123,6 +126,11 @@ services:
       # Fallback path; required (validated at startup) only when MAIL_PROVIDER=resend.
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       RESEND_BASE_URL: ${RESEND_BASE_URL:-https://api.resend.com}
+      # Web Push (E4): the private key signs VAPID JWTs. Blank disables push (service still
+      # boots; PushDropListener/PushTestListener no-op). Keep PUBLIC/PRIVATE a matched pair.
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:admin@price-stalker.com}
     networks: [pricestalker_net]
 
   # Self-hosted outbound MTA (replaces Resend when MAIL_PROVIDER=smtp). Internal only — outbound
