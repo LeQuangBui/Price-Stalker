@@ -6,7 +6,7 @@
 #     https://docs.scrapy.org/en/latest/topics/settings.html
 #     https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
 #     https://docs.scrapy.org/en/latest/topics/spider-middleware.html
-from app.config import AWS_IMAGES_FOLDER_URI, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_KEY_PREFIX
+from app.config import AWS_IMAGES_FOLDER_URI, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_KEY_PREFIX, AWS_REGION, AWS_ENDPOINT_URL
 
 BOT_NAME = "extractors_scrapy"
 
@@ -95,6 +95,12 @@ IMAGES_STORE = AWS_IMAGES_FOLDER_URI + AWS_KEY_PREFIX
 # AWS Credentials (optional if using IAM roles or ~/.aws/credentials)
 AWS_ACCESS_KEY_ID = AWS_ACCESS_KEY_ID
 AWS_SECRET_ACCESS_KEY = AWS_SECRET_ACCESS_KEY
+
+# S3-compatible endpoint (MEGA S4). Both stay None when unset, so the S3 images
+# pipeline (only active when IMAGES_STORE is non-empty) targets real AWS S3 by
+# default and MEGA S4 only when AWS_ENDPOINT_URL / AWS_REGION are configured.
+AWS_ENDPOINT_URL = AWS_ENDPOINT_URL or None
+AWS_REGION_NAME = AWS_REGION or None
 
 # Optional: Set the ACL to public if you want images viewable via URL
 # IMAGES_STORE_S3_ACL = 'public-read'

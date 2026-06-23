@@ -6,45 +6,45 @@ import com.pricestalker.core.event.AlertEmailEvent;
 import com.pricestalker.core.event.QueueNames;
 import com.pricestalker.core.repository.NotificationLogRepository;
 import com.pricestalker.core.repository.UserRepository;
+import com.pricestalker.emailservice.outbox.EmailOutbox;
 import com.pricestalker.emailservice.provider.MailMessage;
-import com.pricestalker.emailservice.provider.MailProvider;
 import com.pricestalker.emailservice.service.TemplateRenderService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
 @Component
 public class AlertEmailListener {
-    private static final Logger log = LoggerFactory.getLogger(AlertEmailListener.class);
-
     private final NotificationLogRepository notificationLogRepository;
     private final UserRepository userRepository;
     private final TemplateRenderService templateRenderService;
-    private final MailProvider mailProvider;
+    private final EmailOutbox emailOutbox;
 
     public AlertEmailListener(
         NotificationLogRepository notificationLogRepository,
         UserRepository userRepository,
         TemplateRenderService templateRenderService,
-        MailProvider mailProvider
+        EmailOutbox emailOutbox
     ) {
         this.notificationLogRepository = notificationLogRepository;
         this.userRepository = userRepository;
         this.templateRenderService = templateRenderService;
-        this.mailProvider = mailProvider;
+        this.emailOutbox = emailOutbox;
     }
 
-    @Transactional
+    // NOT @Transactional: the outbox commits the claim/sent/failed states in their own
+    // transactions (REQUIRES_NEW), and the send must happen between two committed states.
     @RabbitListener(queues = QueueNames.EMAIL_ALERTS)
     public void onAlertEmail(AlertEmailEvent event) {
         String messageUuid = event.id().toString();
-        if (this.notificationLogRepository.findByMessageUuid(messageUuid) != null) {
+        // Fast-path dedup for terminal/handled rows (SENT, or a deliberately-kept FAILED) — avoids
+        // the load/render work for known dupes. A SENDING row is NOT terminal: let it fall through
+        // to the outbox, which decides recent-skip vs stale-reclaim. The outbox claim is the
+        // authoritative, race-safe dedup.
+        NotificationLog existing = this.notificationLogRepository.findByMessageUuid(messageUuid);
+        if (existing != null && existing.getStatus() != NotificationLog.Status.SENDING) {
             return;
         }
 
@@ -63,34 +63,16 @@ public class AlertEmailListener {
 
         String html = this.templateRenderService.render(templateName, model);
         String text = this.templateRenderService.renderText(templateName, model);
+        MailMessage message = new MailMessage(user.getEmail(), subject, html, text, null);
 
-        String providerMessageId;
-        try {
-            providerMessageId = this.mailProvider.send(new MailMessage(
-                user.getEmail(),
-                subject,
-                html,
-                text,
-                null
-            ));
-            log.info("email_sent template={} outcome=success messageUuid={}", event.template(), messageUuid);
-        } catch (RuntimeException ex) {
-            // structured send-failure counter (E1, log-based); rethrow so retry/dead-letter still applies (1A)
-            log.warn("email_sent template={} outcome=failure messageUuid={} error={}",
-                event.template(), messageUuid, ex.toString());
-            throw ex;
-        }
+        NotificationLog claim = new NotificationLog();
+        claim.setAlert(null);
+        claim.setUser(user);
+        claim.setProduct(null);
+        claim.setChannel(NotificationLog.Channel.EMAIL);
+        claim.setMessageUuid(messageUuid);
 
-        NotificationLog notificationLog = new NotificationLog();
-        notificationLog.setAlert(null);
-        notificationLog.setUser(user);
-        notificationLog.setProduct(null);
-        notificationLog.setSentAt(LocalDateTime.now());
-        notificationLog.setChannel(NotificationLog.Channel.EMAIL);
-        notificationLog.setStatus(NotificationLog.Status.SENT);
-        notificationLog.setProviderMessageId(providerMessageId);
-        notificationLog.setMessageUuid(messageUuid);
-        this.notificationLogRepository.save(notificationLog);
+        this.emailOutbox.dispatch(claim, message, "alert:" + event.template());
     }
 
     private String resolveTemplateName(String template) {

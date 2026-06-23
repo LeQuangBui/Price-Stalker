@@ -2,7 +2,7 @@ spring:
   application:
     name: cron-service
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3305/price_stalker_test}
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/price_stalker_test}
     username: ${SPRING_DATASOURCE_USERNAME:root}
     password: ${SPRING_DATASOURCE_PASSWORD:root}
     driver-class-name: com.mysql.cj.jdbc.Driver

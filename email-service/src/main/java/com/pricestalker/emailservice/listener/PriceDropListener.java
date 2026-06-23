@@ -10,28 +10,22 @@ import com.pricestalker.core.repository.NotificationLogRepository;
 import com.pricestalker.core.repository.PriceAlertRepository;
 import com.pricestalker.core.repository.ProductRepository;
 import com.pricestalker.core.repository.UserRepository;
+import com.pricestalker.emailservice.outbox.EmailOutbox;
 import com.pricestalker.emailservice.provider.MailMessage;
-import com.pricestalker.emailservice.provider.MailProvider;
 import com.pricestalker.emailservice.service.TemplateRenderService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.Map;
 
 @Component
 public class PriceDropListener {
-    private static final Logger log = LoggerFactory.getLogger(PriceDropListener.class);
-
     private final NotificationLogRepository notificationLogRepository;
     private final PriceAlertRepository priceAlertRepository;
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
     private final TemplateRenderService templateRenderService;
-    private final MailProvider mailProvider;
+    private final EmailOutbox emailOutbox;
 
     public PriceDropListener(
         NotificationLogRepository notificationLogRepository,
@@ -39,21 +33,26 @@ public class PriceDropListener {
         UserRepository userRepository,
         ProductRepository productRepository,
         TemplateRenderService templateRenderService,
-        MailProvider mailProvider
+        EmailOutbox emailOutbox
     ) {
         this.notificationLogRepository = notificationLogRepository;
         this.priceAlertRepository = priceAlertRepository;
         this.userRepository = userRepository;
         this.productRepository = productRepository;
         this.templateRenderService = templateRenderService;
-        this.mailProvider = mailProvider;
+        this.emailOutbox = emailOutbox;
     }
 
-    @Transactional
+    // NOT @Transactional: the EmailOutbox commits the claim/sent/failed states in their own
+    // (REQUIRES_NEW) transactions around the send.
     @RabbitListener(queues = QueueNames.EMAIL_PRICE_DROP)
     public void onPriceDropped(PriceDroppedEvent event) {
         String messageUuid = event.id().toString();
-        if (this.notificationLogRepository.findByMessageUuid(messageUuid) != null) {
+        // Fast-path dedup for terminal/handled rows (SENT, or a deliberately-kept FAILED). A SENDING
+        // row is NOT terminal: let it fall through to the outbox (recent-skip vs stale-reclaim). The
+        // outbox claim is the authoritative, race-safe dedup.
+        NotificationLog existing = this.notificationLogRepository.findByMessageUuid(messageUuid);
+        if (existing != null && existing.getStatus() != NotificationLog.Status.SENDING) {
             return;
         }
 
@@ -75,33 +74,16 @@ public class PriceDropListener {
         String html = this.templateRenderService.render("price-drop", model);
         String text = this.templateRenderService.renderText("price-drop", model);
         String subject = "Price drop: " + sanitizeSubjectText(product.getName());
+        MailMessage message = new MailMessage(user.getEmail(), subject, html, text, null);
 
-        String providerMessageId;
-        try {
-            providerMessageId = this.mailProvider.send(new MailMessage(
-                user.getEmail(),
-                subject,
-                html,
-                text,
-                null
-            ));
-            log.info("email_sent template=price-drop outcome=success messageUuid={}", messageUuid);
-        } catch (RuntimeException ex) {
-            log.warn("email_sent template=price-drop outcome=failure messageUuid={} error={}",
-                messageUuid, ex.toString());
-            throw ex;
-        }
+        NotificationLog claim = new NotificationLog();
+        claim.setAlert(alert);
+        claim.setUser(user);
+        claim.setProduct(product);
+        claim.setChannel(NotificationLog.Channel.EMAIL);
+        claim.setMessageUuid(messageUuid);
 
-        NotificationLog notificationLog = new NotificationLog();
-        notificationLog.setAlert(alert);
-        notificationLog.setUser(user);
-        notificationLog.setProduct(product);
-        notificationLog.setSentAt(LocalDateTime.now());
-        notificationLog.setChannel(NotificationLog.Channel.EMAIL);
-        notificationLog.setStatus(NotificationLog.Status.SENT);
-        notificationLog.setProviderMessageId(providerMessageId);
-        notificationLog.setMessageUuid(messageUuid);
-        this.notificationLogRepository.save(notificationLog);
+        this.emailOutbox.dispatch(claim, message, "price-drop");
     }
 
     /**

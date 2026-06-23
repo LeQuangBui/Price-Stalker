@@ -31,6 +31,7 @@ RABBITMQ_USERNAME = os.getenv("RABBITMQ_USERNAME", "guest")
 RABBITMQ_PASSWORD = os.getenv("RABBITMQ_PASSWORD", "guest")
 
 AWS_REGION = os.getenv("AWS_REGION")
+AWS_ENDPOINT_URL = os.getenv("AWS_ENDPOINT_URL", "")
 AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
 AWS_BUCKET_NAME = os.getenv("AWS_BUCKET_NAME")
@@ -39,3 +40,16 @@ AWS_IMAGES_FOLDER_URL = os.getenv("AWS_IMAGES_FOLDER_URL", "")
 PROXY_URL = os.getenv("PROXY_URL", "")
 LOCAL_TEMP_FOLDER = os.getenv("LOCAL_TEMP_FOLDER", "/tmp")
 AWS_KEY_PREFIX = os.getenv("AWS_KEY_PREFIX", "")
+
+# Drift guard: the public image URL's path prefix must match the key prefix the images
+# pipeline writes under (IMAGES_STORE = AWS_IMAGES_FOLDER_URI + AWS_KEY_PREFIX), or every
+# stored image URL 404s. They are independent env vars, so warn loudly on mismatch.
+if AWS_IMAGES_FOLDER_URL and AWS_KEY_PREFIX:
+    if not AWS_IMAGES_FOLDER_URL.rstrip("/").endswith(AWS_KEY_PREFIX.rstrip("/")):
+        import sys
+        print(
+            f"WARNING: AWS_IMAGES_FOLDER_URL ({AWS_IMAGES_FOLDER_URL!r}) does not end with "
+            f"AWS_KEY_PREFIX ({AWS_KEY_PREFIX!r}); stored image URLs may not resolve to the "
+            f"uploaded object keys.",
+            file=sys.stderr,
+        )

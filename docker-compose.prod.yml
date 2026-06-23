@@ -165,9 +165,12 @@ services:
       RABBITMQ_USERNAME: ${RABBITMQ_USER:-guest}
       RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
       PROXY_URL: ${PROXY_URL:-}
-      # Optional S3-compatible storage for product images (e.g. DigitalOcean
-      # Spaces). Leave blank to disable. Not related to the AWS deploy you dropped.
+      # Optional S3-compatible image storage (MEGA S4, DigitalOcean Spaces, AWS S3).
+      # Leave blank to disable. For a non-AWS provider set AWS_ENDPOINT_URL (MEGA S4 e.g.
+      # https://s3.ap-tokyo.megas4.com); leave it blank for real AWS S3. Without the
+      # endpoint, uploads silently target AWS instead of MEGA S4.
       AWS_REGION: ${AWS_REGION:-}
+      AWS_ENDPOINT_URL: ${AWS_ENDPOINT_URL:-}
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
       AWS_BUCKET_NAME: ${AWS_BUCKET_NAME:-}

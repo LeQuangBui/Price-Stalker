@@ -43,5 +43,8 @@ public class NotificationLog {
     private String messageUuid;
 
     public enum Channel {EMAIL, SMS, PUSH}
-    public enum Status {SENT, FAILED, BOUNCED, COMPLAINED}
+    // SENDING is the outbox "claim" state: committed before the provider send so a retry can
+    // dedup against an in-flight/just-sent message (exactly-once-ish). Stored as STRING, so
+    // adding it needs no DB migration (status is a VARCHAR column).
+    public enum Status {SENDING, SENT, FAILED, BOUNCED, COMPLAINED}
 }
