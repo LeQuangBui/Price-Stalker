@@ -11,6 +11,17 @@
 {$DOMAIN} {
 	encode gzip
 
+	header {
+		# Defense-in-depth security headers at the TLS edge — applied to BOTH the API and the SPA.
+		# HSTS is ignored by browsers over plain HTTP, so it stays safe in the ":80" testing mode.
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "geolocation=(), microphone=(), camera=()"
+		-Server
+	}
+
 	handle_path /api/* {
 		reverse_proxy api:8080
 	}
