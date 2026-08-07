@@ -44,7 +44,6 @@ tmp/
 *.swp
 *~.nib
 local.properties
-*.properties
 .settings/
 .loadpath
 .recommenders
@@ -113,6 +112,7 @@ yarn-debug.log*
 
 # Build and Coverage
 dist/
+dev-dist/
 build/
 coverage/
 .nyc_output
