@@ -1,0 +1,24 @@
+name = "price-stalker-images"
+
+# workers_dev = true also exposes a *.workers.dev URL — handy to smoke-test the
+# Worker before your custom domain's DNS is active on Cloudflare. Flip back to
+# false once images.price-stalker.com is serving.
+workers_dev = false
+routes = [
+  { pattern = "images.price-stalker.com", custom_domain = true }
+]
+compatibility_date = "2025-03-05"
+main = "index.js"
+
+[vars]
+AWS_DEFAULT_REGION = "ap-tokyo"
+AWS_S3_BUCKET = "price-stalker"
+# false = don't expose a public bucket listing at the domain root
+ALLOW_LIST_BUCKET = "false"
+
+# AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY are intentionally NOT stored here
+# (they would be committed in plaintext). Set them as encrypted Worker secrets:
+#   npx wrangler secret put AWS_ACCESS_KEY_ID
+#   npx wrangler secret put AWS_SECRET_ACCESS_KEY
+# In this Service-Worker-format script they are injected as globals, exactly like
+# [vars], so index.js reads them with no code change.
