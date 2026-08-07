@@ -1,0 +1,33 @@
+services:
+  mysql:
+    image: mysql:8.3
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: price_stalker_test
+    networks:
+      - pricestalker_net
+
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - pricestalker_net
+
+  # Dev mail sink. The Java services run on the host in dev (not in this compose), so a host-run
+  # email-service points spring.mail.host=localhost:1025 (NOT the 'mailpit' hostname) and captures
+  # mail in the Mailpit UI at http://localhost:8025 instead of sending it for real.
+  mailpit:
+    image: axllent/mailpit:v1.20   # pin — verify the current tag on Docker Hub
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    networks:
+      - pricestalker_net
+
+networks:
+  pricestalker_net:
+    driver: bridge

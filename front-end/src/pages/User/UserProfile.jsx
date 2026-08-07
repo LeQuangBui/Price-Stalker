@@ -1,12 +1,15 @@
-import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { getUserProfile } from '../../api/auth'
+import { useEffect, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { getUserProfile, isUnauthorizedError } from '../../api/auth'
+import { formatDate } from '../../utils/formatters'
+import NotificationSettings from '../../components/NotificationSettings/NotificationSettings'
 import './UserProfile.css'
 
 export default function UserProfile() {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [reloadKey, setReloadKey] = useState(0)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -16,7 +19,7 @@ export default function UserProfile() {
         setUser(data)
       } catch (err) {
         setError(err.message)
-        if (err.message.includes('401') || err.message.includes('Unauthorized')) {
+        if (isUnauthorizedError(err)) {
           navigate('/login')
         }
       } finally {
@@ -25,14 +28,26 @@ export default function UserProfile() {
     }
 
     fetchUserProfile()
-  }, [navigate])
+  }, [navigate, reloadKey])
 
   if (loading) {
-    return <div className="user-profile-container">Loading...</div>
+    return (
+      <div className="user-profile-container">
+        <div className="skeleton" style={{ height: '32px', width: '40%', marginBottom: '20px' }} />
+        <div className="skeleton" style={{ height: '160px' }} />
+      </div>
+    )
   }
 
   if (error) {
-    return <div className="user-profile-container error">{error}</div>
+    return (
+      <div className="user-profile-container">
+        <div className="page-error">
+          <span>{error}</span>
+          <button type="button" className="retry-btn" onClick={() => setReloadKey((value) => value + 1)}>Retry</button>
+        </div>
+      </div>
+    )
   }
 
   if (!user) {
@@ -56,10 +71,17 @@ export default function UserProfile() {
 
         <div className="profile-item">
           <span className="profile-label">Member since:</span>
-          <span className="profile-value">
-            {new Date(user.createdAt).toLocaleDateString()}
-          </span>
+          <span className="profile-value">{formatDate(user.createdAt)}</span>
         </div>
+      </div>
+
+      <div className="profile-actions">
+        <Link to="/bookmarks" className="profile-action-link">View Bookmarks</Link>
+        <Link to="/alerts" className="profile-action-link">Manage Alerts</Link>
+      </div>
+
+      <div className="profile-section">
+        <NotificationSettings />
       </div>
 
       <div className="bookmarks-section">
@@ -71,14 +93,17 @@ export default function UserProfile() {
                 <div className="bookmark-info">
                   <span className="bookmark-name">{bookmark.name || 'Unnamed'}</span>
                   <span className="bookmark-date">
-                    Added: {new Date(bookmark.createdAt).toLocaleDateString()}
+                    Created {formatDate(bookmark.createdAt)}
+                  </span>
+                  <span className="bookmark-date">
+                    {bookmark.products?.length || 0} products
                   </span>
                 </div>
               </div>
             ))}
           </div>
         ) : (
-          <p className="no-bookmarks">No bookmarks yet</p>
+          <p className="no-bookmarks">No bookmarks yet.</p>
         )}
       </div>
     </div>

@@ -1,0 +1,7 @@
+Scrapy
+pika
+boto3
+botocore
+pillow
+pytest
+pytest-asyncio

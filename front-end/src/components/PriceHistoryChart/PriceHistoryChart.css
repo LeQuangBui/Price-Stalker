@@ -69,13 +69,35 @@
   margin: 0 auto;
 }
 
+.chart-axis {
+  stroke: var(--border);
+}
+
+.chart-grid {
+  stroke: var(--border-light);
+}
+
+.chart-label {
+  fill: var(--text-secondary);
+}
+
+.chart-line {
+  stroke: var(--primary);
+}
+
 .chart-point {
+  fill: var(--primary);
   cursor: pointer;
   transition: r 0.2s;
 }
 
 .chart-point:hover {
   r: 6;
+}
+
+.chart-skeleton {
+  height: 300px;
+  border-radius: var(--radius);
 }
 
 .chart-loading,
@@ -89,8 +111,12 @@
 
 .chart-error {
   color: var(--danger);
-  background: rgba(239, 68, 68, 0.05);
+  background: color-mix(in srgb, var(--danger) 6%, transparent);
   border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
 }
 
 .chart-empty {

@@ -1,0 +1,50 @@
+spring:
+  application:
+    name: email-service
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/price_stalker_test}
+    username: ${SPRING_DATASOURCE_USERNAME:root}
+    password: ${SPRING_DATASOURCE_PASSWORD:root}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: false
+  rabbitmq:
+    host: ${SPRING_RABBITMQ_HOST:localhost}
+    port: ${SPRING_RABBITMQ_PORT:5672}
+    username: ${SPRING_RABBITMQ_USERNAME:guest}
+    password: ${SPRING_RABBITMQ_PASSWORD:guest}
+  # JavaMailSender config, used when mail.provider=smtp. When SMTP_HOST is unset the host is blank
+  # and this path is simply never selected. mail.smtp.from sets the envelope sender so SPF is
+  # DMARC-aligned (Issue 7A); the timeouts stop a hung Postfix from freezing the consumer (Issue 4A).
+  mail:
+    host: ${SMTP_HOST:}
+    port: ${SMTP_PORT:25}
+    properties:
+      mail:
+        smtp:
+          from: ${MAIL_FROM:}
+          connectiontimeout: 5000
+          timeout: 10000
+          writetimeout: 10000
+
+server:
+  port: ${SERVER_PORT:8091}
+
+mail:
+  provider: ${MAIL_PROVIDER:resend}
+  from: ${MAIL_FROM:PUT_YOUR_FROM_EMAIL_HERE}
+  reply-to: ${MAIL_REPLY_TO:PUT_YOUR_REPLY_TO_EMAIL_HERE}
+  resend:
+    api-key: ${RESEND_API_KEY:PUT_YOUR_API_KEY_HERE}
+    base-url: ${RESEND_BASE_URL:https://api.resend.com}
+    connect-timeout-seconds: ${RESEND_CONNECT_TIMEOUT_SECONDS:10}
+
+# Web Push (E4). When vapid.public-key is blank, push is DISABLED (listeners no-op) so the
+# service still boots in dev without push configured — like the optional S3 image path.
+vapid:
+  public-key: ${VAPID_PUBLIC_KEY:}
+  private-key: ${VAPID_PRIVATE_KEY:}
+  subject: ${VAPID_SUBJECT:mailto:admin@price-stalker.com}

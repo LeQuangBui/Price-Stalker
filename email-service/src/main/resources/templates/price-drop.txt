@@ -1,0 +1,15 @@
+Hi [(${user.username})],
+
+Good news — a product you're tracking just dropped in price:
+
+[(${product.name})]
+
+  Previous price: [(${oldPrice})]
+  New price:      [(${newPrice})]
+  Your threshold: [(${alert.thresholdPrice})]
+
+View it here: [(${product.url})]
+
+Detected at [(${detectedAt})].
+
+The Price Stalker team

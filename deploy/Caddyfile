@@ -1,0 +1,21 @@
+# Edge reverse proxy for the price-stalker VPS stack.
+#
+# DOMAIN is injected from .env.prod via the caddy service:
+#   - a real hostname (price-stalker.example.com) => automatic Let's Encrypt HTTPS
+#   - ":80" => plain HTTP, useful when pointing at a bare IP during setup
+#
+# Routing:
+#   /api/*  -> api:8080   (the /api prefix is stripped before proxying)
+#   /*      -> frontend:80 (static SPA + /healthz)
+
+{$DOMAIN} {
+	encode gzip
+
+	handle_path /api/* {
+		reverse_proxy api:8080
+	}
+
+	handle {
+		reverse_proxy frontend:80
+	}
+}

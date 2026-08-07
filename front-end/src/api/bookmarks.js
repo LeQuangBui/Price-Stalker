@@ -1,62 +1,34 @@
-import { getHeaders } from './auth'
+import { apiRequest, buildQuery } from './client'
 
-const BASE_URL = import.meta.env.VITE_API_URL
-
-export async function getBookmarks(params = {}) {
-  const { page = 0, size = 20, sort = 'createdAt', direction = 'DESC' } = params
-
-  const queryParams = new URLSearchParams()
-  queryParams.append('page', page)
-  queryParams.append('size', size)
-  queryParams.append('sort', sort)
-  queryParams.append('direction', direction)
-
-  const res = await fetch(`${BASE_URL}/bookmarks/me?${queryParams}`, {
-    headers: getHeaders()
-  })
-  if (!res.ok) throw new Error('Failed to fetch bookmarks')
-  return res.json()
+export function getBookmarks(params = {}) {
+  return apiRequest(`/bookmarks${buildQuery({
+    page: params.page ?? 0,
+    size: params.size ?? 20,
+    sort: params.sort ?? 'createdAt',
+    direction: params.direction ?? 'DESC'
+  })}`)
 }
 
-export async function getBookmark(id) {
-  const res = await fetch(`${BASE_URL}/bookmarks/${id}`, {
-    headers: getHeaders()
-  })
-  if (!res.ok) throw new Error('Failed to fetch bookmark')
-  return res.json()
+export function getBookmark(id) {
+  return apiRequest(`/bookmarks/${id}`)
 }
 
-export async function createBookmark(name, productIds = []) {
-  const res = await fetch(`${BASE_URL}/bookmarks`, {
+export function createBookmark({ name, productIds = [] }) {
+  return apiRequest('/bookmarks', {
     method: 'POST',
-    headers: getHeaders(),
-    body: JSON.stringify({ name, productIds })
+    body: { name, productIds }
   })
-  if (!res.ok) throw new Error('Failed to create bookmark')
-  return res.json()
 }
 
-export async function deleteBookmark(id) {
-  const res = await fetch(`${BASE_URL}/bookmarks/${id}`, {
-    method: 'DELETE',
-    headers: getHeaders()
+export function updateBookmark(id, { name, productIds = [] }) {
+  return apiRequest(`/bookmarks/${id}`, {
+    method: 'PUT',
+    body: { name, productIds }
   })
-  if (!res.ok) throw new Error('Failed to delete bookmark')
 }
 
-export async function addProductToBookmark(bookmarkId, productId) {
-  const res = await fetch(`${BASE_URL}/bookmarks/${bookmarkId}/products/${productId}`, {
-    method: 'POST',
-    headers: getHeaders()
+export function deleteBookmark(id) {
+  return apiRequest(`/bookmarks/${id}`, {
+    method: 'DELETE'
   })
-  if (!res.ok) throw new Error('Failed to add product to bookmark')
-  return res.json()
-}
-
-export async function removeProductFromBookmark(bookmarkId, productId) {
-  const res = await fetch(`${BASE_URL}/bookmarks/${bookmarkId}/products/${productId}`, {
-    method: 'DELETE',
-    headers: getHeaders()
-  })
-  if (!res.ok) throw new Error('Failed to remove product from bookmark')
 }

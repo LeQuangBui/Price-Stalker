@@ -1,28 +1,32 @@
 .product-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 18px;
+  position: relative;
+  z-index: 0;
 }
 
 .product-card {
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: 16px;
   overflow: hidden;
-  background: var(--bg-primary);
+  background: var(--surface-raised);
   text-decoration: none;
   color: inherit;
   display: block;
-  transition: box-shadow 0.2s, transform 0.2s;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.2s, transform 0.2s, border-color 0.2s;
 }
 
 .product-card:hover {
   box-shadow: var(--shadow-lg);
-  transform: translateY(-4px);
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--primary) 42%, var(--border));
 }
 
 .product-image-container {
   width: 100%;
-  height: 200px;
+  aspect-ratio: 1.15;
   background: var(--bg-tertiary);
   display: flex;
   align-items: center;
@@ -34,11 +38,6 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.3s;
-}
-
-.product-card:hover .product-image {
-  transform: scale(1.05);
 }
 
 .no-image {
@@ -47,7 +46,7 @@
 }
 
 .product-info {
-  padding: 16px;
+  padding: 16px 16px 18px;
 }
 
 .product-name {
@@ -59,12 +58,37 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 15px;
+  transition: color 0.2s;
 }
 
 .product-price {
-  font-size: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.product-price-flash {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.product-price-current {
+  font-size: 18px;
   font-weight: 700;
   color: var(--success);
+}
+
+.product-price-original {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+.product-card-skeleton {
+  height: 280px;
+  border-radius: 16px;
 }
 
 .no-products {
@@ -72,8 +96,9 @@
   text-align: center;
   padding: 60px 20px;
   font-size: 16px;
-  background: var(--bg-primary);
-  border-radius: var(--radius);
+  background: var(--surface-raised);
+  border-radius: 16px;
   border: 2px dashed var(--border);
+  box-shadow: var(--shadow-sm);
 }
 

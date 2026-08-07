@@ -1,14 +1,9 @@
-import { useState, useRef } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getProducts } from '../../api/products'
+import { formatPrice, getTrackedPrice } from '../../utils/formatters'
 import './ProductSearch.css'
 
-// Props:
-//   onSelect(product)  — bookmark mode: Enter/click adds the product
-//   onSearch(params)   — home page mode: Enter/button triggers full search
-//   showSearchButton   — show the Search button + type selector (home page mode)
-//   placeholder        — input placeholder text
-//   existingIds        — product ids already added (disables their button)
 export default function ProductSearch({
   onSelect,
   onSearch,
@@ -22,11 +17,12 @@ export default function ProductSearch({
   const [searching, setSearching] = useState(false)
   const [showDropdown, setShowDropdown] = useState(false)
   const [activeIndex, setActiveIndex] = useState(-1)
+  const [searchError, setSearchError] = useState(false)
   const debounceRef = useRef(null)
   const navigate = useNavigate()
+  const listboxId = useId()
 
-  const formatPrice = (price) =>
-    price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+  useEffect(() => () => clearTimeout(debounceRef.current), [])
 
   const buildParams = (value) => {
     if (!value.trim()) return null
@@ -35,30 +31,39 @@ export default function ProductSearch({
     return { search: value }
   }
 
-  const handleChange = (value) => {
-    setQuery(value)
-    setActiveIndex(-1)
+  const runLookup = (value) => {
     clearTimeout(debounceRef.current)
 
     if (!value.trim()) {
       setResults([])
+      setSearchError(false)
       setShowDropdown(false)
+      setSearching(false)
       return
     }
 
     debounceRef.current = setTimeout(async () => {
       setSearching(true)
+      setSearchError(false)
       try {
         const params = buildParams(value)
         const data = await getProducts({ ...params, size: 6 })
-        setResults(data.content)
+        setResults(data.content || [])
         setShowDropdown(true)
       } catch {
         setResults([])
+        setSearchError(true)
+        setShowDropdown(true)
       } finally {
         setSearching(false)
       }
     }, 400)
+  }
+
+  const handleChange = (value) => {
+    setQuery(value)
+    setActiveIndex(-1)
+    runLookup(value)
   }
 
   const handleSelect = (product) => {
@@ -71,33 +76,31 @@ export default function ProductSearch({
     setActiveIndex(-1)
   }
 
-  const handleKeyDown = (e) => {
+  const handleKeyDown = (event) => {
     if (showDropdown && results.length > 0) {
-      if (e.key === 'ArrowDown') {
-        e.preventDefault()
-        setActiveIndex(i => Math.min(i + 1, results.length - 1))
+      if (event.key === 'ArrowDown') {
+        event.preventDefault()
+        setActiveIndex((index) => Math.min(index + 1, results.length - 1))
         return
       }
-      if (e.key === 'ArrowUp') {
-        e.preventDefault()
-        setActiveIndex(i => Math.max(i - 1, -1))
+      if (event.key === 'ArrowUp') {
+        event.preventDefault()
+        setActiveIndex((index) => Math.max(index - 1, -1))
         return
       }
-      if (e.key === 'Enter' && activeIndex >= 0) {
-        e.preventDefault()
+      if (event.key === 'Enter' && activeIndex >= 0) {
+        event.preventDefault()
         handleSelect(results[activeIndex])
         return
       }
     }
 
-    if (e.key === 'Enter') {
-      if (onSearch) {
-        setShowDropdown(false)
-        onSearch(buildParams(query) || {})
-      }
+    if (event.key === 'Enter' && onSearch) {
+      setShowDropdown(false)
+      onSearch(buildParams(query) || {})
     }
 
-    if (e.key === 'Escape') {
+    if (event.key === 'Escape') {
       setShowDropdown(false)
       setActiveIndex(-1)
     }
@@ -116,8 +119,9 @@ export default function ProductSearch({
         {showSearchButton && (
           <select
             value={searchType}
-            onChange={(e) => setSearchType(e.target.value)}
+            onChange={(event) => setSearchType(event.target.value)}
             className="search-select"
+            aria-label="Search by"
           >
             <option value="all">All</option>
             <option value="url">URL</option>
@@ -127,12 +131,21 @@ export default function ProductSearch({
         <input
           type="text"
           value={query}
-          onChange={(e) => handleChange(e.target.value)}
+          onChange={(event) => handleChange(event.target.value)}
           onKeyDown={handleKeyDown}
           onFocus={() => results.length > 0 && setShowDropdown(true)}
-          onBlur={() => setTimeout(() => { setShowDropdown(false); setActiveIndex(-1) }, 150)}
+          onBlur={() => setTimeout(() => {
+            setShowDropdown(false)
+            setActiveIndex(-1)
+          }, 150)}
           placeholder={placeholder}
+          aria-label="Search products"
           className="search-input"
+          role="combobox"
+          aria-expanded={showDropdown}
+          aria-controls={listboxId}
+          aria-autocomplete="list"
+          aria-activedescendant={activeIndex >= 0 ? `${listboxId}-opt-${activeIndex}` : undefined}
         />
         {showSearchButton && (
           <button onClick={handleSearchClick} className="search-button">
@@ -142,9 +155,12 @@ export default function ProductSearch({
       </div>
 
       {showDropdown && (
-        <div className="search-dropdown">
+        <div className="search-dropdown" role="listbox" id={listboxId}>
           {searching && <p className="search-status">Searching...</p>}
-          {!searching && results.length === 0 && (
+          {!searching && searchError && (
+            <p className="search-status">Search failed. Try again.</p>
+          )}
+          {!searching && !searchError && results.length === 0 && (
             <p className="search-status">No results found</p>
           )}
           {results.map((product, index) => {
@@ -152,6 +168,9 @@ export default function ProductSearch({
             return (
               <div
                 key={product.id}
+                id={`${listboxId}-opt-${index}`}
+                role="option"
+                aria-selected={activeIndex === index}
                 className={`search-dropdown-item${activeIndex === index ? ' active' : ''}`}
                 onMouseEnter={() => setActiveIndex(index)}
                 onMouseDown={() => handleSelect(product)}
@@ -162,12 +181,15 @@ export default function ProductSearch({
                 <div className="search-dropdown-info">
                   <span className="search-dropdown-name">{product.name}</span>
                   <span className="search-dropdown-price">
-                    {formatPrice(product.currentPrice)} {product.currency}
+                    {formatPrice(getTrackedPrice(product), product.currency)}
                   </span>
                 </div>
                 {onSelect && (
                   <button
-                    onMouseDown={(e) => { e.stopPropagation(); handleSelect(product) }}
+                    onMouseDown={(event) => {
+                      event.stopPropagation()
+                      handleSelect(product)
+                    }}
                     disabled={added}
                     className="search-dropdown-btn"
                   >

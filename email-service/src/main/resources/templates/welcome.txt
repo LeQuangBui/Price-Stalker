@@ -1,0 +1,7 @@
+Welcome to Price Stalker, [(${user.username})]!
+
+Your account ([(${user.email})]) is ready. Start tracking prices by pasting a product
+link from a supported store, and we'll keep an eye on it for you.
+
+Happy stalking,
+The Price Stalker team

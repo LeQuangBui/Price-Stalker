@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+<th:block th:fragment="header(title)">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0f172a;">
+        <tr>
+            <td style="padding:24px 32px;">
+                <p style="margin:0 0 8px 0;color:#93c5fd;font-family:Arial,sans-serif;font-size:12px;letter-spacing:0.08em;text-transform:uppercase;">
+                    Price Stalker
+                </p>
+                <h1 style="margin:0;color:#ffffff;font-family:Arial,sans-serif;font-size:28px;font-weight:700;" th:text="${title}">
+                    Price Stalker
+                </h1>
+            </td>
+        </tr>
+    </table>
+</th:block>
+</body>
+</html>
