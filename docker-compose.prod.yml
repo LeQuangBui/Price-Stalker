@@ -185,6 +185,9 @@ services:
       # A real domain (price-stalker.example.com) => automatic HTTPS.
       # Use ":80" to serve plain HTTP when testing against a bare IP.
       DOMAIN: ${DOMAIN:?set DOMAIN in .env.prod}
+      # Optional www alias, redirected to the apex. Defaults to localhost (served with an
+      # internal cert, never sent to Let's Encrypt) so leaving it unset costs nothing.
+      WWW_DOMAIN: ${WWW_DOMAIN:-localhost}
     volumes:
       - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
