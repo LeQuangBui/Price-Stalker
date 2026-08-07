@@ -5,10 +5,15 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
+import com.pricestalker.api.controller.AuthController;
+
 import java.time.Instant;
 import java.util.Map;
 
-@ControllerAdvice
+// Scoped to AuthController only: the catch-all IllegalArgumentException -> 400 below must NOT swallow
+// IllegalArgumentExceptions from unrelated controllers (product/extraction/scrape), which would mask
+// real server faults as "invalid_auth_request" 400s.
+@ControllerAdvice(assignableTypes = AuthController.class)
 public class AuthExceptionHandler {
 
     @ExceptionHandler(InvalidCredentialsException.class)

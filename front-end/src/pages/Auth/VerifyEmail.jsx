@@ -1,7 +1,9 @@
 import { useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { resendEmailVerification, verifyEmail } from '../../api/auth'
-import './Auth.css'
+import AppLink from '../../components/AppLink'
+import AuthLayout from '../../components/Auth/AuthLayout'
+import Field from '../../components/primitives/Field'
 
 export default function VerifyEmail({ onVerified }) {
   const [searchParams] = useSearchParams()
@@ -56,47 +58,32 @@ export default function VerifyEmail({ onVerified }) {
   }
 
   return (
-    <div className="auth-container">
-      <h2>Verify Email</h2>
-      <form onSubmit={handleSubmit} className="auth-form">
-        <div className="form-group">
-          <label className="form-label" htmlFor="verify-email">Email</label>
-          <input
-            id="verify-email"
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            required
-            className="form-input"
-          />
-        </div>
-        <div className="form-group">
-          <label className="form-label" htmlFor="verify-code">Verification code</label>
-          <input
-            id="verify-code"
-            type="text"
-            inputMode="numeric"
-            maxLength="6"
-            value={code}
-            onChange={(event) => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
-            required
-            className="form-input"
-          />
-        </div>
-        {message && <p className="form-info">{message}</p>}
-        {error && <p className="form-error">{error}</p>}
-        <button type="submit" className="form-button" disabled={loading}>
-          {loading ? 'Verifying...' : 'Verify email'}
+    <AuthLayout
+      kicker="Almost there"
+      title="Verify your email"
+      subtitle="Enter the 6-digit code we sent to your inbox."
+      footer={<>Already verified? <AppLink to="/login" className="font-semibold text-oxblood">Log in</AppLink></>}
+    >
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <Field id="verify-email" label="Email" type="email" value={email}
+          onChange={(e) => setEmail(e.target.value)} required />
+        <Field id="verify-code" label="Verification code" type="text" inputMode="numeric" maxLength="6"
+          value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))} required />
+        {message && <p className="text-sm text-forest">{message}</p>}
+        {error && <p className="text-sm text-danger">{error}</p>}
+        <button type="submit" className="btn btn-primary btn-lg btn-block" disabled={loading}>
+          {loading ? 'Verifying…' : 'Verify email'}
         </button>
       </form>
 
-      <button type="button" className="auth-secondary-button" onClick={handleResend} disabled={resending}>
-        {resending ? 'Sending...' : 'Resend code'}
+      <button
+        type="button"
+        className="mt-4 font-meta text-xs font-semibold uppercase tracking-[0.12em] text-ink-mute transition-colors hover:text-ink disabled:opacity-60"
+        onClick={handleResend}
+        disabled={resending}
+      >
+        {resending ? 'Sending…' : 'Resend code'}
       </button>
-
-      <p className="auth-footer">
-        Already verified? <Link to="/login">Login</Link>
-      </p>
-    </div>
+    </AuthLayout>
   )
 }

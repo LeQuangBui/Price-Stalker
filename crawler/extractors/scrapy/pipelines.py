@@ -20,13 +20,31 @@ class PriceScrapePipeline:
         return item
 
 class CustomS3ImagesPipeline(ImagesPipeline):
-    def get_media_requests(self, item, info):
-        kwargs = {}
-        if info.spider.has_proxy:
-            kwargs['meta'] = {'proxy': PROXY_URL}
+    # Cap how many images we download per product so a hostile/misbehaving page that lists
+    # hundreds of <img>/JSON image entries can't blow up bandwidth, storage, or run time.
+    MAX_IMAGES_PER_PRODUCT = 10
+    # Per-image download ceiling (bytes). Scrapy enforces download_maxsize per request, so an
+    # oversized image is aborted mid-download instead of being fully buffered. Conservative
+    # (10 MiB) — comfortably above any real product photo.
+    MAX_IMAGE_BYTES = 10 * 1024 * 1024
 
+    def get_media_requests(self, item, info):
+        meta = {'download_maxsize': self.MAX_IMAGE_BYTES}
+        if info.spider.has_proxy:
+            meta['proxy'] = PROXY_URL
+
+        count = 0
         for image_url in item["image_urls"]:
-            yield scrapy.Request(image_url, **kwargs)
+            if count >= self.MAX_IMAGES_PER_PRODUCT:
+                break
+            # Only follow real http(s) image URLs. Skip data:/file:/ftp:/blank entries so the
+            # pipeline can't be pointed at the local filesystem or other schemes.
+            if not image_url or not isinstance(image_url, str):
+                continue
+            if not image_url.lower().startswith(("http://", "https://")):
+                continue
+            yield scrapy.Request(image_url, meta=dict(meta))
+            count += 1
 
     def file_path(self, request, response=None, info=None, *, item=None):
         image_url_hash = hashlib.shake_256(request.url.encode()).hexdigest(5)

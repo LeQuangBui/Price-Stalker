@@ -1,7 +1,9 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { signup } from '../../api/auth'
-import './Auth.css'
+import AppLink from '../../components/AppLink'
+import AuthLayout from '../../components/Auth/AuthLayout'
+import Field from '../../components/primitives/Field'
 
 export default function Signup() {
   const [formData, setFormData] = useState({
@@ -44,65 +46,26 @@ export default function Signup() {
   }
 
   return (
-    <div className="auth-container">
-      <h2>Sign Up</h2>
-      <form onSubmit={handleSubmit} className="auth-form">
-        <div className="form-group">
-          <label className="form-label" htmlFor="signup-username">Username</label>
-          <input
-            id="signup-username"
-            type="text"
-            name="username"
-            value={formData.username}
-            onChange={handleChange}
-            required
-            className="form-input"
-          />
-        </div>
-        <div className="form-group">
-          <label className="form-label" htmlFor="signup-email">Email</label>
-          <input
-            id="signup-email"
-            type="email"
-            name="email"
-            value={formData.email}
-            onChange={handleChange}
-            required
-            className="form-input"
-          />
-        </div>
-        <div className="form-group">
-          <label className="form-label" htmlFor="signup-password">Password</label>
-          <input
-            id="signup-password"
-            type="password"
-            name="password"
-            value={formData.password}
-            onChange={handleChange}
-            required
-            className="form-input"
-          />
-        </div>
-        <div className="form-group">
-          <label className="form-label" htmlFor="signup-confirm-password">Confirm Password</label>
-          <input
-            id="signup-confirm-password"
-            type="password"
-            name="confirmPassword"
-            value={formData.confirmPassword}
-            onChange={handleChange}
-            required
-            className="form-input"
-          />
-        </div>
-        {error && <p className="form-error">{error}</p>}
-        <button type="submit" className="form-button" disabled={loading}>
-          {loading ? 'Creating account...' : 'Sign Up'}
+    <AuthLayout
+      kicker="Get started"
+      title="Create your account"
+      subtitle="Free to start. No card required."
+      footer={<>Already have an account? <AppLink to="/login" className="font-semibold text-oxblood">Log in</AppLink></>}
+    >
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <Field id="signup-username" label="Username" type="text" name="username"
+          value={formData.username} onChange={handleChange} required />
+        <Field id="signup-email" label="Email" type="email" name="email"
+          value={formData.email} onChange={handleChange} required />
+        <Field id="signup-password" label="Password" type="password" name="password"
+          value={formData.password} onChange={handleChange} required />
+        <Field id="signup-confirm-password" label="Confirm password" type="password" name="confirmPassword"
+          value={formData.confirmPassword} onChange={handleChange} required />
+        {error && <p className="text-sm text-danger">{error}</p>}
+        <button type="submit" className="btn btn-primary btn-lg btn-block" disabled={loading}>
+          {loading ? 'Creating account…' : 'Sign up'}
         </button>
       </form>
-      <p className="auth-footer">
-        Already have an account? <Link to="/login">Login</Link>
-      </p>
-    </div>
+    </AuthLayout>
   )
 }

@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { deleteAlert, getAlerts, updateAlert } from '../../api/alerts'
 import { isUnauthorizedError } from '../../api/auth'
 import { formatPrice, getTrackedPrice } from '../../utils/formatters'
 import { useConfirm } from '../../components/ConfirmDialog/useConfirm'
+import AppLink from '../../components/AppLink'
+import Kicker from '../../components/primitives/Kicker'
+import Pagination from '../../components/primitives/Pagination'
 import './Alerts.css'
 
 export default function Alerts() {
@@ -69,6 +72,12 @@ export default function Alerts() {
 
   const handleSave = async (alert) => {
     const draft = drafts[alert.id]
+
+    if (draft.thresholdPrice === '' || draft.thresholdPrice == null) {
+      setError('Threshold price is required.')
+      return
+    }
+
     const numericThreshold = Number(draft.thresholdPrice)
 
     if (!Number.isFinite(numericThreshold) || numericThreshold < 0) {
@@ -133,14 +142,15 @@ export default function Alerts() {
   const emptyState = useMemo(() => !loading && !error && alerts.length === 0, [alerts.length, error, loading])
 
   return (
-    <div className="alerts-page">
+    <div className="mx-auto max-w-4xl px-6 py-8">
       {confirmDialog}
-      <div className="alerts-header">
+      <Kicker>Watchlist</Kicker>
+      <div className="mt-3 mb-8 flex flex-wrap items-end justify-between gap-4 border-b-2 border-ink pb-4">
         <div>
-          <h2>My Alerts</h2>
-          <p className="alerts-subtitle">Create new alerts from product pages and manage them here.</p>
+          <h1 className="font-display text-display-sm font-semibold text-ink">My alerts</h1>
+          <p className="mt-2 text-sm text-ink-soft">Create alerts from product pages and manage them here.</p>
         </div>
-        <Link to="/" className="alerts-home-link">Browse products</Link>
+        <AppLink to="/" className="btn btn-secondary shrink-0">Browse products</AppLink>
       </div>
 
       {loading && (
@@ -163,8 +173,8 @@ export default function Alerts() {
       {emptyState && (
         <div className="empty-state">
           <h3>No price alerts yet</h3>
-          <p>Set an alert on any product and we&apos;ll email you when the price drops below your target.</p>
-          <Link to="/" className="empty-state-cta">Browse products</Link>
+          <p>Set an alert on any product and we&apos;ll notify you when the price drops below your target.</p>
+          <AppLink to="/" className="empty-state-cta">Browse products</AppLink>
         </div>
       )}
 
@@ -179,9 +189,9 @@ export default function Alerts() {
                 <section key={alert.id} className="alert-card">
                   <div className="alert-card-main">
                     <div className="alert-card-info">
-                      <Link to={`/products/${alert.product?.id}`} className="alert-product-link">
+                      <AppLink to={`/products/${alert.product?.id}`} className="alert-product-link">
                         {alert.product?.name || 'Unknown product'}
-                      </Link>
+                      </AppLink>
                       <p className="alert-product-meta">
                         Current price: {formatPrice(trackedPrice, alert.product?.currency)}
                       </p>
@@ -230,17 +240,12 @@ export default function Alerts() {
             })}
           </div>
 
-          {totalPages > 1 && (
-            <div className="pagination">
-              <button onClick={() => setPage((value) => Math.max(0, value - 1))} disabled={page === 0}>
-                Previous
-              </button>
-              <span className="pagination-info">Page {page + 1} of {totalPages}</span>
-              <button onClick={() => setPage((value) => value + 1)} disabled={page >= totalPages - 1}>
-                Next
-              </button>
-            </div>
-          )}
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            onPrev={() => setPage((value) => Math.max(0, value - 1))}
+            onNext={() => setPage((value) => value + 1)}
+          />
         </>
       )}
     </div>

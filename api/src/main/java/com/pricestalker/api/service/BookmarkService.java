@@ -55,9 +55,11 @@ public class BookmarkService {
 		return this.bookmarkRepository.save(bookmark);
 	}
 
-	public Bookmark getBookmark(String id) {
+	public Bookmark getBookmark(String userId, String id) {
 		Bookmark bookmark = this.bookmarkRepository.findById(id).orElse(null);
-		if (bookmark == null) {
+		// Scope to the owner: a non-owner gets the same NotFound as a missing id (no existence leak,
+		// no cross-user read). Mirrors modifyBookmark's ownership check used by update/delete.
+		if (bookmark == null || !bookmark.getUser().getId().equals(userId)) {
 			throw new BookmarkNotFoundException(id);
 		}
 		return bookmark;

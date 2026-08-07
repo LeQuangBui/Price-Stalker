@@ -43,12 +43,18 @@ public class User {
 	@Column(name = "EMAIL_VERIFICATION_CODE_EXPIRES_AT")
 	private LocalDateTime emailVerificationCodeExpiresAt;
 
+	@Column(name = "EMAIL_VERIFICATION_ATTEMPTS", nullable = false)
+	private int emailVerificationAttempts;
+
 	@Column(name = "PASSWORD_RESET_TOKEN_HASH")
 	private String passwordResetTokenHash;
 
 	@Column(name = "PASSWORD_RESET_TOKEN_EXPIRES_AT")
 	private LocalDateTime passwordResetTokenExpiresAt;
-	
+
+	@Column(name = "TOKEN_VERSION", nullable = false)
+	private int tokenVersion;
+
 	@CreationTimestamp
 	@Column(name = "CREATED_AT", nullable = false)
 	private LocalDateTime createdAt;

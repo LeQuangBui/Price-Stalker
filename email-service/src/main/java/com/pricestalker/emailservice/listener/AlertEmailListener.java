@@ -38,6 +38,9 @@ public class AlertEmailListener {
     // transactions (REQUIRES_NEW), and the send must happen between two committed states.
     @RabbitListener(queues = QueueNames.EMAIL_ALERTS)
     public void onAlertEmail(AlertEmailEvent event) {
+        if (event == null || event.id() == null || event.userId() == null) {
+            return; // forged/malformed event: drop (event.id()/userId deref would NPE / findById(null) throws)
+        }
         String messageUuid = event.id().toString();
         // Fast-path dedup for terminal/handled rows (SENT, or a deliberately-kept FAILED) — avoids
         // the load/render work for known dupes. A SENDING row is NOT terminal: let it fall through

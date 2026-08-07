@@ -91,7 +91,7 @@ public class AuthServiceTest {
                 .hasMessage("Email verification is required before login");
 
         verify(authenticationManager).authenticate(any(UsernamePasswordAuthenticationToken.class));
-        verify(jwtUtil, never()).generateToken("hungbeodamde");
+        verify(jwtUtil, never()).generateToken(eq("hungbeodamde"), anyInt());
     }
 
     @Test

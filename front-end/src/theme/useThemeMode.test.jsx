@@ -23,8 +23,9 @@ describe('useThemeMode', () => {
     vi.unstubAllGlobals()
   })
 
-  it('applies a saved dark theme to the document root', () => {
+  it('applies an explicitly-pinned saved theme to the document root', () => {
     localStorage.setItem('theme', 'dark')
+    localStorage.setItem('theme_pinned', '1')
 
     const { result } = renderHook(() => useThemeMode())
 
@@ -32,8 +33,18 @@ describe('useThemeMode', () => {
     expect(document.documentElement.classList.contains('dark')).toBe(true)
   })
 
-  it('toggles theme and persists the user choice', () => {
+  it('ignores a non-pinned saved theme (older builds wrote it) and falls back', () => {
+    // jsdom has no matchMedia → prefersDark() is false → light, despite the stale saved value.
+    localStorage.setItem('theme', 'dark') // no theme_pinned key
+
+    const { result } = renderHook(() => useThemeMode())
+
+    expect(result.current.theme).toBe('light')
+  })
+
+  it('toggles theme and persists the choice as an explicit pin', () => {
     localStorage.setItem('theme', 'light')
+    localStorage.setItem('theme_pinned', '1')
     const { result } = renderHook(() => useThemeMode())
 
     act(() => {
@@ -42,6 +53,7 @@ describe('useThemeMode', () => {
 
     expect(result.current.theme).toBe('dark')
     expect(localStorage.getItem('theme')).toBe('dark')
+    expect(localStorage.getItem('theme_pinned')).toBe('1')
     expect(document.documentElement.classList.contains('dark')).toBe(true)
   })
 })

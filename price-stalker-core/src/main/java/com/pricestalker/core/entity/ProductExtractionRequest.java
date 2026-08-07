@@ -27,6 +27,9 @@ public class ProductExtractionRequest {
     @Column(name = "PRODUCT_ID")
     private String productId;
 
+    @Column(name = "USER_ID")
+    private String userId;
+
     @Column(name = "ERROR_MESSAGE", columnDefinition = "TEXT")
     private String errorMessage;
 

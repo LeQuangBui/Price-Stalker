@@ -22,7 +22,7 @@ public class ProductExtractionService {
         this.scrapeRequestPublisher = scrapeRequestPublisher;
     }
 
-    public ProductExtractionRequest create(String rawUrl) {
+    public ProductExtractionRequest create(String rawUrl, String userId) {
         if (rawUrl == null || rawUrl.isBlank()) {
             throw new IllegalArgumentException("URL is required");
         }
@@ -34,6 +34,7 @@ public class ProductExtractionService {
         ProductExtractionRequest request = new ProductExtractionRequest();
         request.setId(requestId.toString());
         request.setUrl(url);
+        request.setUserId(userId);
         request.setStatus(ProductExtractionRequest.Status.QUEUED);
         request.setCreatedAt(now);
         request.setUpdatedAt(now);

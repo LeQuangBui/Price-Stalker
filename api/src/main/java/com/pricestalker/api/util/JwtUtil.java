@@ -21,9 +21,10 @@ public class JwtUtil {
     @Value("${jwt.expiration}")
     private Long expiration;
 
-    public String generateToken(String username) {
+    public String generateToken(String username, int tokenVersion) {
         return Jwts.builder()
                 .subject(username)
+                .claim("ver", tokenVersion)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + expiration))
                 .signWith(getSigningKey())
@@ -32,6 +33,11 @@ public class JwtUtil {
 
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
+    }
+
+    public int extractTokenVersion(String token) {
+        Integer version = extractClaim(token, claims -> claims.get("ver", Integer.class));
+        return version == null ? 0 : version;
     }
 
     public boolean validateToken(String token, String username) {

@@ -1,11 +1,18 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { createAlert, deleteAlert, findAlertForProduct, updateAlert } from '../../api/alerts'
 import { isUnauthorizedError } from '../../api/auth'
 import { getProduct } from '../../api/products'
 import AddToBookmark from '../../components/AddToBookmark/AddToBookmark'
 import PriceHistoryChart from '../../components/PriceHistoryChart/PriceHistoryChart'
 import { useConfirm } from '../../components/ConfirmDialog/useConfirm'
+import AppLink from '../../components/AppLink'
+import { useToast } from '../../components/Toast/ToastProvider'
+import Kicker from '../../components/primitives/Kicker'
+import SectionHeader from '../../components/primitives/SectionHeader'
+import PriceDisplay from '../../components/primitives/PriceDisplay'
+import DropBadge from '../../components/primitives/DropBadge'
+import ErrorState from '../../components/primitives/ErrorState'
 import {
   formatDate,
   formatDateTime,
@@ -16,9 +23,18 @@ import {
 } from '../../utils/formatters'
 import './ProductDetail.css'
 
+function hostOf(url) {
+  try {
+    return new URL(url).host.replace(/^www\./, '')
+  } catch {
+    return null
+  }
+}
+
 export default function ProductDetail({ isSignedIn }) {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { toast } = useToast()
 
   const [product, setProduct] = useState(null)
   const [slide, setSlide] = useState(0)
@@ -35,22 +51,25 @@ export default function ProductDetail({ isSignedIn }) {
   const [alertMessage, setAlertMessage] = useState('')
 
   useEffect(() => {
+    let cancelled = false
     const fetchProduct = async () => {
       setLoading(true)
       setError('')
 
       try {
         const data = await getProduct(id)
+        if (cancelled) return
         setProduct(data)
         setSlide(0)
       } catch (err) {
-        setError(err.message)
+        if (!cancelled) setError(err.message)
       } finally {
-        setLoading(false)
+        if (!cancelled) setLoading(false)
       }
     }
 
     fetchProduct()
+    return () => { cancelled = true }
   }, [id, reloadKey])
 
   useEffect(() => {
@@ -61,27 +80,31 @@ export default function ProductDetail({ isSignedIn }) {
       return
     }
 
+    let cancelled = false
     const fetchAlert = async () => {
       setAlertLoading(true)
       setAlertError('')
 
       try {
         const alert = await findAlertForProduct(id)
+        if (cancelled) return
         setCurrentAlert(alert)
         setAlertThreshold(alert?.thresholdPrice != null ? String(alert.thresholdPrice) : '')
         setAlertActive(alert?.active ?? true)
       } catch (err) {
+        if (cancelled) return
         if (isUnauthorizedError(err)) {
           navigate('/login')
           return
         }
         setAlertError(err.message)
       } finally {
-        setAlertLoading(false)
+        if (!cancelled) setAlertLoading(false)
       }
     }
 
     fetchAlert()
+    return () => { cancelled = true }
   }, [id, isSignedIn, navigate])
 
   const images = product?.images || []
@@ -90,6 +113,7 @@ export default function ProductDetail({ isSignedIn }) {
   const trackedPrice = useMemo(() => getTrackedPrice(product), [product])
   const showFlash = hasFlashSalePrice(product)
   const showOriginal = hasOriginalPrice(product)
+  const wasPrice = showFlash ? product?.price : showOriginal ? product?.originalPrice : null
 
   const prevSlide = () => setSlide((value) => (value - 1 + images.length) % images.length)
   const nextSlide = () => setSlide((value) => (value + 1) % images.length)
@@ -122,6 +146,7 @@ export default function ProductDetail({ isSignedIn }) {
         setAlertThreshold(String(updated.thresholdPrice))
         setAlertActive(updated.active)
         setAlertMessage('Alert updated.')
+        toast('Price alert updated', { type: 'success' })
       } else {
         const created = await createAlert({
           productId: id,
@@ -131,6 +156,7 @@ export default function ProductDetail({ isSignedIn }) {
         setAlertThreshold(String(created.thresholdPrice))
         setAlertActive(created.active)
         setAlertMessage('Alert created.')
+        toast('Price alert created', { type: 'success' })
       }
     } catch (err) {
       if (isUnauthorizedError(err)) {
@@ -167,6 +193,7 @@ export default function ProductDetail({ isSignedIn }) {
       setAlertThreshold('')
       setAlertActive(true)
       setAlertMessage('Alert deleted.')
+      toast('Price alert deleted', { type: 'info' })
     } catch (err) {
       if (isUnauthorizedError(err)) {
         navigate('/login')
@@ -180,14 +207,14 @@ export default function ProductDetail({ isSignedIn }) {
 
   if (loading) {
     return (
-      <div className="product-detail-container">
+      <div className="mx-auto max-w-5xl px-6 py-8">
         <p className="sr-only" role="status">Loading product…</p>
-        <div className="product-detail">
-          <div className="skeleton" style={{ aspectRatio: '1', borderRadius: 'var(--radius)' }} />
-          <div className="product-info">
+        <div className="grid gap-10 lg:grid-cols-2">
+          <div className="skeleton" style={{ aspectRatio: '1', borderRadius: 'var(--radius-lg)' }} />
+          <div className="flex flex-col gap-4">
             <div className="skeleton" style={{ height: '36px', width: '70%' }} />
             <div className="skeleton" style={{ height: '90px' }} />
-            <div className="skeleton" style={{ height: '140px' }} />
+            <div className="skeleton" style={{ height: '160px' }} />
           </div>
         </div>
       </div>
@@ -196,49 +223,42 @@ export default function ProductDetail({ isSignedIn }) {
 
   if (error) {
     return (
-      <div className="product-detail-container">
-        <div className="page-error">
-          <span>{error}</span>
-          <button type="button" className="retry-btn" onClick={() => setReloadKey((value) => value + 1)}>Retry</button>
-        </div>
+      <div className="mx-auto max-w-5xl px-6 py-8">
+        <ErrorState message={error} onRetry={() => setReloadKey((value) => value + 1)} />
       </div>
     )
   }
 
   if (!product) {
-    return <div className="product-detail-container">Product not found.</div>
+    return <div className="mx-auto max-w-5xl px-6 py-16 text-center text-ink-soft">Product not found.</div>
   }
 
   return (
-    <div className="product-detail-container">
+    <div className="mx-auto max-w-5xl px-6 py-8">
       {confirmDialog}
-      <Link to="/" className="back-link">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="16" height="16" aria-hidden="true">
+      <AppLink to="/" className="inline-flex items-center gap-1.5 font-meta text-xs font-semibold uppercase tracking-[0.12em] text-ink-mute transition-colors hover:text-ink">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14" aria-hidden="true">
           <path d="M15 18l-6-6 6-6" />
         </svg>
         Back to products
-      </Link>
+      </AppLink>
 
-      <div className="product-detail">
-        <div className="product-images">
+      <div className="mt-6 grid gap-10 lg:grid-cols-2">
+        {/* Images (existing swiper, restyled frame) */}
+        <div>
           {hasImages ? (
-            <div className="swiper">
+            <div className="swiper overflow-hidden rounded-2xl border border-line bg-paper">
               <div className="swiper-track" style={{ transform: `translateX(-${slide * 100}%)` }}>
                 {images.map((image, index) => (
                   <div key={index} className="swiper-slide">
-                    <img src={image} alt={`${product.name} ${index + 1}`} />
+                    <img src={image} alt={`${product.name} ${index + 1}`} loading="lazy" />
                   </div>
                 ))}
               </div>
-
               {hasMultiple && (
                 <>
-                  <button className="swiper-btn swiper-prev" onClick={prevSlide} aria-label="Previous image">
-                    &lt;
-                  </button>
-                  <button className="swiper-btn swiper-next" onClick={nextSlide} aria-label="Next image">
-                    &gt;
-                  </button>
+                  <button className="swiper-btn swiper-prev" onClick={prevSlide} aria-label="Previous image">&lt;</button>
+                  <button className="swiper-btn swiper-next" onClick={nextSlide} aria-label="Next image">&gt;</button>
                   <div className="swiper-dots">
                     {images.map((_, index) => (
                       <button
@@ -253,56 +273,54 @@ export default function ProductDetail({ isSignedIn }) {
               )}
             </div>
           ) : (
-            <div className="no-image">No image available</div>
+            <div className="grid aspect-square place-items-center rounded-2xl border border-dashed border-line bg-surface font-display italic text-ink-mute">
+              No image available
+            </div>
           )}
         </div>
 
-        <div className="product-info">
-          <h1>{product.name}</h1>
+        {/* Editorial product hero */}
+        <div>
+          <Kicker>
+            {hostOf(product.url) || 'Tracked product'}
+            {product.sku ? ` · ${product.sku}` : ''}
+          </Kicker>
+          <h1 className="mt-3 font-display text-display-sm font-semibold leading-tight text-ink">
+            {product.name}
+          </h1>
 
-          {product.sku && (
-            <p className="product-sku">SKU: {product.sku}</p>
-          )}
-
-          <div className="product-price">
-            {showFlash && (
-              <span className="price-flash">{formatPrice(product.flash_sale_price, product.currency)}</span>
-            )}
-            <span className={`price-amount${showFlash ? ' price-struck' : ''}`}>
-              {formatPrice(product.price, product.currency)}
-            </span>
-            {!showFlash && showOriginal && (
-              <span className="price-original">{formatPrice(product.originalPrice, product.currency)}</span>
-            )}
+          <div className="mt-6 flex flex-wrap items-end gap-4">
+            <PriceDisplay value={trackedPrice} was={wasPrice} currency={product.currency} size="xl" />
+            <DropBadge oldPrice={wasPrice} newPrice={trackedPrice} />
           </div>
 
-          <div className="product-meta">
-            <div className="meta-item">
-              <span className="meta-label">Added:</span>
-              <span className="meta-value">{formatDate(product.createdAt)}</span>
+          <dl className="mt-6 flex flex-wrap gap-x-8 gap-y-2 font-meta text-xs text-ink-mute">
+            <div>
+              <dt className="uppercase tracking-[0.12em]">Added</dt>
+              <dd className="mt-0.5 text-ink-soft">{formatDate(product.createdAt)}</dd>
             </div>
-            <div className="meta-item">
-              <span className="meta-label">Last updated:</span>
-              <span className="meta-value">{formatDate(product.updatedAt)}</span>
+            <div>
+              <dt className="uppercase tracking-[0.12em]">Last updated</dt>
+              <dd className="mt-0.5 text-ink-soft">{formatDate(product.updatedAt)}</dd>
             </div>
-          </div>
+          </dl>
 
           <a
             href={product.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="view-product-btn"
+            className="btn btn-secondary mt-6 inline-flex"
           >
-            View on website
+            View on website ↗
           </a>
 
           {isSignedIn ? (
-            <>
+            <div className="mt-6">
               <AddToBookmark productId={product.id} />
 
-              <section className="product-panel">
+              <section className="product-panel mt-5">
                 <div className="product-panel-header">
-                  <h2>Price Alert</h2>
+                  <h2>Price alert</h2>
                   {currentAlert && (
                     <span className={`alert-status ${currentAlert.active ? 'active' : 'paused'}`}>
                       {currentAlert.active ? 'Active' : 'Paused'}
@@ -355,40 +373,24 @@ export default function ProductDetail({ isSignedIn }) {
                 {alertMessage && <p className="panel-message success">{alertMessage}</p>}
                 {alertError && <p className="panel-message error-message">{alertError}</p>}
               </section>
-            </>
+            </div>
           ) : (
-            <section className="product-panel">
-              <h2>Price Alert</h2>
-              <p className="panel-text">Sign in to save this product to a bookmark or create a price alert.</p>
+            <section className="product-panel mt-6">
+              <h2>Price alert</h2>
+              <p className="panel-text">Sign in to bookmark this product or create a price alert.</p>
             </section>
           )}
         </div>
       </div>
 
-      {currentAlert && (
-        <section className="product-panel compact">
-          <h2>Current Alert Summary</h2>
-          <div className="product-meta">
-            <div className="meta-item">
-              <span className="meta-label">Threshold:</span>
-              <span className="meta-value">{formatPrice(currentAlert.thresholdPrice, product.currency)}</span>
-            </div>
-            <div className="meta-item">
-              <span className="meta-label">Status:</span>
-              <span className="meta-value">{currentAlert.active ? 'Active' : 'Paused'}</span>
-            </div>
-            <div className="meta-item">
-              <span className="meta-label">Last known price:</span>
-              <span className="meta-value">{formatPrice(trackedPrice, product.currency)}</span>
-            </div>
-          </div>
-        </section>
-      )}
+      {/* Price history */}
+      <div className="mt-14">
+        <SectionHeader title="Price history" meta={hostOf(product.url) || undefined} />
+        <PriceHistoryChart productId={product.id} currency={product.currency} />
+      </div>
 
-      <PriceHistoryChart productId={product.id} currency={product.currency} />
-
-      <section className="product-panel compact">
-        <h2>Tracking Notes</h2>
+      <section className="product-panel compact mt-10">
+        <h2>Tracking notes</h2>
         <p className="panel-text">
           Product created {formatDateTime(product.createdAt)} and last updated {formatDateTime(product.updatedAt)}.
         </p>

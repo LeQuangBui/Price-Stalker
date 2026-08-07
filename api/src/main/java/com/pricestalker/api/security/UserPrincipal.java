@@ -11,9 +11,11 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 public class UserPrincipal implements UserDetails {
 	private User user;
-	
+	private final int tokenVersion;
+
 	public UserPrincipal(User user) {
 		this.user = user;
+		this.tokenVersion = user.getTokenVersion();
 	}
 	
 	@Override
@@ -32,7 +34,9 @@ public class UserPrincipal implements UserDetails {
     }
 
     public String getId() { return user.getId(); }
-    
+
+    public int getTokenVersion() { return tokenVersion; }
+
     @Override
     public boolean isAccountNonExpired() {
         return UserDetails.super.isAccountNonExpired();

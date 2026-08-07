@@ -10,6 +10,7 @@ import com.pricestalker.core.event.RoutingKeys;
 import com.pricestalker.core.repository.PushSubscriptionRepository;
 import com.pricestalker.core.repository.UserRepository;
 import com.pricestalker.core.util.Hashing;
+import com.pricestalker.core.util.PushEndpoints;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -18,11 +19,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
-import java.net.URI;
 import java.time.Instant;
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -39,32 +37,12 @@ public class PushController {
     /**
      * SSRF guard: subscribe only accepts https endpoints on a known browser-push host. Without this,
      * an authenticated user could register an internal URL (e.g. the cloud metadata endpoint) and
-     * turn the email-service sender into an SSRF probe (response codes leak reachability).
+     * turn the email-service sender into an SSRF probe (response codes leak reachability). The
+     * allowlist rules live in the shared {@link PushEndpoints} helper so email-service can re-apply
+     * them as defense-in-depth before the outbound POST.
      */
-    private static final List<String> ALLOWED_PUSH_HOSTS = List.of(
-            "fcm.googleapis.com",          // Chrome / Edge (FCM)
-            "push.services.mozilla.com",   // Firefox
-            "notify.windows.com",          // Edge / Windows (WNS)
-            "web.push.apple.com"           // Safari / Apple
-    );
-
     static boolean isAllowedPushEndpoint(String endpoint) {
-        final URI uri;
-        try {
-            uri = URI.create(endpoint);
-        } catch (IllegalArgumentException malformed) {
-            return false;
-        }
-        if (!"https".equalsIgnoreCase(uri.getScheme()) || uri.getHost() == null) {
-            return false;
-        }
-        String host = uri.getHost().toLowerCase(Locale.ROOT);
-        for (String allowed : ALLOWED_PUSH_HOSTS) {
-            if (host.equals(allowed) || host.endsWith("." + allowed)) {
-                return true;
-            }
-        }
-        return false;
+        return PushEndpoints.isAllowed(endpoint);
     }
 
     private final PushSubscriptionRepository subscriptions;
