@@ -4,6 +4,10 @@
 #   - a real hostname (price-stalker.example.com) => automatic Let's Encrypt HTTPS
 #   - ":80" => plain HTTP, useful when pointing at a bare IP during setup
 #
+# WWW_DOMAIN is the optional www alias. Set it to www.<your domain> to get a redirect to the
+# apex; leave it unset and it defaults to localhost, which Caddy serves with an internal cert
+# and never takes to Let's Encrypt — so the bare-IP and no-www setups stay unaffected.
+#
 # Routing:
 #   /api/*  -> api:8080   (the /api prefix is stripped before proxying)
 #   /*      -> frontend:80 (static SPA + /healthz)
@@ -29,4 +33,11 @@
 	handle {
 		reverse_proxy frontend:80
 	}
+}
+
+# Send www to the apex. A redirect rather than a second copy of the site: CORS_ALLOWED_ORIGIN and
+# the SPA's baked API URL are both the apex, so serving www directly would fail every API call.
+{$WWW_DOMAIN:localhost} {
+	header Strict-Transport-Security "max-age=31536000"
+	redir https://{$DOMAIN}{uri} permanent
 }

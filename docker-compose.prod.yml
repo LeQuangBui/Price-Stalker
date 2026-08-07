@@ -106,7 +106,6 @@ services:
       mysql: { condition: service_healthy }
       rabbitmq: { condition: service_healthy }
       api: { condition: service_healthy }
-      postfix: { condition: service_started }   # started (not healthy): a flaky/unready postfix must not brick the Resend default
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-price_stalker}
       SPRING_DATASOURCE_USERNAME: root
@@ -116,11 +115,9 @@ services:
       SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER:?set RABBITMQ_USER in .env.prod}
       SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?set RABBITMQ_PASSWORD in .env.prod}
       SERVER_PORT: "8091"
-      # Provider selector: 'resend' (default, safe fallback) or 'smtp' (self-hosted Postfix).
-      # Flip to 'smtp' in .env.prod ONLY after the mail-tester baseline passes (DKIM/DNS live).
+      # Provider selector. Only 'resend' is deployable: the self-hosted Postfix MTA that backed
+      # 'smtp' was removed, so that path needs the postfix service restored before it will work.
       MAIL_PROVIDER: ${MAIL_PROVIDER:-resend}
-      SMTP_HOST: postfix
-      SMTP_PORT: "25"
       MAIL_FROM: ${MAIL_FROM:?set MAIL_FROM in .env.prod}
       MAIL_REPLY_TO: ${MAIL_REPLY_TO:?set MAIL_REPLY_TO in .env.prod}
       # Fallback path; required (validated at startup) only when MAIL_PROVIDER=resend.
@@ -131,33 +128,6 @@ services:
       VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
       VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:admin@price-stalker.com}
-    networks: [pricestalker_net]
-
-  # Self-hosted outbound MTA (replaces Resend when MAIL_PROVIDER=smtp). Internal only — outbound
-  # mail egresses via the host on port 25 (Docker NAT), so PTR must be set on the host IP. Do NOT
-  # publish port 25 inbound. The container auto-generates a DKIM key on first start (persisted in
-  # the postfix_dkim volume); read it from the logs and publish the DKIM TXT record BEFORE flipping
-  # MAIL_PROVIDER=smtp (DKIM bootstrap ordering — see deploy/README.md).
-  postfix:
-    image: boky/postfix:v4.4.0   # pin to a real published tag — verify the current one on Docker Hub
-    restart: unless-stopped
-    environment:
-      # Defaults to localhost so a Resend-only deploy (the default) never fails on a missing
-      # MAIL_DOMAIN; set a real MAIL_DOMAIN in .env.prod before flipping MAIL_PROVIDER=smtp.
-      HOSTNAME: mail.${MAIL_DOMAIN:-localhost}
-      ALLOWED_SENDER_DOMAINS: ${MAIL_DOMAIN:-localhost}
-      DKIM_AUTOGENERATE: "1"
-      # RELAYHOST intentionally unset → deliver directly to recipient MX on port 25.
-    volumes:
-      - postfix_dkim:/etc/opendkim/keys
-      - postfix_spool:/var/spool/postfix   # persist the mail queue so deferred mail survives restart/redeploy
-    healthcheck:
-      # busybox nc (alpine image): succeeds once a listener is up. Verify the command against the image.
-      test: ["CMD-SHELL", "nc -z 127.0.0.1 587 || nc -z 127.0.0.1 25"]
-      interval: 15s
-      timeout: 5s
-      retries: 10
-      start_period: 30s
     networks: [pricestalker_net]
 
   crawler:
@@ -215,6 +185,9 @@ services:
       # A real domain (price-stalker.example.com) => automatic HTTPS.
       # Use ":80" to serve plain HTTP when testing against a bare IP.
       DOMAIN: ${DOMAIN:?set DOMAIN in .env.prod}
+      # Optional www alias, redirected to the apex. Defaults to localhost (served with an
+      # internal cert, never sent to Let's Encrypt) so leaving it unset costs nothing.
+      WWW_DOMAIN: ${WWW_DOMAIN:-localhost}
     volumes:
       - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
@@ -226,8 +199,6 @@ volumes:
   rabbitmq_data:
   caddy_data:
   caddy_config:
-  postfix_dkim:    # persists the auto-generated DKIM key across rebuilds (losing it silently breaks DKIM)
-  postfix_spool:   # persists the Postfix mail queue so deferred mail is not lost on container recreate
 
 networks:
   pricestalker_net:
