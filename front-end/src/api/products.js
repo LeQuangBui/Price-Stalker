@@ -17,15 +17,18 @@ export function getProduct(id) {
 }
 
 export function createProductExtraction(url) {
+  // Sends the auth token: the backend gates POST /products/extractions to signed-in users
+  // (anti-abuse — anonymous URL submission to the crawler is no longer allowed).
   return apiRequest('/products/extractions', {
     method: 'POST',
-    auth: false,
     body: { url }
   })
 }
 
 export function getProductExtraction(requestId) {
-  return apiRequest(`/products/extractions/${requestId}`, { auth: false })
+  // Sends the auth token: the backend now scopes extraction status to the owner,
+  // so the SPA poll must carry the token to read its own request.
+  return apiRequest(`/products/extractions/${requestId}`)
 }
 
 export function createProductByUrl(url) {

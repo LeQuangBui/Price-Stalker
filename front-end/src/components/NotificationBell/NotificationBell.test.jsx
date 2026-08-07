@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import NotificationBell from './NotificationBell'
@@ -21,7 +21,7 @@ describe('NotificationBell', () => {
     vi.clearAllMocks()
   })
 
-  it('does not fetch until opened, then lists notifications', async () => {
+  it('lists notifications when opened and deep-links to the internal product route', async () => {
     getNotifications.mockResolvedValue([
       {
         eventId: 'evt-1',
@@ -33,13 +33,10 @@ describe('NotificationBell', () => {
     ])
 
     renderBell()
-    expect(getNotifications).not.toHaveBeenCalled()
-
     fireEvent.click(screen.getByRole('button', { name: /notifications/i }))
 
     const link = await screen.findByText('GTX 4070')
-    expect(getNotifications).toHaveBeenCalledTimes(1)
-    // Clicking navigates to the internal product route (H7), not the merchant URL.
+    // Internal route (H7), not the merchant URL.
     expect(link.closest('a')).toHaveAttribute('href', '/products/product-1')
   })
 
@@ -50,5 +47,22 @@ describe('NotificationBell', () => {
     fireEvent.click(screen.getByRole('button', { name: /notifications/i }))
 
     expect(await screen.findByText(/no price-drop notifications yet/i)).toBeInTheDocument()
+  })
+
+  it('pulses when a drop is newer than last-seen, and clears the pulse on open', async () => {
+    getNotifications.mockResolvedValue([
+      { eventId: 'e', productId: 'p', productName: 'X', sentAt: new Date().toISOString() },
+    ])
+
+    renderBell()
+
+    // Mount probe finds a fresh drop → the accessible name flips to "(new)".
+    const newBtn = await screen.findByRole('button', { name: /notifications \(new\)/i })
+    fireEvent.click(newBtn)
+
+    // Opening records "seen" and clears the pulse.
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /^notifications$/i })).toBeInTheDocument()
+    )
   })
 })

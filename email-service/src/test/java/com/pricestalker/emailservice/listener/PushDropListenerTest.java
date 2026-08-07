@@ -33,6 +33,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -95,12 +96,27 @@ public class PushDropListenerTest {
 
     @Test
     void noDispatchWhenUserHasNoSubscriptions() {
+        // The alert is re-loaded and validated (BUS Issue 2) BEFORE subscriptions are looked up, so a
+        // consistent alert is stubbed; the drop here is purely because the user has no subscribed devices.
+        User user = new User("hung", "hung@example.com", "hashed-password");
+        user.setId("user-1");
+        Product product = new Product();
+        product.setId("product-1");
+        PriceAlert alert = new PriceAlert();
+        alert.setId("alert-1");
+        alert.setUser(user);
+        alert.setProduct(product);
+        alert.setActive(true);
+        alert.setThresholdPrice(new BigDecimal("899.99"));
+
         when(webPushProvider.isEnabled()).thenReturn(true);
+        when(alerts.findById("alert-1")).thenReturn(Optional.of(alert));
         when(subscriptions.findByUserId("user-1")).thenReturn(List.of());
 
         listener.onPriceDropped(event("user-1", "product-1", "alert-1"));
 
-        verifyNoInteractions(users, products, alerts, pushOutbox);
+        // No device, so nothing is sent and the user/product are never resolved for sending.
+        verifyNoInteractions(users, products, pushOutbox);
     }
 
     @Test
@@ -112,6 +128,12 @@ public class PushDropListenerTest {
         product.setName("GTX 4070");
         PriceAlert alert = new PriceAlert();
         alert.setId("alert-1");
+        // Make the re-loaded alert consistent with the event (BUS Issue 2): same user, same product,
+        // active, and a threshold the event's newPrice (799.99) actually crosses.
+        alert.setUser(user);
+        alert.setProduct(product);
+        alert.setActive(true);
+        alert.setThresholdPrice(new BigDecimal("899.99"));
 
         PushSubscription s1 = sub("https://push.example.com/ep1", "hash-1");
         PushSubscription s2 = sub("https://push.example.com/ep2", "hash-2");
@@ -163,6 +185,11 @@ public class PushDropListenerTest {
         product.setName("GTX 4070");
         PriceAlert alert = new PriceAlert();
         alert.setId("alert-1");
+        // Consistent alert so dispatch is actually attempted (BUS Issue 2).
+        alert.setUser(user);
+        alert.setProduct(product);
+        alert.setActive(true);
+        alert.setThresholdPrice(new BigDecimal("899.99"));
 
         PushSubscription s1 = sub("https://push.example.com/ep1", "hash-1");
         PushSubscription s2 = sub("https://push.example.com/ep2", "hash-2");
@@ -184,27 +211,25 @@ public class PushDropListenerTest {
     }
 
     @Test
-    void dispatchesWithNullAlertWhenAlertMissing() {
+    void dropsWhenAlertMissing() {
+        // BUS Issue 2: a null alertId (or an alert that can't be re-loaded) is no longer consistent
+        // with the event, so the push must be dropped — never dispatched — rather than sent with a
+        // null alert. With alertId==null the listener short-circuits without even hitting the repo.
         User user = new User("hung", "hung@example.com", "hashed-password");
         user.setId("user-1");
         Product product = new Product();
         product.setId("product-1");
         product.setName("GTX 4070");
 
-        PushSubscription s1 = sub("https://push.example.com/ep1", "hash-1");
         PriceDroppedEvent event = event(user.getId(), product.getId(), null);
 
         when(webPushProvider.isEnabled()).thenReturn(true);
-        when(subscriptions.findByUserId("user-1")).thenReturn(List.of(s1));
-        when(users.findById("user-1")).thenReturn(Optional.of(user));
-        when(products.findById("product-1")).thenReturn(Optional.of(product));
 
         listener.onPriceDropped(event);
 
-        ArgumentCaptor<NotificationLog> claimCaptor = ArgumentCaptor.forClass(NotificationLog.class);
-        verify(pushOutbox).dispatch(
-                claimCaptor.capture(), any(PushSubscription.class), any(byte[].class), eq("price-drop"));
-        verifyNoInteractions(alerts);
-        assertThat(claimCaptor.getValue().getAlert()).isNull();
+        // No alert => inconsistent => dropped. Nothing is dispatched and no subscriptions/users/products
+        // are touched for sending.
+        verify(pushOutbox, never()).dispatch(any(), any(PushSubscription.class), any(byte[].class), any());
+        verifyNoInteractions(subscriptions, users, products);
     }
 }

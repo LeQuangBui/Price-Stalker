@@ -83,6 +83,12 @@ public class PriceDropListenerTest {
         product.setName("GTX 4070");
         PriceAlert alert = new PriceAlert();
         alert.setId("alert-1");
+        // Make the re-loaded alert consistent with the event (BUS Issue 2): same user, same product,
+        // active, and a threshold the event's newPrice (799.99) actually crosses.
+        alert.setUser(user);
+        alert.setProduct(product);
+        alert.setActive(true);
+        alert.setThresholdPrice(new BigDecimal("899.99"));
 
         PriceDroppedEvent event = event(user.getId(), product.getId(), alert.getId());
 
@@ -140,6 +146,11 @@ public class PriceDropListenerTest {
         product.setName("Evil\r\nBcc: x@y.com");
         PriceAlert alert = new PriceAlert();
         alert.setId("alert-1");
+        // Consistent alert so the message is actually dispatched (BUS Issue 2).
+        alert.setUser(user);
+        alert.setProduct(product);
+        alert.setActive(true);
+        alert.setThresholdPrice(new BigDecimal("899.99"));
 
         PriceDroppedEvent event = event(user.getId(), product.getId(), alert.getId());
 
@@ -170,6 +181,11 @@ public class PriceDropListenerTest {
         product.setName(null);
         PriceAlert alert = new PriceAlert();
         alert.setId("alert-1");
+        // Consistent alert so the message is actually dispatched (BUS Issue 2).
+        alert.setUser(user);
+        alert.setProduct(product);
+        alert.setActive(true);
+        alert.setThresholdPrice(new BigDecimal("899.99"));
 
         PriceDroppedEvent event = event(user.getId(), product.getId(), alert.getId());
 

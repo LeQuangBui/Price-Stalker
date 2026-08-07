@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { getUserProfile, isUnauthorizedError } from '../../api/auth'
 import { formatDate } from '../../utils/formatters'
 import NotificationSettings from '../../components/NotificationSettings/NotificationSettings'
+import AppLink from '../../components/AppLink'
+import Kicker from '../../components/primitives/Kicker'
+import ErrorState from '../../components/primitives/ErrorState'
 import './UserProfile.css'
 
 export default function UserProfile() {
@@ -14,6 +17,8 @@ export default function UserProfile() {
 
   useEffect(() => {
     const fetchUserProfile = async () => {
+      setLoading(true)
+      setError('')
       try {
         const data = await getUserProfile()
         setUser(data)
@@ -42,10 +47,7 @@ export default function UserProfile() {
   if (error) {
     return (
       <div className="user-profile-container">
-        <div className="page-error">
-          <span>{error}</span>
-          <button type="button" className="retry-btn" onClick={() => setReloadKey((value) => value + 1)}>Retry</button>
-        </div>
+        <ErrorState message={error} onRetry={() => setReloadKey((value) => value + 1)} />
       </div>
     )
   }
@@ -56,7 +58,10 @@ export default function UserProfile() {
 
   return (
     <div className="user-profile-container">
-      <h2>User Profile</h2>
+      <Kicker>Account</Kicker>
+      <h1 className="font-display text-display-sm font-semibold text-ink" style={{ marginTop: '12px', marginBottom: '24px' }}>
+        Your profile
+      </h1>
 
       <div className="profile-section">
         <div className="profile-item">
@@ -76,8 +81,8 @@ export default function UserProfile() {
       </div>
 
       <div className="profile-actions">
-        <Link to="/bookmarks" className="profile-action-link">View Bookmarks</Link>
-        <Link to="/alerts" className="profile-action-link">Manage Alerts</Link>
+        <AppLink to="/bookmarks" className="profile-action-link">View Bookmarks</AppLink>
+        <AppLink to="/alerts" className="profile-action-link">Manage Alerts</AppLink>
       </div>
 
       <div className="profile-section">

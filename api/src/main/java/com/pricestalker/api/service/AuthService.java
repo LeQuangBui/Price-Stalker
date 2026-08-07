@@ -11,6 +11,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.Locale;
@@ -20,6 +21,10 @@ import java.util.UUID;
 public class AuthService {
     private static final long EMAIL_VERIFICATION_TTL_MINUTES = 15;
     private static final long PASSWORD_RESET_TTL_MINUTES = 30;
+    // Wrong-guess cap per issued code: after this many failures the code is burned (force a resend),
+    // bounding brute force to MAX_VERIFICATION_ATTEMPTS guesses out of 10^6 per code instead of the
+    // whole space within the 15-minute TTL.
+    private static final int MAX_VERIFICATION_ATTEMPTS = 5;
 
     private final UserRepository userRepository;
     private final BCryptPasswordEncoder bCryptPasswordEncoder;
@@ -64,7 +69,7 @@ public class AuthService {
             throw new EmailNotVerifiedException("Email verification is required before login");
         }
 
-        String token = this.jwtUtil.generateToken(username);
+        String token = this.jwtUtil.generateToken(username, user.getTokenVersion());
         return new AuthResponseDto(token, username);
     }
 
@@ -93,30 +98,60 @@ public class AuthService {
         return new SignupResponseDto(username, email, "Verification code sent");
     }
 
+    // noRollbackFor: a wrong guess throws InvalidEmailVerificationCodeException, but the preceding
+    // save() that increments the attempt counter MUST still commit — otherwise the @Transactional
+    // rollback reverts the increment, the code is never burned, and the brute-force cap is inert.
+    @Transactional(noRollbackFor = InvalidEmailVerificationCodeException.class)
     public AuthResponseDto verifyEmail(EmailVerificationRequestDto dto) {
         String email = normalizeEmail(requireText(dto == null ? null : dto.getEmail(), "Email"));
         String code = requireText(dto == null ? null : dto.getCode(), "Verification code");
 
-        User user = this.userRepository.findByEmail(email);
+        // Pessimistic lock: serialize concurrent verify attempts for this account so the wrong-guess
+        // counter increments atomically and the cap can't be raced (parallel guesses can't all read 0).
+        User user = this.userRepository.findByEmailForUpdate(email).orElse(null);
         if (user == null) {
             throw new InvalidEmailVerificationCodeException("Verification code is invalid or expired");
         }
         if (user.isEmailVerified()) {
-            return new AuthResponseDto(this.jwtUtil.generateToken(user.getUsername()), user.getUsername());
+            // Already verified: do NOT mint a token here. This endpoint takes only email + code (no
+            // password) and is public, so returning a JWT for a verified account would be account
+            // takeover by email address alone. The user must sign in instead. Same generic error as a
+            // bad code, so it doesn't leak which emails are registered/verified.
+            throw new InvalidEmailVerificationCodeException("Verification code is invalid or expired");
         }
-        if (user.getEmailVerificationCodeExpiresAt() == null
-            || user.getEmailVerificationCodeExpiresAt().isBefore(LocalDateTime.now())
-            || !this.authTokenService.matches(code, user.getEmailVerificationCodeHash())) {
+
+        boolean expired = user.getEmailVerificationCodeExpiresAt() == null
+            || user.getEmailVerificationCodeExpiresAt().isBefore(LocalDateTime.now());
+        boolean matches = !expired
+            && this.authTokenService.matches(code, user.getEmailVerificationCodeHash());
+
+        if (!matches) {
+            // Count the wrong guess; once the cap is hit, burn the code so the rest of the 10^6 space
+            // can't be enumerated. A new code must be requested (resend), which only reaches the
+            // account owner's inbox — an attacker gains nothing by forcing a reissue.
+            int attempts = user.getEmailVerificationAttempts() + 1;
+            user.setEmailVerificationAttempts(attempts);
+            if (attempts >= MAX_VERIFICATION_ATTEMPTS) {
+                user.setEmailVerificationCodeHash(null);
+                user.setEmailVerificationCodeExpiresAt(null);
+            }
+            this.userRepository.save(user);
             throw new InvalidEmailVerificationCodeException("Verification code is invalid or expired");
         }
 
         user.setEmailVerified(true);
         user.setEmailVerificationCodeHash(null);
         user.setEmailVerificationCodeExpiresAt(null);
+        user.setEmailVerificationAttempts(0);
         this.userRepository.save(user);
-        this.alertEmailPublisher.publishWelcome(user);
+        try {
+            this.alertEmailPublisher.publishWelcome(user);
+        } catch (RuntimeException brokerUnavailable) {
+            // Best-effort welcome email: a broker hiccup must NOT roll back the (now successful) email
+            // verification. The account is verified and the user gets a token regardless.
+        }
 
-        return new AuthResponseDto(this.jwtUtil.generateToken(user.getUsername()), user.getUsername());
+        return new AuthResponseDto(this.jwtUtil.generateToken(user.getUsername(), user.getTokenVersion()), user.getUsername());
     }
 
     public void resendEmailVerification(EmailVerificationResendRequestDto dto) {
@@ -161,6 +196,10 @@ public class AuthService {
         user.setPassword(this.bCryptPasswordEncoder.encode(newPassword));
         user.setPasswordResetTokenHash(null);
         user.setPasswordResetTokenExpiresAt(null);
+        // Revoke every JWT issued before this reset: bumping the version makes the auth filter's
+        // 'ver' check fail for all previously minted tokens (a leaked/active session can't survive
+        // a password reset).
+        user.setTokenVersion(user.getTokenVersion() + 1);
         this.userRepository.save(user);
     }
 
@@ -168,6 +207,7 @@ public class AuthService {
         String code = this.authTokenService.generateEmailVerificationCode();
         user.setEmailVerificationCodeHash(this.authTokenService.hash(code));
         user.setEmailVerificationCodeExpiresAt(LocalDateTime.now().plusMinutes(EMAIL_VERIFICATION_TTL_MINUTES));
+        user.setEmailVerificationAttempts(0);
         return code;
     }
 

@@ -1,7 +1,9 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { login, requestPasswordReset } from '../../api/auth'
-import './Auth.css'
+import AppLink from '../../components/AppLink'
+import AuthLayout from '../../components/Auth/AuthLayout'
+import Field from '../../components/primitives/Field'
 
 export default function Login({ onLogin }) {
   const [username, setUsername] = useState('')
@@ -57,40 +59,25 @@ export default function Login({ onLogin }) {
   }
 
   return (
-    <div className="auth-container">
-      <h2>Login</h2>
-      <form onSubmit={handleSubmit} className="auth-form">
-        <div className="form-group">
-          <label className="form-label" htmlFor="login-username">Username</label>
-          <input
-            id="login-username"
-            type="text"
-            value={username}
-            onChange={(event) => setUsername(event.target.value)}
-            required
-            className="form-input"
-          />
-        </div>
-        <div className="form-group">
-          <label className="form-label" htmlFor="login-password">Password</label>
-          <input
-            id="login-password"
-            type="password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            required
-            className="form-input"
-          />
-        </div>
-        {error && <p className="form-error">{error}</p>}
-        <button type="submit" className="form-button" disabled={loading}>
-          {loading ? 'Logging in...' : 'Login'}
+    <AuthLayout
+      kicker="Welcome back"
+      title="Log in"
+      footer={<>Don&apos;t have an account? <AppLink to="/signup" className="font-semibold text-oxblood">Sign up</AppLink></>}
+    >
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <Field id="login-username" label="Username" type="text" value={username}
+          onChange={(e) => setUsername(e.target.value)} required />
+        <Field id="login-password" label="Password" type="password" value={password}
+          onChange={(e) => setPassword(e.target.value)} required />
+        {error && <p className="text-sm text-danger">{error}</p>}
+        <button type="submit" className="btn btn-primary btn-lg btn-block" disabled={loading}>
+          {loading ? 'Logging in…' : 'Log in'}
         </button>
       </form>
 
       <button
         type="button"
-        className="auth-secondary-button"
+        className="mt-4 font-meta text-xs font-semibold uppercase tracking-[0.12em] text-ink-mute transition-colors hover:text-ink"
         onClick={() => {
           setShowResetForm((value) => !value)
           setResetMessage('')
@@ -100,32 +87,19 @@ export default function Login({ onLogin }) {
       </button>
 
       {showResetForm && (
-        <form onSubmit={handlePasswordReset} className="auth-form auth-secondary-form">
-          <div className="form-group">
-            <label className="form-label" htmlFor="login-reset-email">Account email</label>
-            <input
-              id="login-reset-email"
-              type="email"
-              value={resetEmail}
-              onChange={(event) => setResetEmail(event.target.value)}
-              required
-              className="form-input"
-            />
-          </div>
+        <form onSubmit={handlePasswordReset} className="mt-4 flex flex-col gap-4 border-t border-line pt-4">
+          <Field id="login-reset-email" label="Account email" type="email" value={resetEmail}
+            onChange={(e) => setResetEmail(e.target.value)} required />
           {resetMessage && (
-            <p className={resetMessage.startsWith('If the account exists') ? 'form-info' : 'form-error'}>
+            <p className={resetMessage.startsWith('If the account exists') ? 'text-sm text-forest' : 'text-sm text-danger'}>
               {resetMessage}
             </p>
           )}
-          <button type="submit" className="form-button" disabled={resetLoading}>
-            {resetLoading ? 'Requesting...' : 'Request reset email'}
+          <button type="submit" className="btn btn-secondary btn-block" disabled={resetLoading}>
+            {resetLoading ? 'Requesting…' : 'Request reset email'}
           </button>
         </form>
       )}
-
-      <p className="auth-footer">
-        Don&apos;t have an account? <Link to="/signup">Sign up</Link>
-      </p>
-    </div>
+    </AuthLayout>
   )
 }

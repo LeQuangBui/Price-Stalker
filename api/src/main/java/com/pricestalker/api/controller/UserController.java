@@ -2,10 +2,6 @@ package com.pricestalker.api.controller;
 
 import com.pricestalker.core.entity.User;
 import com.pricestalker.api.security.UserPrincipal;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -22,6 +18,9 @@ public class UserController {
         this.userService = userService;
     }
 
+    // Only the caller's own profile is exposed. The former GET /users (list all) and GET /users/{id}
+    // returned email + bookmarks for ANY user to ANY authenticated caller — an email-harvest / IDOR.
+    // The SPA only ever calls /users/me; reintroduce listing behind an admin role if ever needed.
     @GetMapping("/me")
 	public ResponseEntity<UserResponseDto> getCurrentUser(
 		@AuthenticationPrincipal UserPrincipal userPrincipal
@@ -30,29 +29,4 @@ public class UserController {
         User user = this.userService.getUser(id);
         return ResponseEntity.ok(UserResponseDto.from(user));
     }
-	
-	@GetMapping("/{id}")
-	public ResponseEntity<UserResponseDto> getUser(@PathVariable String id) {
-		User user = this.userService.getUser(id);
-		return ResponseEntity.ok(UserResponseDto.from(user));
-	}
-	
-	@GetMapping()
-	public ResponseEntity<Page<UserResponseDto>> getUsers(
-			@RequestParam(defaultValue = "") String username,
-			@RequestParam(defaultValue = "0") int page,
-			@RequestParam(defaultValue = "20") int size,
-			@RequestParam(defaultValue = "createdAt") String sort,
-			@RequestParam(defaultValue = "DESC") String direction
-	) {
-		Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.fromString(direction), sort));
-		Page<User> users;
-		if (!username.isEmpty()) {
-			users = userService.getUsersByUsername(username, pageable);
-		} else {
-			users = userService.getAllUsers(pageable);
-		}
-		return ResponseEntity.ok(users.map(UserResponseDto::from));
-	}
-
 }

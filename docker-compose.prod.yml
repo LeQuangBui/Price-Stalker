@@ -31,8 +31,8 @@ services:
     image: rabbitmq:3.13-management
     restart: unless-stopped
     environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:?set RABBITMQ_USER in .env.prod}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?set RABBITMQ_PASSWORD in .env.prod}
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
@@ -57,8 +57,8 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD in .env.prod}
       SPRING_RABBITMQ_HOST: rabbitmq
       SPRING_RABBITMQ_PORT: "5672"
-      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER:-guest}
-      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER:?set RABBITMQ_USER in .env.prod}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?set RABBITMQ_PASSWORD in .env.prod}
       SERVER_PORT: "8080"
       CORS_ALLOWED_ORIGIN: ${PUBLIC_BASE_URL:?set PUBLIC_BASE_URL in .env.prod}
       APP_FRONTEND_BASE_URL: ${PUBLIC_BASE_URL:?set PUBLIC_BASE_URL in .env.prod}
@@ -92,8 +92,8 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD in .env.prod}
       SPRING_RABBITMQ_HOST: rabbitmq
       SPRING_RABBITMQ_PORT: "5672"
-      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER:-guest}
-      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER:?set RABBITMQ_USER in .env.prod}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?set RABBITMQ_PASSWORD in .env.prod}
       SERVER_PORT: "8090"
     networks: [pricestalker_net]
 
@@ -113,8 +113,8 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD in .env.prod}
       SPRING_RABBITMQ_HOST: rabbitmq
       SPRING_RABBITMQ_PORT: "5672"
-      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER:-guest}
-      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER:?set RABBITMQ_USER in .env.prod}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?set RABBITMQ_PASSWORD in .env.prod}
       SERVER_PORT: "8091"
       # Provider selector: 'resend' (default, safe fallback) or 'smtp' (self-hosted Postfix).
       # Flip to 'smtp' in .env.prod ONLY after the mail-tester baseline passes (DKIM/DNS live).
@@ -170,8 +170,8 @@ services:
     environment:
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_PORT: "5672"
-      RABBITMQ_USERNAME: ${RABBITMQ_USER:-guest}
-      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
+      RABBITMQ_USERNAME: ${RABBITMQ_USER:?set RABBITMQ_USER in .env.prod}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?set RABBITMQ_PASSWORD in .env.prod}
       PROXY_URL: ${PROXY_URL:-}
       # Optional S3-compatible image storage (MEGA S4, DigitalOcean Spaces, AWS S3).
       # Leave blank to disable. For a non-AWS provider set AWS_ENDPOINT_URL (MEGA S4 e.g.

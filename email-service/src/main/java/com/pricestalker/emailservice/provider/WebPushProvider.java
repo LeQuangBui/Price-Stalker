@@ -1,5 +1,6 @@
 package com.pricestalker.emailservice.provider;
 
+import com.pricestalker.core.util.PushEndpoints;
 import nl.martijndwars.webpush.Encoding;
 import nl.martijndwars.webpush.Notification;
 import nl.martijndwars.webpush.PushService;
@@ -65,6 +66,17 @@ public class WebPushProvider {
     public int send(String endpoint, String p256dh, String auth, byte[] payload) throws IOException {
         if (!this.enabled) {
             throw new IllegalStateException("Web Push is disabled (VAPID not configured).");
+        }
+        // SSRF defense-in-depth: the api allowlists endpoints at subscribe time, but re-validate the
+        // STORED endpoint here before the outbound POST (the allowlist could have tightened, or a row
+        // could have been written by another path). Skip a disallowed endpoint instead of probing it.
+        // Return 403 (NOT 404): PushOutbox prunes the subscription on 404/410, which would DESTROY a
+        // real subscription if we ever tighten the allowlist. 403 routes to PushOutbox's non-retryable
+        // branch — this push is marked FAILED + alert-logged, but the subscription is KEPT so it still
+        // delivers if the host is later allowlisted.
+        if (!PushEndpoints.isAllowed(endpoint)) {
+            log.warn("web_push skipped disallowed endpoint (SSRF guard); keeping the subscription.");
+            return 403;
         }
         try {
             Notification notification = new Notification(endpoint, p256dh, auth, payload);

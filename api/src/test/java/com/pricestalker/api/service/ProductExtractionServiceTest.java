@@ -27,7 +27,7 @@ class ProductExtractionServiceTest {
         when(requestRepository.save(org.mockito.ArgumentMatchers.any(ProductExtractionRequest.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-        ProductExtractionRequest request = productExtractionService.create(" https://gearvn.com/products/mouse ");
+        ProductExtractionRequest request = productExtractionService.create(" https://gearvn.com/products/mouse ", "user-1");
 
         ArgumentCaptor<ProductExtractionRequest> requestCaptor = ArgumentCaptor.forClass(ProductExtractionRequest.class);
         ArgumentCaptor<ScrapeRequestedEvent> eventCaptor = ArgumentCaptor.forClass(ScrapeRequestedEvent.class);
@@ -39,6 +39,7 @@ class ProductExtractionServiceTest {
         assertThat(request.getId()).isEqualTo(saved.getId());
         assertThat(saved.getStatus()).isEqualTo(ProductExtractionRequest.Status.QUEUED);
         assertThat(saved.getUrl()).isEqualTo("https://gearvn.com/products/mouse");
+        assertThat(saved.getUserId()).isEqualTo("user-1");
         assertThat(event.id().toString()).isEqualTo(saved.getId());
         assertThat(event.updated()).isFalse();
         assertThat(event.url()).isEqualTo(saved.getUrl());

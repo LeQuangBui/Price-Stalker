@@ -1,3 +1,4 @@
+import json
 import re
 from scrapy.http import JsonRequest
 from extractors.scrapy.spiders.base import BaseSpider
@@ -11,9 +12,15 @@ class CellphonesSpider(BaseSpider):
 
     def parse(self, response):
         images = response.css("div.swiper-slide a.spotlight::attr(href)").getall()
-        for image in images:
-            image = re.sub(".*https:\/\/cellphones\.com\.vn", "https://cellphones.com.vn/", image)
-        query = 'query { products( filter: { static: { province_id:30 url_path: \"' + re.sub(self.base_url, '', self.url) + '\" } }) { filterable {product_id name sku price special_price flash_sale_types } }}'
+        # List comprehension: the old `for image in images: image = re.sub(...)` only rebound the loop
+        # variable and never wrote back to the list, so the normalization was a silent no-op.
+        images = [re.sub(".*https:\/\/cellphones\.com\.vn", "https://cellphones.com.vn/", image) for image in images]
+        # url_path is attacker-controllable (the path of the submitted product URL). Emit it via
+        # json.dumps so it becomes a properly-escaped GraphQL string literal instead of being
+        # concatenated raw — otherwise a crafted path with quotes/braces breaks out of the query
+        # (GraphQL injection against the CellphoneS API).
+        url_path = re.sub(self.base_url, '', self.url)
+        query = 'query { products( filter: { static: { province_id:30 url_path: ' + json.dumps(url_path) + ' } }) { filterable {product_id name sku price special_price flash_sale_types } }}'
         yield JsonRequest(
             url=self.start_urls[0],
             data={

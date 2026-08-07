@@ -1,5 +1,16 @@
 const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8080').replace(/\/$/, '')
 
+let unauthorizedHandler = null
+
+/**
+ * Register a callback fired when an AUTHENTICATED request is rejected with 401 (an expired or
+ * revoked session). The shell uses it to clear signed-in state + redirect, so stale signed-in
+ * chrome can't linger after the session dies. Pass null to unregister.
+ */
+export function setUnauthorizedHandler(handler) {
+  unauthorizedHandler = handler
+}
+
 export class ApiError extends Error {
   constructor(message, status, payload = null) {
     super(message)
@@ -50,6 +61,7 @@ export async function apiRequest(path, options = {}) {
     headers = {},
     auth = true,
     parse = true,
+    suppressAuthRedirect = false,
     ...rest
   } = options
 
@@ -78,6 +90,15 @@ export async function apiRequest(path, options = {}) {
   const payload = parse ? await parseResponseBody(response) : null
 
   if (!response.ok) {
+    // A 401 on a request we authenticated (had a token) means the session is dead — not a
+    // login/credential failure (those use auth:false). Clear it and notify the app shell.
+    // Background/indicator fetches pass suppressAuthRedirect so a probe the user never initiated
+    // can't yank them to /login; the token is left intact so the next foreground request triggers
+    // the real logout.
+    if (response.status === 401 && auth && token && !suppressAuthRedirect) {
+      removeToken()
+      if (unauthorizedHandler) unauthorizedHandler()
+    }
     throw new ApiError(extractErrorMessage(payload, response), response.status, payload)
   }
 

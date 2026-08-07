@@ -5,6 +5,13 @@
 :root {
   --font-serif: 'Fraunces', Georgia, 'Times New Roman', serif;
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;  /* editorial datelines / meta */
+
+  /* Motion tokens (E5 redesign) — all usage is prefers-reduced-motion gated. */
+  --ease-standard: cubic-bezier(0.2, 0.7, 0.3, 1);
+  --dur-fast: 150ms;
+  --dur-base: 220ms;
+  --dur-slow: 600ms;
 
   --primary: #6f1d2b;        /* oxblood — brand + primary actions */
   --primary-dark: #571521;
@@ -31,6 +38,7 @@
   --radius: 8px;
   --radius-sm: 6px;
   --radius-lg: 12px;
+  --text-on-primary: #ffffff;   /* text on oxblood/solid buttons (white reads on both themes) */
 }
 
 .dark {
@@ -56,6 +64,64 @@
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
   --shadow: 0 22px 56px -34px rgba(0, 0, 0, 0.7);
   --shadow-lg: 0 28px 80px -36px rgba(0, 0, 0, 0.78);
+}
+
+/* ── Tailwind v4 token bridge (E5 redesign) ─────────────────
+   Maps the semantic CSS custom properties above to Tailwind utilities so
+   components can write `bg-paper text-ink border-line font-display` instead of
+   `bg-[var(--bg-primary)]`. `inline` = utilities reference the live vars, so
+   dark mode (the .dark class) flips them for free. ADDITIVE for now — the
+   default palette is restricted + lint-gated in the Phase 4 sweep, once every
+   page has migrated off raw utilities. */
+@theme inline {
+  --color-ground: var(--bg-secondary);
+  --color-paper: var(--bg-primary);
+  --color-surface: var(--surface-raised);
+  --color-tertiary: var(--bg-tertiary);
+  --color-ink: var(--text-primary);
+  --color-ink-soft: var(--text-secondary);
+  --color-ink-mute: var(--text-muted);
+  --color-oxblood: var(--primary);
+  --color-oxblood-deep: var(--primary-dark);
+  --color-forest: var(--accent);
+  --color-danger: var(--danger);
+  --color-line: var(--border);
+  --color-line-soft: var(--border-light);
+
+  --font-display: var(--font-serif);
+  --font-body: var(--font-sans);
+  --font-meta: var(--font-mono);
+
+  /* Editorial display scale (poster headlines + hero prices). */
+  --text-display-xl: clamp(2.75rem, 9vw, 7rem);
+  --text-display-xl--line-height: 0.96;
+  --text-display-xl--letter-spacing: -0.02em;
+  --text-display: clamp(2.25rem, 6vw, 4.5rem);
+  --text-display--line-height: 1.0;
+  --text-display--letter-spacing: -0.02em;
+  --text-display-sm: clamp(1.6rem, 4vw, 2.4rem);
+  --text-display-sm--line-height: 1.08;
+  --text-display-sm--letter-spacing: -0.01em;
+}
+
+/* ── Reveal-on-scroll primitive (driven by the useReveal hook) ──── */
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(18px);
+}
+[data-reveal].is-visible {
+  opacity: 1;
+  transform: none;
+  transition: opacity var(--dur-slow) var(--ease-standard),
+    transform var(--dur-slow) var(--ease-standard);
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal],
+  [data-reveal].is-visible {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
 }
 
 * {
@@ -267,6 +333,24 @@ button:focus-visible,
   }
 }
 
+.skip-link {
+  position: absolute;
+  left: 16px;
+  top: -48px;
+  z-index: 70;
+  padding: 10px 16px;
+  border-radius: var(--radius-sm);
+  background: var(--primary);
+  color: #fff;
+  font-weight: 600;
+  text-decoration: none;
+  transition: top var(--dur-fast) var(--ease-standard);
+}
+
+.skip-link:focus {
+  top: 16px;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
@@ -287,6 +371,13 @@ button:focus-visible,
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+
+  /* Route View Transitions must also respect reduced motion. */
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
   }
 }
 

@@ -58,7 +58,7 @@
 .confirm-dialog-confirm {
   border: none;
   background: var(--primary);
-  color: #fff;
+  color: var(--text-on-primary);
 }
 
 .confirm-dialog-confirm.danger {

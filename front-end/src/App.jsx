@@ -1,6 +1,5 @@
-import { useState } from 'react'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import Header from './components/Header/Header'
+import { createBrowserRouter, RouterProvider, useOutletContext } from 'react-router-dom'
+import RootLayout from './layouts/RootLayout'
 import Home from './pages/Home/Home'
 import Login from './pages/Auth/Login'
 import Signup from './pages/Auth/Signup'
@@ -11,47 +10,52 @@ import Bookmarks from './pages/Bookmarks/Bookmarks'
 import ProductDetail from './pages/Product/ProductDetail'
 import Alerts from './pages/Alerts/Alerts'
 import Landing from './pages/Landing/Landing'
-import { hasToken, logout } from './api/auth'
-import { useThemeMode } from './theme/useThemeMode'
+import NotFound from './pages/NotFound/NotFound'
+import RequireAuth from './components/RequireAuth'
 import './App.css'
 
+// Thin route wrappers: pull shared auth state/handlers from the RootLayout's
+// Outlet context so pages keep their existing prop contracts.
+function HomeOrLanding() {
+  const { isSignedIn } = useOutletContext()
+  return isSignedIn ? <Home isSignedIn /> : <Landing />
+}
+function BrowseRoute() {
+  const { isSignedIn } = useOutletContext()
+  return <Home isSignedIn={isSignedIn} />
+}
+function LoginRoute() {
+  const { onLogin } = useOutletContext()
+  return <Login onLogin={onLogin} />
+}
+function VerifyEmailRoute() {
+  const { onLogin } = useOutletContext()
+  return <VerifyEmail onVerified={onLogin} />
+}
+function ProductRoute() {
+  const { isSignedIn } = useOutletContext()
+  return <ProductDetail isSignedIn={isSignedIn} />
+}
+
+const router = createBrowserRouter([
+  {
+    element: <RootLayout />,
+    children: [
+      { path: '/', element: <HomeOrLanding /> },
+      { path: '/browse', element: <BrowseRoute /> },
+      { path: '/login', element: <LoginRoute /> },
+      { path: '/signup', element: <Signup /> },
+      { path: '/verify-email', element: <VerifyEmailRoute /> },
+      { path: '/reset-password', element: <ResetPassword /> },
+      { path: '/profile', element: <RequireAuth><UserProfile /></RequireAuth> },
+      { path: '/bookmarks', element: <RequireAuth><Bookmarks /></RequireAuth> },
+      { path: '/alerts', element: <RequireAuth><Alerts /></RequireAuth> },
+      { path: '/products/:id', element: <ProductRoute /> },
+      { path: '*', element: <NotFound /> },
+    ],
+  },
+])
+
 export default function App() {
-  const [isSignedIn, setIsSignedIn] = useState(() => hasToken())
-  const { theme, toggleTheme } = useThemeMode()
-
-  const handleLogin = () => setIsSignedIn(true)
-
-  const handleSignOut = () => {
-    logout()
-    setIsSignedIn(false)
-  }
-
-  return (
-    <BrowserRouter>
-      <div className="min-h-screen bg-[var(--bg-secondary)] text-[var(--text-primary)] transition-colors duration-300">
-        <div className="app-container">
-          <Header
-            isSignedIn={isSignedIn}
-            onSignOut={handleSignOut}
-            theme={theme}
-            onToggleTheme={toggleTheme}
-          />
-          <main className="pb-12">
-            <Routes>
-              <Route path="/" element={isSignedIn ? <Home /> : <Landing />} />
-              <Route path="/browse" element={<Home />} />
-              <Route path="/login" element={<Login onLogin={handleLogin} />} />
-              <Route path="/signup" element={<Signup />} />
-              <Route path="/verify-email" element={<VerifyEmail onVerified={handleLogin} />} />
-              <Route path="/reset-password" element={<ResetPassword />} />
-              <Route path="/profile" element={<UserProfile />} />
-              <Route path="/bookmarks" element={<Bookmarks />} />
-              <Route path="/alerts" element={<Alerts />} />
-              <Route path="/products/:id" element={<ProductDetail isSignedIn={isSignedIn} />} />
-            </Routes>
-          </main>
-        </div>
-      </div>
-    </BrowserRouter>
-  )
+  return <RouterProvider router={router} />
 }

@@ -2,6 +2,7 @@ package com.pricestalker.api.controller;
 
 import com.pricestalker.api.dto.auth.*;
 import com.pricestalker.api.service.AuthService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -18,12 +19,12 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<AuthResponseDto> login(@RequestBody LoginRequestDto dto) {
+    public ResponseEntity<AuthResponseDto> login(@Valid @RequestBody LoginRequestDto dto) {
         return ResponseEntity.ok(this.authService.login(dto));
     }
 
     @PostMapping("/signup")
-    public ResponseEntity<SignupResponseDto> signup(@RequestBody SignupRequestDto dto) {
+    public ResponseEntity<SignupResponseDto> signup(@Valid @RequestBody SignupRequestDto dto) {
         return ResponseEntity.ok(this.authService.signup(dto));
     }
 

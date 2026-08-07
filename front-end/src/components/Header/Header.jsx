@@ -1,4 +1,5 @@
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
+import AppLink from '../AppLink'
 import NotificationBell from '../NotificationBell/NotificationBell'
 import './Header.css'
 
@@ -11,49 +12,48 @@ export default function Header({ isSignedIn, onSignOut, theme, onToggleTheme }) 
   }
 
   return (
-    <header className="header sticky top-4 z-40 rounded-2xl border border-[var(--border)] bg-[var(--bg-primary)] px-4 py-3 shadow-[var(--shadow)] sm:px-5">
-      <Link to="/" className="header-title group">
-        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--primary)] text-lg font-black text-white shadow-[var(--shadow-sm)]">
+    <header
+      className="header sticky top-4 z-40 rounded-2xl border border-line bg-paper px-4 py-3 sm:px-5"
+      style={{ boxShadow: 'var(--shadow)' }}
+    >
+      <AppLink to="/" className="header-title group">
+        <span
+          className="flex h-10 w-10 items-center justify-center rounded-xl bg-oxblood font-display text-xl font-bold text-white"
+          style={{ boxShadow: 'var(--shadow-sm)' }}
+        >
           P
         </span>
         <div>
-          <h1>Price Stalker</h1>
-          <span className="hidden text-xs font-semibold uppercase text-[var(--text-muted)] sm:block">
+          <h1 className="font-display">
+            Price<span className="text-oxblood">Stalker</span>
+          </h1>
+          <span className="hidden font-meta text-[10px] font-semibold uppercase tracking-[0.18em] text-ink-mute sm:block">
             Track smarter
           </span>
         </div>
-      </Link>
+      </AppLink>
       <nav className="header-nav">
         {isSignedIn ? (
           <>
             <NotificationBell />
-            <Link to="/profile" className="header-link">
-              Profile
-            </Link>
-            <Link to="/alerts" className="header-link">
-              Alerts
-            </Link>
-            <Link to="/bookmarks" className="header-link">
-              Bookmarks
-            </Link>
+            <AppLink to="/profile" className="header-link">Profile</AppLink>
+            <AppLink to="/alerts" className="header-link">Alerts</AppLink>
+            <AppLink to="/bookmarks" className="header-link">Bookmarks</AppLink>
             <button onClick={handleSignOut} className="signout-button" type="button">
               Sign Out
             </button>
           </>
         ) : (
           <>
-            <Link to="/login" className="header-link">
-              Login
-            </Link>
-            <Link to="/signup" className="header-link">
-              Sign Up
-            </Link>
+            <AppLink to="/login" className="header-link">Login</AppLink>
+            <AppLink to="/signup" className="header-link">Sign Up</AppLink>
           </>
         )}
         <button
           type="button"
           className="theme-toggle"
           onClick={onToggleTheme}
+          aria-pressed={theme === 'dark'}
           aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
           title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
         >

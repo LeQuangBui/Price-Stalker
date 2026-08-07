@@ -120,7 +120,7 @@
   font-weight: 600;
   cursor: pointer;
   background: var(--primary);
-  color: #fff;
+  color: var(--text-on-primary);
 }
 
 .bookmark-existing-action:disabled,

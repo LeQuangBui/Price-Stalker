@@ -54,7 +54,12 @@ public class ScrapeResultListener {
     private UUID toUuid(Object value) {
         if (value == null) return null;
         if (value instanceof UUID uuid) return uuid;
-        return UUID.fromString(value.toString());
+        try {
+            return UUID.fromString(value.toString());
+        } catch (IllegalArgumentException notAUuid) {
+            // Forged/garbage id -> null -> handleCompleted logs + drops it (no poison-message retry loop).
+            return null;
+        }
     }
 
     private String toStringOrNull(Object value) {

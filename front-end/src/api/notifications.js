@@ -5,7 +5,7 @@ import { apiRequest, buildQuery } from './client'
  * (the server collapses the email + push rows by event_id). Returns an array of
  * { eventId, productId, productName, productUrl, sentAt }.
  */
-export async function getNotifications({ size = 20 } = {}) {
-  const data = await apiRequest(`/notifications${buildQuery({ size })}`)
+export async function getNotifications({ size = 20, suppressAuthRedirect = false } = {}) {
+  const data = await apiRequest(`/notifications${buildQuery({ size })}`, { suppressAuthRedirect })
   return Array.isArray(data) ? data : []
 }

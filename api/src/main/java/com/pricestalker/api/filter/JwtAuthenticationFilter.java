@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.pricestalker.api.security.MyUserDetailsService;
+import com.pricestalker.api.security.UserPrincipal;
 import com.pricestalker.api.util.JwtUtil;
 
 import jakarta.servlet.FilterChain;
@@ -37,16 +38,39 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
-            String username = jwtUtil.extractUsername(token);
 
-            if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+            try {
+                String username = jwtUtil.extractUsername(token);
 
-                if (jwtUtil.validateToken(token, username)) {
-                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                    UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+
+                    // Fail closed: the token must (a) carry a valid signature + not be expired,
+                    // (b) name the exact user we just loaded (validate against the persisted
+                    // username, not a value re-derived from the same token), and (c) match the
+                    // user's current token version (so tokens minted before a password reset are
+                    // rejected). Any mismatch leaves the context unauthenticated.
+                    boolean userMatches = jwtUtil.validateToken(token, userDetails.getUsername());
+                    boolean versionMatches = false;
+                    if (userDetails instanceof UserPrincipal principal) {
+                        versionMatches = jwtUtil.extractTokenVersion(token) == principal.getTokenVersion();
+                    }
+
+                    if (userMatches && versionMatches) {
+                        UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                        authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                        SecurityContextHolder.getContext().setAuthentication(authToken);
+                    } else {
+                        SecurityContextHolder.clearContext();
+                    }
                 }
+            } catch (io.jsonwebtoken.JwtException | IllegalArgumentException
+                     | org.springframework.security.core.userdetails.UsernameNotFoundException invalidToken) {
+                // Swallow ONLY token/identity failures (malformed/expired/forged token, or a token for a
+                // since-deleted user): stay unauthenticated -> clean 401. A transient infra error (e.g. a
+                // DB blip inside loadUserByUsername) is deliberately NOT caught here, so it surfaces as a
+                // 500 instead of silently logging a valid user out during the blip.
+                SecurityContextHolder.clearContext();
             }
         }
 

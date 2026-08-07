@@ -61,9 +61,15 @@ export function getTrackedPrice(product) {
     return product.flash_sale_price
   }
 
-  if (product.price !== null && product.price !== undefined) {
+  // A stored 0 (out-of-stock / parse glitch) is not a real price — fall through rather than render
+  // "$0" and a fake ~100% drop badge. Mirrors the >0 guard in hasFlashSalePrice/hasOriginalPrice.
+  if (product.price !== null && product.price !== undefined && Number(product.price) > 0) {
     return product.price
   }
 
-  return product.originalPrice ?? null
+  if (product.originalPrice !== null && product.originalPrice !== undefined && Number(product.originalPrice) > 0) {
+    return product.originalPrice
+  }
+
+  return null
 }

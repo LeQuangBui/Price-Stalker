@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import AddByUrl from '../../components/AddByUrl/AddByUrl'
 import ProductSearch from '../../components/ProductSearch/ProductSearch'
 import {
@@ -11,6 +11,10 @@ import {
 import { isUnauthorizedError } from '../../api/auth'
 import { formatDate, formatPrice, getPrimaryImage, getTrackedPrice } from '../../utils/formatters'
 import { useConfirm } from '../../components/ConfirmDialog/useConfirm'
+import AppLink from '../../components/AppLink'
+import Kicker from '../../components/primitives/Kicker'
+import Pagination from '../../components/primitives/Pagination'
+import ErrorState from '../../components/primitives/ErrorState'
 import './Bookmarks.css'
 
 export default function Bookmarks() {
@@ -237,10 +241,7 @@ export default function Bookmarks() {
   if (error && bookmarks.length === 0) {
     return (
       <div className="bookmarks-container">
-        <div className="page-error">
-          <span>{error}</span>
-          <button type="button" className="retry-btn" onClick={fetchBookmarks}>Retry</button>
-        </div>
+        <ErrorState message={error} onRetry={fetchBookmarks} />
       </div>
     )
   }
@@ -248,11 +249,12 @@ export default function Bookmarks() {
   return (
     <div className="bookmarks-container">
       {confirmDialog}
+      <Kicker>Collections</Kicker>
       <div className="bookmarks-header">
         <div>
-          <h2>My Bookmarks</h2>
+          <h1 className="font-display text-display-sm font-semibold text-ink" style={{ margin: 0 }}>My bookmarks</h1>
           <p className="bookmarks-subtitle">
-            Expand a bookmark, add products locally, then save the final list with one update request.
+            Group products to watch together. Add by search or by pasting a URL, then save the list.
           </p>
         </div>
 
@@ -363,7 +365,7 @@ export default function Bookmarks() {
                         <div className="bookmark-products">
                           {draft.products.map((product) => (
                             <div key={product.id} className="product-preview">
-                              <Link to={`/products/${product.id}`} className="product-preview-link">
+                              <AppLink to={`/products/${product.id}`} className="product-preview-link">
                                 {getPrimaryImage(product) ? (
                                   <img src={getPrimaryImage(product)} alt={product.name} />
                                 ) : (
@@ -376,7 +378,7 @@ export default function Bookmarks() {
                                     {formatPrice(getTrackedPrice(product), product.currency)}
                                   </span>
                                 </div>
-                              </Link>
+                              </AppLink>
 
                               <button
                                 type="button"
@@ -398,17 +400,12 @@ export default function Bookmarks() {
             })}
           </div>
 
-          {totalPages > 1 && (
-            <div className="pagination">
-              <button onClick={() => setPage((value) => Math.max(0, value - 1))} disabled={page === 0}>
-                Previous
-              </button>
-              <span className="pagination-info">Page {page + 1} of {totalPages}</span>
-              <button onClick={() => setPage((value) => value + 1)} disabled={page >= totalPages - 1}>
-                Next
-              </button>
-            </div>
-          )}
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            onPrev={() => setPage((value) => Math.max(0, value - 1))}
+            onNext={() => setPage((value) => value + 1)}
+          />
         </>
       )}
     </div>
