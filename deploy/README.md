@@ -94,60 +94,39 @@ MySQL and RabbitMQ are **not** published to the host. To reach the RabbitMQ
 management UI, SSH-tunnel it: `ssh -L 15672:localhost:15672 deploy@<host>` after
 temporarily publishing the port, or add a guarded route in the Caddyfile.
 
-## Self-hosted email (Postfix) — switching off Resend
+## Email
 
-The `email-service` sends through a `MailProvider` chosen by `MAIL_PROVIDER` (`resend` |
-`smtp`). The default is `resend`. The `postfix` service self-hosts outbound mail; flipping to
-`smtp` is a DNS + one-env-var change. **Order matters — do not flip `MAIL_PROVIDER=smtp` until
-DNS is live, or verification emails will land in spam.**
+Mail is sent through [Resend](https://resend.com). Set `RESEND_API_KEY` in `.env.prod` and verify
+the sending domain in the Resend dashboard — it refuses to send from an unverified domain, and
+verification is DNS-propagation bound, so do it before the first deploy.
 
-Prereqs: outbound port 25 open on the VPS, and the ability to set reverse DNS (PTR) on the VPS
-IP. Many providers block port 25 by default — confirm first
-(`nc -zv -w5 gmail-smtp-in.l.google.com 25` from the VPS should connect).
+`email-service` validates the key at startup: if it is blank the service will not boot. Nothing
+else in the stack depends on it, so the site stays up, but no verification emails are delivered
+and users cannot complete signup.
 
-### 1. Bring up Postfix and read its DKIM key
-With `MAIL_PROVIDER=resend` still set (so live mail keeps flowing via Resend), deploy so the
-`postfix` container starts and generates its DKIM key:
-
-```bash
-docker compose -f docker-compose.prod.yml --env-file .env.prod up -d postfix
-docker compose -f docker-compose.prod.yml logs postfix | grep -iA20 dkim   # prints the DKIM TXT record + selector
-```
-
-### 2. Publish DNS, then PTR (before cutover)
-Set `MAIL_DOMAIN` in `.env.prod` (usually your app domain), then create:
+DNS for the sending domain:
 
 | Type | Name | Value |
 |------|------|-------|
-| A | `mail.<MAIL_DOMAIN>` | `<VPS_IP>` |
-| PTR | `<VPS_IP>` | `mail.<MAIL_DOMAIN>` (VPS provider panel; must match the A record) |
-| TXT | `<MAIL_DOMAIN>` (SPF) | `v=spf1 a:mail.<MAIL_DOMAIN> include:_spf.resend.com -all` |
-| TXT | `<selector>._domainkey.<MAIL_DOMAIN>` (DKIM) | the key from step 1 |
-| TXT | `_dmarc.<MAIL_DOMAIN>` | `v=DMARC1; p=none; rua=mailto:<id>@<hosted-aggregator>` |
+| TXT | `<domain>` (SPF) | `v=spf1 include:_spf.resend.com -all` |
+| TXT | `_dmarc.<domain>` | `v=DMARC1; p=none; rua=mailto:<a mailbox you read>` |
 
-The SPF `include:_spf.resend.com` keeps the Resend fallback deliverable. The DMARC `rua=` points
-at a free hosted aggregator (URIports / Postmark / dmarcian) so you get reports without running an
-inbox. Wait for propagation (`dig +short <selector>._domainkey.<MAIL_DOMAIN> TXT`, `dig -x <VPS_IP>`).
+Plus the DKIM records Resend generates for your account. Keep a **single** SPF record — two TXT
+records starting with `v=spf1` at the same name is an RFC 7208 permerror that breaks SPF for every
+message.
 
-### 3. Baseline, then cut over
-Send a test (envelope sender on `<MAIL_DOMAIN>`) to https://www.mail-tester.com and to a Gmail +
-Outlook account. Confirm **≥ 9/10** and SPF/DKIM/DMARC **pass and align** (check Return-Path, not
-just From). Only then:
+`MAIL_REPLY_TO` has no inbox in a send-only setup, so replies bounce. Point it at a real mailbox
+or accept that knowingly.
 
-```bash
-# in .env.prod:
-MAIL_PROVIDER=smtp
-docker compose -f docker-compose.prod.yml --env-file .env.prod up -d email-service
-```
+### Self-hosting the MTA
 
-### Rollback
-Set `MAIL_PROVIDER=resend` and `up -d email-service` again (seconds). SPF already authorizes
-Resend, so the fallback delivers cleanly.
+A Postfix service used to ship here for `MAIL_PROVIDER=smtp`, self-hosting outbound mail. It was
+removed in favour of Resend: the code path still exists, but the container does not, so the `smtp`
+setting will not work until the service is restored from git history.
 
-### Notes
-- Outbound mail egresses via the host IP (Docker NAT), so PTR lives on the **host** IP, not a
-  container address. Port 25 is never published inbound.
-- The DKIM key persists in the `postfix_dkim` volume — back it up; losing it silently breaks DKIM
-  until you republish the TXT record.
-- `MAIL_REPLY_TO` has no inbox in an outbound-only setup, so replies bounce — point it at a real
-  mailbox or accept that knowingly.
+Worth knowing if you revisit it — reputation, not setup, is the hard part. A fresh IP with no
+sending history gets filtered by the large providers for weeks regardless of how correct the DNS
+is, which matters because these are signup verification codes. Restoring it needs the `postfix`
+service and its two volumes back in `docker-compose.prod.yml`, a PTR record on the host IP (set
+with the VPS provider, not the DNS host), DKIM/SPF/DMARC published, and a mail-tester score of at
+least 9/10 before cutting over.
