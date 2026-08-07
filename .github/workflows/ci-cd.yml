@@ -160,6 +160,6 @@ jobs:
             git checkout main
             git pull --ff-only origin main
             docker compose -f docker-compose.prod.yml --env-file .env.prod build
-            docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
+            docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --remove-orphans
             docker image prune -f
-            docker compose -f docker-compose.prod.yml ps
+            docker compose -f docker-compose.prod.yml --env-file .env.prod ps
