@@ -21,17 +21,24 @@ describe('TabBar', () => {
     expect(container).toBeEmptyDOMElement()
   })
 
-  it('renders the three primary destinations', () => {
+  it('renders the four primary destinations', () => {
     renderAt('/')
     expect(screen.getByRole('link', { name: /home/i })).toHaveAttribute('href', '/')
     expect(screen.getByRole('link', { name: /alerts/i })).toHaveAttribute('href', '/alerts')
     expect(screen.getByRole('link', { name: /saved/i })).toHaveAttribute('href', '/bookmarks')
+    expect(screen.getByRole('link', { name: /account/i })).toHaveAttribute('href', '/profile')
   })
 
   it('marks the active destination for assistive tech', () => {
     renderAt('/alerts')
     expect(screen.getByRole('link', { name: /alerts/i })).toHaveAttribute('aria-current', 'page')
     expect(screen.getByRole('link', { name: /home/i })).not.toHaveAttribute('aria-current')
+  })
+
+  it('marks Account active on /profile so phone users can always reach sign out', () => {
+    renderAt('/profile')
+    expect(screen.getByRole('link', { name: /account/i })).toHaveAttribute('href', '/profile')
+    expect(screen.getByRole('link', { name: /account/i })).toHaveAttribute('aria-current', 'page')
   })
 
   it('does not mark Home active on a sub-route', () => {

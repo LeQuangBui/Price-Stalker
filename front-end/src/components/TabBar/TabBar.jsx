@@ -10,12 +10,18 @@ const ICONS = {
   saved: (
     <path d="M6 3h12a1 1 0 0 1 1 1v16l-7-4-7 4V4a1 1 0 0 1 1-1Z" />
   ),
+  account: (
+    <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM4 20c0-3.3 3.6-6 8-6s8 2.7 8 6" />
+  ),
 }
 
 const TABS = [
   { to: '/', label: 'Home', icon: 'home', end: true },
   { to: '/alerts', label: 'Alerts', icon: 'alerts', end: false },
   { to: '/bookmarks', label: 'Saved', icon: 'saved', end: false },
+  // Header nav collapses to `md:flex` (Task 7), so /profile — and the sign-out
+  // control that lives there (Task 8) — is otherwise unreachable on phones.
+  { to: '/profile', label: 'Account', icon: 'account', end: false },
 ]
 
 /**
@@ -45,20 +51,24 @@ export default function TabBar({ isSignedIn }) {
                 ].join(' ')
               }
             >
-              <svg
-                aria-hidden="true"
-                viewBox="0 0 24 24"
-                width="22"
-                height="22"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                {ICONS[tab.icon]}
-              </svg>
-              {tab.label}
+              {({ isActive }) => (
+                <>
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 24 24"
+                    width="22"
+                    height="22"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={isActive ? 2.6 : 1.8}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    {ICONS[tab.icon]}
+                  </svg>
+                  {tab.label}
+                </>
+              )}
             </NavLink>
           </li>
         ))}
