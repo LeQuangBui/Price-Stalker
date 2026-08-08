@@ -35,3 +35,17 @@ describe('cascade layer guard', () => {
     expect(css.indexOf('@custom-variant')).toBeLessThan(layerStart)
   })
 })
+
+describe('safe-area opt-in', () => {
+  const html = readFileSync(join(SRC, '..', 'index.html'), 'utf8')
+
+  it('the viewport meta opts into safe-area insets', () => {
+    expect(html).toMatch(/name="viewport"[^>]*viewport-fit=cover/)
+  })
+
+  it('shell spacing tokens are exposed to Tailwind', () => {
+    for (const token of ['--spacing-tabbar', '--spacing-safe-b', '--spacing-shell-b']) {
+      expect(css).toContain(token)
+    }
+  })
+})
