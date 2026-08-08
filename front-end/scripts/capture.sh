@@ -16,7 +16,12 @@ set -euo pipefail
 
 SIDE="${1:?usage: capture.sh <before|after> <base-url>}"
 BASE="${2:?usage: capture.sh <before|after> <base-url>}"
-B="$(~/.claude/skills/gstack/browse/bin/find-browse)"
+# Headless-browser CLI. Set BROWSE_BIN to its path, or put it on PATH as `browse`.
+B="${BROWSE_BIN:-$(command -v browse || true)}"
+if [ -z "$B" ] || [ ! -x "$B" ]; then
+  echo "capture.sh: no headless browser CLI found. Set BROWSE_BIN=/path/to/browse" >&2
+  exit 1
+fi
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 FRONTEND_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 OUT="$FRONTEND_DIR/.screens/$SIDE"
