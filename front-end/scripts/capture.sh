@@ -35,6 +35,14 @@ settle() {
 widths=$(python3 -c "import json,sys;print(' '.join(map(str,json.load(open('$MATRIX'))['widths'])))")
 routes=$(python3 -c "import json;d=json.load(open('$MATRIX'));print('\n'.join(r['name']+' '+r['path'] for r in d['routes']))")
 
+# Prime theme storage before the first capture. useThemeMode reads localStorage
+# only at mount and does not listen for storage events, so settle() inside the
+# loop cannot affect the page it runs on — only the next navigation. Without this,
+# the very first shot of the run is captured at whatever prefers-color-scheme the
+# browser defaults to, regardless of the "-light" filename.
+"$B" goto "$BASE/"
+settle
+
 for w in $widths; do
   while read -r name path; do
     "$B" viewport "${w}x900"
