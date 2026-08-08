@@ -1,7 +1,9 @@
 import AppLink from '../AppLink'
 import NotificationBell from '../NotificationBell/NotificationBell'
 
-const LINK = 'rounded-lg px-3 py-2 text-sm font-bold text-ink-soft transition-colors hover:bg-tertiary hover:text-oxblood'
+// py-3 not py-2: text-sm is a 20px line box, so py-2 yields a 36px target. These links render
+// from md up, which includes iPad portrait and other touch devices, so they need the full 44px.
+const LINK = 'rounded-lg px-3 py-3 text-sm font-bold text-ink-soft transition-colors hover:bg-tertiary hover:text-oxblood'
 
 export default function Header({ isSignedIn, theme, onToggleTheme }) {
   return (
@@ -29,10 +31,11 @@ export default function Header({ isSignedIn, theme, onToggleTheme }) {
       <div className="flex items-center gap-2">
         {isSignedIn ? <NotificationBell /> : null}
 
-        {/* TabBar (mobile) already owns the "Primary" nav landmark — a distinct name
-            here keeps assistive tech from ever seeing two identically-labelled
-            navigation regions, even though only one is ever visible per breakpoint. */}
-        <nav aria-label="Secondary" className="hidden items-center gap-2 md:flex">
+        {/* Same label as TabBar deliberately. They are exact complements — this is `hidden md:flex`,
+            TabBar is `md:hidden` — and `display: none` removes an element from the accessibility
+            tree, so the two are never exposed at once. They are one navigation region rendered two
+            ways, and naming the desktop one "Secondary" would imply a Primary that isn't there. */}
+        <nav aria-label="Primary" className="hidden items-center gap-2 md:flex">
           {isSignedIn ? (
             <>
               <AppLink to="/profile" className={LINK}>Profile</AppLink>
