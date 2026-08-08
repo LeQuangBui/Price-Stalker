@@ -44,6 +44,9 @@ export default function Landing() {
         <Reveal delay={240} className="mt-9 flex flex-wrap gap-3">
           <AppLink to="/signup" className="btn btn-primary btn-lg">Create your watchlist</AppLink>
           <AppLink to="/browse" className="btn btn-secondary btn-lg">Browse products</AppLink>
+          {/* The header nav is `hidden md:flex` and TabBar renders nothing when signed out, so
+              below md this is the only route back to /login. Keep it in the hero CTA row. */}
+          <AppLink to="/login" className="btn btn-secondary btn-lg">Log in</AppLink>
         </Reveal>
         <Reveal delay={320}>
           <p className="mt-5 font-meta text-xs uppercase tracking-[0.16em] text-ink-mute">

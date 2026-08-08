@@ -12,7 +12,6 @@ import Alerts from './pages/Alerts/Alerts'
 import Landing from './pages/Landing/Landing'
 import NotFound from './pages/NotFound/NotFound'
 import RequireAuth from './components/RequireAuth'
-import './App.css'
 
 // Thin route wrappers: pull shared auth state/handlers from the RootLayout's
 // Outlet context so pages keep their existing prop contracts.

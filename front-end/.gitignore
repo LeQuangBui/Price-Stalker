@@ -29,3 +29,6 @@ pnpm-debug.log*
 # Vite specific
 .vite-dev.log
 .vite-dev.err
+
+# Responsive screenshot baseline captures (scripts/capture.sh)
+.screens/

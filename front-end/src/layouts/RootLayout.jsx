@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Outlet, useNavigate } from 'react-router-dom'
 import Header from '../components/Header/Header'
 import CommandPalette from '../components/CommandPalette/CommandPalette'
+import TabBar from '../components/TabBar/TabBar'
 import { ToastProvider } from '../components/Toast/ToastProvider'
 import { hasToken, logout } from '../api/auth'
 import { setUnauthorizedHandler } from '../api/client'
@@ -34,21 +35,25 @@ export default function RootLayout() {
   }, [navigate])
 
   return (
-    <ToastProvider>
-      <div className="min-h-screen bg-ground text-ink transition-colors duration-300">
+    // TabBar renders nothing when signed out, so the space reserved for it — main's bottom
+    // padding and the toast host's bottom offset — has to be gated on the same condition.
+    // ToastProvider takes it as a prop: RootLayout is its only mount point and already owns
+    // isSignedIn, so a prop beats a context or a second hasToken() read.
+    <ToastProvider offsetForTabBar={isSignedIn}>
+      <div className="min-h-dvh bg-ground text-ink transition-colors duration-300">
         <a href="#main" className="skip-link">Skip to content</a>
-        <div className="app-container">
+        <div className="mx-auto w-full max-w-[1400px] pt-4 pb-6 pl-[max(clamp(1rem,4vw,1.5rem),var(--safe-l))] pr-[max(clamp(1rem,4vw,1.5rem),var(--safe-r))] md:pt-[18px]">
           <Header
             isSignedIn={isSignedIn}
-            onSignOut={onSignOut}
             theme={theme}
             onToggleTheme={toggleTheme}
           />
-          <main id="main" className="pb-12">
+          <main id="main" className={isSignedIn ? 'pb-shell-b md:pb-12' : 'md:pb-12'}>
             <Outlet context={{ isSignedIn, onLogin, onSignOut }} />
           </main>
         </div>
         {isSignedIn ? <CommandPalette onNavigate={(to) => navigate(to)} /> : null}
+        <TabBar isSignedIn={isSignedIn} />
       </div>
     </ToastProvider>
   )
