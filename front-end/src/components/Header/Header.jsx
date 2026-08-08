@@ -7,8 +7,16 @@ const LINK = 'rounded-lg px-3 py-3 text-sm font-bold text-ink-soft transition-co
 
 export default function Header({ isSignedIn, theme, onToggleTheme }) {
   return (
+    // z-50, not z-40: Home's `.search-layer` is `position: relative; z-index: 40` (Home.css:1-4)
+    // and sits in the root stacking context, so at z-40 this sticky header lost the DOM-order tie
+    // to it and the search card slid over the header on scroll. z-50 clears it. This also lifts
+    // the header's stacking context above TabBar (z-40), which is what keeps NotificationBell's
+    // z-50 dropdown — trapped inside this header — painting over the bar. CommandPalette is also
+    // z-50 but renders after the header in RootLayout, so it still wins on DOM order and the
+    // palette is not trapped behind the header. `.search-layer`'s 40 is load-bearing for all of
+    // this; it has now caused two bugs. Do not treat these numbers as arbitrary.
     <header
-      className="sticky top-4 z-40 mb-7 flex items-center justify-between rounded-2xl border border-line bg-paper px-4 py-3 sm:px-5"
+      className="sticky top-4 z-50 mb-7 flex items-center justify-between rounded-2xl border border-line bg-paper px-4 py-3 sm:px-5"
       style={{ boxShadow: 'var(--shadow)' }}
     >
       {/* `transition`, not `transition-colors`: the hover lift is a transform, and

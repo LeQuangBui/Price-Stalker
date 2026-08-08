@@ -31,15 +31,19 @@ const TABS = [
 export default function TabBar({ isSignedIn }) {
   if (!isSignedIn) return null
 
-  // z-30, not z-40: Header is `sticky z-40`, which makes it a stacking context, so
-  // NotificationBell's z-50 dropdown is trapped inside the header and competes with the
-  // TabBar at the header's own level — later-in-DOM wins and the bar covers the dropdown's
-  // last rows. z-30 still paints above unpositioned page content and stays below
-  // CommandPalette's z-50 overlay.
+  // z-40 exactly — the whole app-shell z-order is pinned by one value we do not own:
+  // Home's `.search-layer` is `position: relative; z-index: 40` (Home.css:1-4), opaque, and
+  // in the root stacking context. z-30 loses to it outright and the bar becomes untappable on
+  // the signed-in home screen at narrow widths (measured: 4/4 tabs dead at 360x640/375x667/375x812).
+  // z-40 ties it, and TabBar renders after <main> in RootLayout, so DOM order breaks the tie our
+  // way. Header sits a level up at z-50 (see Header.jsx) so NotificationBell's z-50 dropdown —
+  // trapped inside the header's stacking context — still paints over this bar, and
+  // CommandPalette's z-50 overlay still covers it. Do not raise this to z-50: that would put the
+  // bar level with the header and later-in-DOM would let it cover the notification dropdown again.
   return (
     <nav
       aria-label="Primary"
-      className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-paper pb-safe-b md:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-paper pb-safe-b md:hidden"
     >
       <ul className="mx-auto flex max-w-md">
         {TABS.map((tab) => (
