@@ -1,22 +1,15 @@
-import { useNavigate } from 'react-router-dom'
 import AppLink from '../AppLink'
 import NotificationBell from '../NotificationBell/NotificationBell'
-import './Header.css'
 
-export default function Header({ isSignedIn, onSignOut, theme, onToggleTheme }) {
-  const navigate = useNavigate()
+const LINK = 'rounded-lg px-3 py-2 text-sm font-bold text-ink-soft transition-colors hover:bg-tertiary hover:text-oxblood'
 
-  const handleSignOut = () => {
-    onSignOut()
-    navigate('/')
-  }
-
+export default function Header({ isSignedIn, theme, onToggleTheme }) {
   return (
     <header
-      className="header sticky top-4 z-40 rounded-2xl border border-line bg-paper px-4 py-3 sm:px-5"
+      className="sticky top-4 z-40 mb-7 flex items-center justify-between rounded-2xl border border-line bg-paper px-4 py-3 sm:px-5"
       style={{ boxShadow: 'var(--shadow)' }}
     >
-      <AppLink to="/" className="header-title group">
+      <AppLink to="/" className="group flex items-center gap-3 text-ink no-underline transition-colors hover:text-oxblood">
         <span
           className="flex h-10 w-10 items-center justify-center rounded-xl bg-oxblood font-display text-xl font-bold text-white"
           style={{ boxShadow: 'var(--shadow-sm)' }}
@@ -24,7 +17,7 @@ export default function Header({ isSignedIn, onSignOut, theme, onToggleTheme }) 
           P
         </span>
         <div>
-          <h1 className="font-display">
+          <h1 className="m-0 font-display text-[22px] font-extrabold leading-[1.05] text-ink">
             Price<span className="text-oxblood">Stalker</span>
           </h1>
           <span className="hidden font-meta text-[10px] font-semibold uppercase tracking-[0.18em] text-ink-mute sm:block">
@@ -32,32 +25,37 @@ export default function Header({ isSignedIn, onSignOut, theme, onToggleTheme }) 
           </span>
         </div>
       </AppLink>
-      <nav className="header-nav">
-        {isSignedIn ? (
-          <>
-            <NotificationBell />
-            <AppLink to="/profile" className="header-link">Profile</AppLink>
-            <AppLink to="/alerts" className="header-link">Alerts</AppLink>
-            <AppLink to="/bookmarks" className="header-link">Bookmarks</AppLink>
-            <button onClick={handleSignOut} className="signout-button" type="button">
-              Sign Out
-            </button>
-          </>
-        ) : (
-          <>
-            <AppLink to="/login" className="header-link">Login</AppLink>
-            <AppLink to="/signup" className="header-link">Sign Up</AppLink>
-          </>
-        )}
+
+      <div className="flex items-center gap-2">
+        {isSignedIn ? <NotificationBell /> : null}
+
+        {/* TabBar (mobile) already owns the "Primary" nav landmark — a distinct name
+            here keeps assistive tech from ever seeing two identically-labelled
+            navigation regions, even though only one is ever visible per breakpoint. */}
+        <nav aria-label="Secondary" className="hidden items-center gap-2 md:flex">
+          {isSignedIn ? (
+            <>
+              <AppLink to="/profile" className={LINK}>Profile</AppLink>
+              <AppLink to="/alerts" className={LINK}>Alerts</AppLink>
+              <AppLink to="/bookmarks" className={LINK}>Bookmarks</AppLink>
+            </>
+          ) : (
+            <>
+              <AppLink to="/login" className={LINK}>Login</AppLink>
+              <AppLink to="/signup" className={LINK}>Sign Up</AppLink>
+            </>
+          )}
+        </nav>
+
         <button
           type="button"
-          className="theme-toggle"
+          className="flex h-11 w-11 items-center justify-center rounded-lg border border-line bg-paper text-ink transition-colors hover:bg-tertiary"
           onClick={onToggleTheme}
           aria-pressed={theme === 'dark'}
           aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
           title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
         >
-          <span aria-hidden="true" className="theme-toggle-icon">
+          <span aria-hidden="true">
             {theme === 'dark' ? (
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="18" height="18">
                 <circle cx="12" cy="12" r="4" />
@@ -70,7 +68,7 @@ export default function Header({ isSignedIn, onSignOut, theme, onToggleTheme }) 
             )}
           </span>
         </button>
-      </nav>
+      </div>
     </header>
   )
 }
