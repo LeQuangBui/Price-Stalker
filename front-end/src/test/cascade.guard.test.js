@@ -22,9 +22,16 @@ describe('cascade layer guard', () => {
     expect(css.indexOf('.btn {')).toBeGreaterThan(layerStart)
   })
 
+  // All four of these must stay unlayered: :root and .dark define custom
+  // properties, not cascading rules, and @theme inline / @custom-variant
+  // define Tailwind config. Layering any of them breaks the token system
+  // silently — in particular, layering .dark would break dark-mode theming,
+  // and layering @custom-variant would break the `dark:` variant that drives it.
   it('token definitions stay OUTSIDE the layer (custom properties, not rules)', () => {
     const layerStart = css.indexOf('@layer base')
     expect(css.indexOf(':root {')).toBeLessThan(layerStart)
+    expect(css.indexOf('.dark {')).toBeLessThan(layerStart)
     expect(css.indexOf('@theme inline')).toBeLessThan(layerStart)
+    expect(css.indexOf('@custom-variant')).toBeLessThan(layerStart)
   })
 })
