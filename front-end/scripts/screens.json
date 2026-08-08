@@ -1,0 +1,15 @@
+{
+  "widths": [360, 390, 767, 768, 820, 1280, 1920],
+  "darkWidths": [360, 1280],
+  "routes": [
+    { "name": "landing", "path": "/", "auth": false },
+    { "name": "login", "path": "/login", "auth": false },
+    { "name": "signup", "path": "/signup", "auth": false },
+    { "name": "notfound", "path": "/no-such-page", "auth": false },
+    { "name": "browse", "path": "/browse", "auth": true },
+    { "name": "browse-empty", "path": "/browse?search=zzzzzzzz", "auth": true },
+    { "name": "bookmarks", "path": "/bookmarks", "auth": true },
+    { "name": "alerts", "path": "/alerts", "auth": true },
+    { "name": "profile", "path": "/profile", "auth": true }
+  ]
+}
