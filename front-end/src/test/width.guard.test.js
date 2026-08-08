@@ -6,15 +6,28 @@ import { fileURLToPath } from 'node:url'
 const SRC = join(dirname(fileURLToPath(import.meta.url)), '..')
 const LIMIT = 320
 
-// Only `width` and `min-width` can force a viewport to overflow. `max-width` is a CAP — it
-// constrains rather than expands, so `max-width: 1200px` on a page container is healthy and
-// must NOT be flagged. Media queries are legitimate and excluded separately.
-const CSS_WIDTH = /(?<!max-)(?:min-)?width\s*:\s*(\d+)px/g
+// Known blind spots — not caught by either pattern below, by design:
+// - `minmax()` grid sizing, e.g. Bookmarks.css:86's
+//   `grid-template-columns: repeat(auto-fill, minmax(380px, 1fr))` — a real 380px minimum, over
+//   LIMIT, but not `width:`/`w-[…]` syntax so neither regex sees it. Bookmarks.css is Phase 2's
+//   to convert; this guard doesn't cover it yet.
+// - Sub-LIMIT values that combine to overflow, e.g. ProductSearch.css:33 and AddByUrl.css:11 are
+//   both `min-width: 250px` — individually under the floor, so deliberately unflagged, even
+//   though two of them in a nowrap flex row would already exceed a 360px viewport.
+
+// Only `width` and `min-width` can force a viewport to overflow. The lookbehind requires that
+// nothing directly before "width" is a word character or a hyphen — i.e. "width" must sit at a
+// property-name boundary. This excludes `max-width` (a CAP, not an overflow risk) but, unlike a
+// literal `(?<!max-)` check, it also excludes *any* other `-width` property or custom token
+// (`border-width`, `--card-width`, a future `--drawer-width`/`--rail-width` design token) rather
+// than special-casing just the one word "max". Media queries are excluded separately.
+const CSS_WIDTH = /(?<![\w-])(?:min-)?width\s*:\s*(\d+)px/g
 // Tailwind arbitrary values, same reasoning: `w-[380px]` and `min-w-[380px]` overflow;
-// `max-w-[1400px]` does not. The lookbehind is required here too: without it, `\b(?:min-w|w)-\[`
-// still matches the "w-[" tail inside "max-w-[1400px]" (a word boundary sits right after the
-// hyphen), which would false-positive on the Task 4 shell container in RootLayout.jsx.
-const TW_WIDTH = /(?<!max-)\b(?:min-w|w)-\[(\d+)px\]/g
+// `max-w-[1400px]` does not, nor would a hypothetical `rail-w-[380px]`. Boundary-anchored for the
+// same reason as CSS_WIDTH above — without it, `\b(?:min-w|w)-\[` still matches the "w-[" tail
+// inside "max-w-[1400px]" (a word boundary sits right after the hyphen), which would
+// false-positive on the Task 4 shell container in RootLayout.jsx.
+const TW_WIDTH = /(?<![\w-])(?:min-w|w)-\[(\d+)px\]/g
 
 function walk(dir) {
   const out = []
