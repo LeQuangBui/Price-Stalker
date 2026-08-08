@@ -41,7 +41,6 @@ export default function RootLayout() {
         <div className="mx-auto w-full max-w-[1400px] pt-4 pb-6 pl-[max(clamp(1rem,4vw,1.5rem),var(--safe-l))] pr-[max(clamp(1rem,4vw,1.5rem),var(--safe-r))] md:pt-[18px]">
           <Header
             isSignedIn={isSignedIn}
-            onSignOut={onSignOut}
             theme={theme}
             onToggleTheme={toggleTheme}
           />

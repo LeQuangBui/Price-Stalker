@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useOutletContext } from 'react-router-dom'
 import { getUserProfile, isUnauthorizedError } from '../../api/auth'
 import { formatDate } from '../../utils/formatters'
 import NotificationSettings from '../../components/NotificationSettings/NotificationSettings'
@@ -14,6 +14,7 @@ export default function UserProfile() {
   const [error, setError] = useState('')
   const [reloadKey, setReloadKey] = useState(0)
   const navigate = useNavigate()
+  const { onSignOut } = useOutletContext()
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -111,6 +112,19 @@ export default function UserProfile() {
           <p className="no-bookmarks">No bookmarks yet.</p>
         )}
       </div>
+
+      <section className="mt-8 border-t border-line pt-6">
+        <button
+          type="button"
+          className="btn btn-danger btn-block min-h-[44px]"
+          onClick={() => {
+            onSignOut()
+            navigate('/')
+          }}
+        >
+          Sign Out
+        </button>
+      </section>
     </div>
   )
 }
