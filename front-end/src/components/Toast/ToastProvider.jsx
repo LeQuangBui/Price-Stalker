@@ -20,7 +20,13 @@ const ACCENT = {
   error: 'var(--danger)',
 }
 
-export function ToastProvider({ children, duration = 3500 }) {
+/**
+ * `offsetForTabBar` lifts the toast host clear of the fixed bottom TabBar. TabBar only renders
+ * when signed in, so signed-out pages must not reserve the space — otherwise toasts float ~72px
+ * above nothing. RootLayout is the only mount point and already owns the signed-in flag, so it
+ * passes it down rather than either side reading auth state twice.
+ */
+export function ToastProvider({ children, duration = 3500, offsetForTabBar = false }) {
   const [toasts, setToasts] = useState([])
   const timers = useRef(new Map())
 
@@ -57,7 +63,10 @@ export function ToastProvider({ children, duration = 3500 }) {
     <ToastContext.Provider value={{ toast, dismiss }}>
       {children}
       <div
-        className="pointer-events-none fixed right-4 bottom-[calc(var(--shell-pb)+1rem)] flex flex-col gap-2 md:bottom-4"
+        className={[
+          'pointer-events-none fixed right-4 flex flex-col gap-2',
+          offsetForTabBar ? 'bottom-[calc(var(--shell-pb)+1rem)] md:bottom-4' : 'bottom-4',
+        ].join(' ')}
         style={{ zIndex: 60 }}
         role="status"
         aria-live="polite"

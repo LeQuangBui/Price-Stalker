@@ -36,7 +36,7 @@ afterEach(() => {
 function renderHeader(props = {}) {
   return render(
     <MemoryRouter>
-      <Header isSignedIn onSignOut={vi.fn()} theme="light" onToggleTheme={vi.fn()} {...props} />
+      <Header isSignedIn theme="light" onToggleTheme={vi.fn()} {...props} />
     </MemoryRouter>,
   )
 }

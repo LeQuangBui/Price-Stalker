@@ -48,4 +48,18 @@ describe('UserProfile sign out', () => {
     await userEvent.click(await screen.findByRole('button', { name: /sign out/i }))
     expect(onSignOut).toHaveBeenCalledOnce()
   })
+
+  // This is the app's only sign-out control, so it cannot live behind the success branch:
+  // a backend 500 / offline / CORS failure would otherwise lock the user into the session.
+  // (401 is the one failure that self-heals — isUnauthorizedError sends you to /login.)
+  it('still offers sign out when the profile fetch fails', async () => {
+    getUserProfile.mockRejectedValue(new Error('Internal Server Error'))
+    const onSignOut = renderProfile()
+
+    const button = await screen.findByRole('button', { name: /sign out/i })
+    expect(button).toBeVisible()
+
+    await userEvent.click(button)
+    expect(onSignOut).toHaveBeenCalledOnce()
+  })
 })

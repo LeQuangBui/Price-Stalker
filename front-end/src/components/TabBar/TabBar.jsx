@@ -31,10 +31,15 @@ const TABS = [
 export default function TabBar({ isSignedIn }) {
   if (!isSignedIn) return null
 
+  // z-30, not z-40: Header is `sticky z-40`, which makes it a stacking context, so
+  // NotificationBell's z-50 dropdown is trapped inside the header and competes with the
+  // TabBar at the header's own level — later-in-DOM wins and the bar covers the dropdown's
+  // last rows. z-30 still paints above unpositioned page content and stays below
+  // CommandPalette's z-50 overlay.
   return (
     <nav
       aria-label="Primary"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-paper pb-safe-b md:hidden"
+      className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-paper pb-safe-b md:hidden"
     >
       <ul className="mx-auto flex max-w-md">
         {TABS.map((tab) => (
@@ -44,7 +49,7 @@ export default function TabBar({ isSignedIn }) {
               end={tab.end}
               className={({ isActive }) =>
                 [
-                  'flex h-tabbar min-h-[3.5rem] flex-col items-center justify-center gap-1',
+                  'flex h-tabbar min-h-tabbar flex-col items-center justify-center gap-1',
                   'font-meta text-[11px] font-semibold uppercase tracking-[0.08em]',
                   'transition-colors',
                   isActive ? 'text-oxblood' : 'text-ink-mute',

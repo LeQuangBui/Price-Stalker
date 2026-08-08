@@ -35,7 +35,11 @@ export default function RootLayout() {
   }, [navigate])
 
   return (
-    <ToastProvider>
+    // TabBar renders nothing when signed out, so the space reserved for it — main's bottom
+    // padding and the toast host's bottom offset — has to be gated on the same condition.
+    // ToastProvider takes it as a prop: RootLayout is its only mount point and already owns
+    // isSignedIn, so a prop beats a context or a second hasToken() read.
+    <ToastProvider offsetForTabBar={isSignedIn}>
       <div className="min-h-dvh bg-ground text-ink transition-colors duration-300">
         <a href="#main" className="skip-link">Skip to content</a>
         <div className="mx-auto w-full max-w-[1400px] pt-4 pb-6 pl-[max(clamp(1rem,4vw,1.5rem),var(--safe-l))] pr-[max(clamp(1rem,4vw,1.5rem),var(--safe-r))] md:pt-[18px]">
@@ -44,7 +48,7 @@ export default function RootLayout() {
             theme={theme}
             onToggleTheme={toggleTheme}
           />
-          <main id="main" className="pb-shell-b md:pb-12">
+          <main id="main" className={isSignedIn ? 'pb-shell-b md:pb-12' : 'md:pb-12'}>
             <Outlet context={{ isSignedIn, onLogin, onSignOut }} />
           </main>
         </div>

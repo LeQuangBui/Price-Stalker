@@ -11,7 +11,9 @@ export default function Header({ isSignedIn, theme, onToggleTheme }) {
       className="sticky top-4 z-40 mb-7 flex items-center justify-between rounded-2xl border border-line bg-paper px-4 py-3 sm:px-5"
       style={{ boxShadow: 'var(--shadow)' }}
     >
-      <AppLink to="/" className="group flex items-center gap-3 text-ink no-underline transition-colors hover:text-oxblood">
+      {/* `transition`, not `transition-colors`: the hover lift is a transform, and
+          transition-colors would snap it instantly. Same on the theme toggle below. */}
+      <AppLink to="/" className="flex items-center gap-3 text-ink no-underline transition hover:-translate-y-px hover:text-oxblood">
         <span
           className="flex h-10 w-10 items-center justify-center rounded-xl bg-oxblood font-display text-xl font-bold text-white"
           style={{ boxShadow: 'var(--shadow-sm)' }}
@@ -52,7 +54,8 @@ export default function Header({ isSignedIn, theme, onToggleTheme }) {
 
         <button
           type="button"
-          className="flex h-11 w-11 items-center justify-center rounded-lg border border-line bg-paper text-ink transition-colors hover:bg-tertiary"
+          className="flex h-11 w-11 items-center justify-center rounded-lg border border-line bg-paper text-ink transition hover:-translate-y-px hover:border-oxblood hover:bg-tertiary"
+          style={{ boxShadow: 'var(--shadow-sm)' }}
           onClick={onToggleTheme}
           aria-pressed={theme === 'dark'}
           aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
