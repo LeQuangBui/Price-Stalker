@@ -104,6 +104,7 @@
   --text-display-sm--letter-spacing: -0.01em;
 }
 
+@layer base {
 /* ── Reveal-on-scroll primitive (driven by the useReveal hook) ──── */
 [data-reveal] {
   opacity: 0;
@@ -379,5 +380,6 @@ button:focus-visible,
   ::view-transition-new(*) {
     animation: none !important;
   }
+}
 }
 
