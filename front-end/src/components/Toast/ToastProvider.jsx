@@ -57,7 +57,7 @@ export function ToastProvider({ children, duration = 3500 }) {
     <ToastContext.Provider value={{ toast, dismiss }}>
       {children}
       <div
-        className="pointer-events-none fixed bottom-4 right-4 flex flex-col gap-2"
+        className="pointer-events-none fixed right-4 bottom-[calc(var(--shell-pb)+1rem)] flex flex-col gap-2 md:bottom-4"
         style={{ zIndex: 60 }}
         role="status"
         aria-live="polite"
