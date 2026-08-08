@@ -37,7 +37,7 @@ export default function RootLayout() {
     <ToastProvider>
       <div className="min-h-screen bg-ground text-ink transition-colors duration-300">
         <a href="#main" className="skip-link">Skip to content</a>
-        <div className="mx-auto w-full max-w-[1400px] pt-4 pb-6 pl-[max(1rem,var(--safe-l))] pr-[max(1rem,var(--safe-r))] md:pt-[18px] md:pb-6 md:pl-6 md:pr-6">
+        <div className="mx-auto w-full max-w-[1400px] pt-4 pb-6 pl-[max(clamp(1rem,4vw,1.5rem),var(--safe-l))] pr-[max(clamp(1rem,4vw,1.5rem),var(--safe-r))] md:pt-[18px]">
           <Header
             isSignedIn={isSignedIn}
             onSignOut={onSignOut}
