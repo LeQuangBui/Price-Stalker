@@ -20,7 +20,7 @@ function SignOutSection({ onSignOut, navigate }) {
     <section className="mt-8 border-t border-line pt-6">
       <button
         type="button"
-        className="btn btn-danger btn-block min-h-[44px]"
+        className="btn btn-danger btn-block"
         onClick={() => {
           onSignOut()
           navigate('/')
