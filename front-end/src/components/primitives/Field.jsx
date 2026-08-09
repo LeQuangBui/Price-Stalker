@@ -12,7 +12,7 @@ export default function Field({ id, label, hint, className, ...props }) {
       </label>
       <input
         id={id}
-        className="w-full rounded-xl border border-line bg-paper px-4 py-3 text-ink outline-none transition-colors placeholder:text-ink-mute focus:border-oxblood focus:ring-2 focus:ring-oxblood/20"
+        className="w-full rounded-xl border border-line bg-paper px-4 py-3 text-base text-ink outline-none transition-colors placeholder:text-ink-mute focus:border-oxblood focus:ring-2 focus:ring-oxblood/20"
         {...props}
       />
       {hint ? <p className="text-xs text-ink-mute">{hint}</p> : null}

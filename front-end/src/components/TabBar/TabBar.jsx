@@ -32,7 +32,7 @@ export default function TabBar({ isSignedIn }) {
   if (!isSignedIn) return null
 
   // z-40 exactly — the whole app-shell z-order is pinned by one value we do not own:
-  // Home's `.search-layer` is `position: relative; z-index: 40` (Home.css:1-4), opaque, and
+  // Home's `.search-layer` is `position: relative; z-index: 40` (Home.jsx:69), opaque, and
   // in the root stacking context. z-30 loses to it outright and the bar becomes untappable on
   // the signed-in home screen at narrow widths (measured: 4/4 tabs dead at 360x640/375x667/375x812).
   // z-40 ties it, and TabBar renders after <main> in RootLayout, so DOM order breaks the tie our

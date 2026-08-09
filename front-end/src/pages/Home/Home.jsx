@@ -1,16 +1,16 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import ProductSearch from '../../components/ProductSearch/ProductSearch'
-import ProductList from '../../components/ProductList/ProductList'
+import ProductList, { PRODUCT_GRID } from '../../components/ProductList/ProductList'
 import AddByUrl from '../../components/AddByUrl/AddByUrl'
 import AppLink from '../../components/AppLink'
 import Kicker from '../../components/primitives/Kicker'
 import SectionHeader from '../../components/primitives/SectionHeader'
 import Reveal from '../../components/primitives/Reveal'
 import Pagination from '../../components/primitives/Pagination'
+import ErrorState from '../../components/primitives/ErrorState'
 import { getProducts } from '../../api/products'
 import Onboarding from '../../components/Onboarding/Onboarding'
-import './Home.css'
 
 export default function Home({ isSignedIn = false }) {
   const [searchParams, setSearchParams] = useState({})
@@ -66,7 +66,7 @@ export default function Home({ isSignedIn = false }) {
       </section>
 
       <section
-        className="search-layer mb-10 rounded-2xl border border-line bg-surface p-5 sm:p-6"
+        className="search-layer relative z-40 mb-10 rounded-2xl border border-line bg-surface p-5 sm:p-6"
         style={{ boxShadow: 'var(--shadow)' }}
       >
         <p className="m-0 font-meta text-xs font-semibold uppercase tracking-[0.16em] text-oxblood">
@@ -104,19 +104,14 @@ export default function Home({ isSignedIn = false }) {
       {loading && (
         <>
           <p className="sr-only" role="status">Loading products…</p>
-          <div className="product-grid" aria-hidden="true">
+          <div className={PRODUCT_GRID} aria-hidden="true">
             {Array.from({ length: 8 }).map((_, index) => (
-              <div key={index} className="skeleton product-card-skeleton" />
+              <div key={index} className="skeleton h-[280px] rounded-2xl" />
             ))}
           </div>
         </>
       )}
-      {error && (
-        <div className="error-text">
-          <span>{error}</span>
-          <button type="button" className="retry-btn" onClick={() => setReloadKey((value) => value + 1)}>Retry</button>
-        </div>
-      )}
+      {error && <ErrorState message={error} onRetry={() => setReloadKey((value) => value + 1)} />}
       {!loading && !error && showOnboarding && <Onboarding />}
       {!loading && !error && !showOnboarding && (
         <>
