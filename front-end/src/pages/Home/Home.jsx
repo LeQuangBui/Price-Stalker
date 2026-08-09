@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import ProductSearch from '../../components/ProductSearch/ProductSearch'
-import ProductList from '../../components/ProductList/ProductList'
+import ProductList, { PRODUCT_GRID } from '../../components/ProductList/ProductList'
 import AddByUrl from '../../components/AddByUrl/AddByUrl'
 import AppLink from '../../components/AppLink'
 import Kicker from '../../components/primitives/Kicker'
@@ -104,9 +104,9 @@ export default function Home({ isSignedIn = false }) {
       {loading && (
         <>
           <p className="sr-only" role="status">Loading products…</p>
-          <div className="product-grid" aria-hidden="true">
+          <div className={PRODUCT_GRID} aria-hidden="true">
             {Array.from({ length: 8 }).map((_, index) => (
-              <div key={index} className="skeleton product-card-skeleton" />
+              <div key={index} className="skeleton h-[280px] rounded-2xl" />
             ))}
           </div>
         </>

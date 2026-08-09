@@ -14,8 +14,6 @@ const SRC = join(dirname(fileURLToPath(import.meta.url)), '..')
 // only ever shrink. Do not add to it, or widen an entry, to make a build pass.
 const ALLOWED = new Map([
   // Known remaining collisions, each awaiting its Phase 2b conversion.
-  ['product-price', ['Bookmarks.css', 'ProductList.css']], // both retire in Phase 2b
-  ['product-name', ['Bookmarks.css', 'ProductList.css']], // values agree, benign
   ['bookmark-info', ['Bookmarks.css', 'UserProfile.css']],
   ['no-bookmarks', ['Bookmarks.css', 'UserProfile.css']],
   ['bookmark-name-input', ['AddToBookmark.css', 'Bookmarks.css']],
