@@ -21,8 +21,15 @@ export function formatPrice(value, currency) {
       // vi-VN string, so the grid only holds if that is the string everyone gets.
       //
       // Other currencies deliberately keep the ambient locale — nobody should read US dollars in
-      // Vietnamese grouping. Their rendered width is therefore NOT guaranteed and the grid makes
-      // no promise about them.
+      // Vietnamese grouping. Their rendered width is therefore whatever the reader's language
+      // makes it, and measured, they overflow: at 360px the same value that fits as `12.900.000 ₫`
+      // runs past the card's clip edge as `VND 12,900,000` under en-AU, and before the backstop
+      // went in it was sliced there with no ellipsis and no scrollbar.
+      //
+      // The card no longer loses characters over it. `PriceDisplay` puts `overflow-wrap: anywhere`
+      // on the value, which applies to every currency and not only to đồng, so an over-wide
+      // rendering now wraps onto a second line with all of it readable. The grid still does not
+      // promise a non-VND price will fit on one line — only that none of it will disappear.
       const locale = currency === 'VND' ? 'vi-VN' : undefined
       return new Intl.NumberFormat(locale, { style: 'currency', currency }).format(numeric)
     } catch {

@@ -86,6 +86,38 @@ describe('PriceDisplay', () => {
     expect(CARD_PRICE_SIZE).not.toMatch(/min-\[\d+px\]/)
   })
 
+  // The ladder is the design; this is the backstop under it. A formatted price holds no break
+  // opportunity — Intl puts a no-break space before the ₫ — so its min-content width equals its
+  // full width, and a flex item floored at min-content cannot shrink: it overflows and the
+  // `overflow-hidden` card takes the end off the number with no ellipsis and no scrollbar.
+  // `1.290.000.000 ₫` came back as `1.290.000.00`, which is not a truncated number, it is a
+  // plausible one that is a thousand times wrong.
+  //
+  // `overflow-wrap: anywhere` is the only one of the three candidates that fixes it. Per CSS Text
+  // it is the only value whose break opportunities count towards intrinsic sizing;
+  // `overflow-wrap: break-word` and `word-break: break-word` are defined not to, so they leave the
+  // min-content floor exactly where it was and the item still cannot shrink. A price split over
+  // two lines is ugly. A price missing a digit is wrong, and wrong loses.
+  it('breaks the number rather than losing a digit when it cannot fit', () => {
+    const { container } = render(<PriceDisplay value={1290000000} currency="VND" size="sm" />)
+    const classes = classesOf(parts(container).value)
+    expect(classes).toContain('wrap-anywhere')
+    expect(classes).not.toContain('break-words')
+    expect(classes).not.toContain('break-all')
+  })
+
+  // Both prices in the block, not just the headline one, and this is measured rather than tidy.
+  // A flex container's min-content width is the widest min-content among its items, so a struck
+  // price that cannot break floors the whole block wider than the card's content box — and the
+  // value span is then laid out to that floor and runs past the clip edge however freely it
+  // wraps. On the card whose old price is also ten digits the block came out 114.41px wide in a
+  // 98px box, putting the value 4.91px past the edge with a digit gone. Giving the struck price
+  // the same break opportunity brought both back inside with 19.69px and 16.52px to spare.
+  it('gives the struck price the same backstop, or the value cannot use its own', () => {
+    const { container } = render(<PriceDisplay value={1290000000} was={1990000000} currency="VND" size="sm" reserveWas />)
+    expect(classesOf(parts(container).was)).toContain('wrap-anywhere')
+  })
+
   it('leaves the other sizes on a single step', () => {
     for (const [size, expected] of [['md', 'text-4xl'], ['lg', 'text-display-sm'], ['xl', 'text-display']]) {
       const { container, unmount } = render(<PriceDisplay value={12900000} size={size} />)
@@ -127,10 +159,31 @@ describe('PriceDisplay', () => {
       expect(classesOf(was)).not.toContain('invisible')
     })
 
+    // The reserved row earns its keep by lining prices up ACROSS a row of cards. Below 22.5rem
+    // the grid is one column, every card is alone on its row, and the row is a blank band under
+    // every price for nothing. It arrives with the second column, at the second column's own
+    // breakpoint.
+    it('reserves nothing below the width the second column arrives at', () => {
+      const { container } = render(<PriceDisplay value={12900000} size="sm" reserveWas />)
+      const classes = classesOf(parts(container).was)
+      expect(classes).toContain('hidden')
+      expect(classes).toContain('min-[22.5rem]:block')
+    })
+
+    it('never hides a real old price, at any width', () => {
+      const { container } = render(<PriceDisplay value={12900000} was={15900000} size="sm" reserveWas />)
+      expect(classesOf(parts(container).was)).not.toContain('hidden')
+    })
+
+    // Three classes belong to the placeholder alone: the one that makes it invisible and the two
+    // that keep it out of the one-column layout. Everything else has to match, or the reserved
+    // card and the sale card beside it would not come out the same height in the band where the
+    // reservation is doing its work.
     it('gives both cases the identical two-row shape', () => {
       const drop = render(<PriceDisplay value={12900000} was={15900000} size="sm" reserveWas />)
       const flat = render(<PriceDisplay value={12900000} size="sm" reserveWas />)
-      const shape = ({ container }) => classesOf(parts(container).was).filter((cls) => cls !== 'invisible')
+      const placeholderOnly = new Set(['invisible', 'hidden', 'min-[22.5rem]:block'])
+      const shape = ({ container }) => classesOf(parts(container).was).filter((cls) => !placeholderOnly.has(cls))
       expect(shape(flat)).toEqual(shape(drop))
     })
 

@@ -45,7 +45,10 @@ describe('formatPrice', () => {
   })
 
   // Only đồng is pinned. Every other currency still follows the reader's own locale, so its
-  // rendered width is whatever that locale makes it and the grid promises nothing about it.
+  // rendered width is whatever that locale makes it — and measured, some of those renderings run
+  // past the card's clip edge at 360px. They are no longer sliced there: the price value carries
+  // `overflow-wrap: anywhere`, which is currency-agnostic, so an over-wide string wraps with every
+  // character still on screen. Fitting on one line is what is not promised.
   it('leaves other currencies on the browser language', () => {
     browserLanguage('en-US')
     const american = formatPrice(1299, 'USD')

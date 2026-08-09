@@ -50,7 +50,18 @@ export default function ProductList({ products }) {
                 <span className="text-sm text-ink-mute">No image</span>
               )}
             </div>
-            <div className="p-4 pb-[18px]">
+            {/*
+              12px of horizontal padding in the phone band rather than 16. Everything the body
+              does not spend on padding it hands to the price, and the two-up column has the least
+              to give: 16px a side on a 131px card at 360px leaves a 97px interior, which is the
+              tightest box in the design and the one the whole size ladder is measured against.
+              12px takes it to 105px, 4 of which land on the right, where the clip edge is — the
+              edge itself does not move with the padding. Those 4px are what take the Georgia
+              fallback, which paints on every cold load and permanently if Google Fonts is blocked,
+              from −0.73px at 360px (clipped) to +3.27px (clear) on a nine-digit price. 16px on a
+              131px card was generous anyway; `sm:` has the room for it and takes it back.
+            */}
+            <div className="px-3 py-4 pb-[18px] sm:px-4">
               {/*
                 Two lines, not one truncated one. A single `truncate` line in a two-up column left
                 about ten characters of a forty-five character name, and on a tracker watching one
@@ -58,14 +69,26 @@ export default function ProductList({ products }) {
                 roughly doubles what survives, and every storefront this grid is modelled on —
                 Shopee, Lazada, Tiki — clamps the name at two lines here.
 
+                14px in the two-up band, 15 at `sm:`. The name drops a point for the same reason
+                the price steps down: two columns is a narrower box, and the clamp only buys back
+                what the smaller type does not spend. The point it drops is taken from the name
+                rather than the price because the price is the thing a tracker exists to show, and
+                the name still has two lines to spread across while the price has one. Both sizes
+                are rem — `text-sm`, then 0.9375rem — so they grow with the reader's own default
+                font size, like the gutters, the card padding and the price ladder around them. A
+                px size would not, and would leave a reader on a 24px default with a 13px name
+                under a 24px price until a 960px viewport.
+
                 `min-h-[2.75em]` reserves both lines whether or not the name needs them, so the
                 price sits at one height across a row instead of riding up on the short names.
                 2.75em is `leading-snug` (1.375) twice over, in em so it holds at both type sizes
                 without a second number to keep in sync. Not the `lh` unit, which would say the
-                same thing more directly but is too recent for this project's Safari floor.
+                same thing more directly but is too recent for this project's Safari floor. Gated
+                on 22.5rem, the width the second column arrives at: in one column a card has no
+                neighbour to line up with and the reservation is only a blank line.
               */}
               <span
-                className="mb-2.5 line-clamp-2 min-h-[2.75em] text-[13px] font-semibold leading-snug text-ink transition-colors group-hover:text-oxblood sm:text-[15px]"
+                className="mb-2.5 line-clamp-2 min-[22.5rem]:min-h-[2.75em] text-sm font-semibold leading-snug text-ink transition-colors group-hover:text-oxblood sm:text-[0.9375rem]"
                 title={product.name}
               >
                 {product.name}

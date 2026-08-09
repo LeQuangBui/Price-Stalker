@@ -7,6 +7,8 @@ import { formatPrice } from '../../utils/formatters'
 // wide, 16px across the two-up squeeze, 18px once the column has grown a little, and 24px again
 // at `sm:`, where the grid is no longer squeezing. 16px everywhere was the simpler option and was
 // rejected: the product name above it is smaller, so a flat 16px price flattens the hierarchy.
+// The ladder is what keeps the number on one line; `wrap-anywhere` on the value span below is the
+// backstop for when it cannot, and the two are meant to be read together.
 //
 // Every step is rem, and the whole ladder is really a statement about how much room is inside the
 // card, which is a rem quantity: below `sm:` the page gutters resolve to 1rem a side, the page
@@ -27,8 +29,18 @@ import { formatPrice } from '../../utils/formatters'
 // viewport — measured, to the pixel, as the width where clipping stops. 17rem takes that with a
 // rem of headroom. At a default font it is 272px, below any phone, so the one-column 320px case
 // keeps its 24px price; at a 24px default font it is 408px, and it is what keeps a 320px phone on
-// "Very Large" from slicing digits off a 36px price in a 150px card. Prices of ten digits or more
-// are outside what this ladder can hold in two columns and were not designed for.
+// "Very Large" from slicing digits off a 36px price in a 150px card.
+//
+// Prices of ten digits or more are outside what this ladder can hold, full stop — not only in the
+// two-up band. Measured with the webfont loaded and a classic scrollbar, they ran past the clip
+// edge in the ONE-column layout too: at a 20px default font from 340 to 348px, at 24px from 320
+// to 331 and again from 408 to 413. Both bands widen on the Georgia fallback. What that looked
+// like depended on the reader's scrollbar: with overlay scrollbars the ₫ went missing and the
+// number read as a bare figure; with a classic 15px gutter `1.290.000.000 ₫` came back as
+// `1.290.000.00`, which is not a truncated number but a plausible one that is a thousand times
+// wrong. That is why the backstop exists, and it is history rather than behaviour now — the value
+// span carries `wrap-anywhere`, so such a price breaks across two lines with every digit intact.
+// The ladder still makes no promise to fit one on a single line.
 export const CARD_PRICE_SIZE =
   'text-base min-[17rem]:text-2xl min-[22.5rem]:text-base min-[24.375rem]:text-lg sm:text-2xl'
 
@@ -60,7 +72,29 @@ export default function PriceDisplay({ value, currency, was, size = 'md', reserv
     <span className={cx('inline-flex flex-wrap items-end gap-x-3 gap-y-1', className)}>
       <span
         className={cx(
-          'font-display font-semibold leading-none tracking-tight tabular-nums text-ink',
+          // `wrap-anywhere` has to be this exact value, and it is the one thing standing between a
+          // reader and a wrong number. A formatted price holds no break opportunity, so its
+          // min-content width equals its full width; a flex item is floored at min-content, so it
+          // can never shrink, so it overflows and the card's `overflow-hidden` takes the end off
+          // the number with no ellipsis and no scrollbar to show that anything went.
+          //
+          // Per CSS Text, `overflow-wrap: anywhere` is the only value whose break opportunities
+          // count towards intrinsic sizing. `overflow-wrap: break-word` and `word-break:
+          // break-word` are both defined NOT to, so neither moves the min-content floor and
+          // neither changes anything here. Two other candidates were measured and rejected:
+          // `min-w-0` with `text-overflow` does nothing, because the inline-flex wrapper sizes to
+          // max-content and the item is never asked to shrink; `max-w-full` on the wrapper does
+          // ellipsise, but it also ellipsises `12.900.000 ₫` at 360px, a price that fits today
+          // with room to spare.
+          //
+          // It engages at the content box, not at the clip edge: CSS wraps text where its own box
+          // ends, while `overflow: hidden` clips 12px further out at the padding box. Measured
+          // over 45,720 cells it never once fired on a price that fits its box, and no price of
+          // seven digits or fewer wraps at any width in any combination of face, scrollbar and
+          // default font size. What it does cost is the prices that used to reach one line only by
+          // bleeding into the card's right padding — those wrap now. A price over two lines is
+          // ugly; a price missing a digit is wrong, and wrong loses.
+          'font-display font-semibold leading-none tracking-tight tabular-nums text-ink wrap-anywhere',
           SIZES[size] || SIZES.md
         )}
       >
@@ -69,14 +103,26 @@ export default function PriceDisplay({ value, currency, was, size = 'md', reserv
       {hasWas || reserveWas ? (
         <span
           className={cx(
-            'pb-1 text-sm tabular-nums text-ink-mute line-through',
+            // The same backstop, and it is not decoration. A flex container's own min-content
+            // width is the widest min-content among its items, so an unbreakable struck price
+            // floors the whole block ABOVE the card's content box — and the value span, however
+            // freely it wraps, is then laid out to that floor and spills anyway. Measured on the
+            // one card whose old price is also ten digits: the block came out 114.41px wide in a
+            // 98px box and put the value 4.91px past the clip edge, wrapped and all. Both spans
+            // have to be able to break or neither of them can.
+            'pb-1 text-sm tabular-nums text-ink-mute line-through wrap-anywhere',
             // `basis-full` takes the whole flex line, so the struck price sits under the value at
             // every width instead of only at the widths where it happens not to fit beside it.
             reserveWas && 'basis-full',
             // Reserved but empty. `invisible` keeps the box and its height while taking the text
             // out of the a11y tree; an empty span would collapse and reserve nothing, so the
             // placeholder needs a character in it.
-            !hasWas && 'invisible'
+            //
+            // Gated on the grid's own two-up breakpoint, because a reserved row only earns its
+            // keep once a card has a neighbour to line its price up with. Below 22.5rem the grid
+            // is one column and the reservation is a blank band under every price that never
+            // matches anything. 22.5rem is PRODUCT_GRID's number — see the warning above.
+            !hasWas && 'invisible hidden min-[22.5rem]:block'
           )}
         >
           {hasWas ? formatPrice(was, currency) : '\u00a0'}

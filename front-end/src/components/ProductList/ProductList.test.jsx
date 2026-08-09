@@ -74,6 +74,21 @@ describe('ProductList', () => {
     expect(classesOf(grid)).toContain('xl:grid-cols-4')
   })
 
+  // Whatever the card body does not spend on padding it hands to the price, and the two-up column
+  // has the least to give: 16px a side on a 131px card at 360px leaves a 97px interior. 12px in
+  // the phone band takes that to 105px, which is the difference between the Georgia fallback
+  // clearing the clip edge and running past it. `sm:` gets the roomier 16px back.
+  it('trims the card padding in the phone band and takes it back at sm:', () => {
+    const { container } = renderList([product()])
+    const classes = classesOf(container.querySelector('a').lastElementChild)
+    expect(classes).toContain('px-3')
+    expect(classes).toContain('py-4')
+    expect(classes).toContain('pb-[18px]')
+    expect(classes).toContain('sm:px-4')
+    // `p-4` would set all four sides and beat the narrower phone value on the horizontal axis.
+    expect(classes).not.toContain('p-4')
+  })
+
   it('links each card to its product', () => {
     renderList([product()])
     expect(screen.getByRole('link', { name: /espresso machine/i })).toHaveAttribute('href', '/products/p1')
@@ -93,18 +108,31 @@ describe('ProductList', () => {
     const classes = classesOf(cards(container)[0].name)
     expect(classes).toContain('line-clamp-2')
     expect(classes).not.toContain('truncate')
-    // 15px of name against a 16px price is one point of separation and reads as a coincidence.
-    expect(classes).toContain('text-[13px]')
-    expect(classes).toContain('sm:text-[15px]')
+  })
+
+  // The name has to move with the reader for the same reason everything else on this card does.
+  // A px size does not: at a 24px default font the price above the name renders at 24px and the
+  // name stays at 13 — a name SMALLER than it was before the grid went two-up, and it stays that
+  // way until a 960px viewport, because `sm:` is 40rem and moves out with the font too.
+  it('sizes the name in rem, so it grows with the reader like everything around it', () => {
+    const { container } = renderList([product()])
+    const classes = classesOf(cards(container)[0].name)
+    expect(classes).toContain('text-sm')
+    expect(classes).toContain('sm:text-[0.9375rem]')
+    const pixelSizes = classes.filter((cls) => /^(?:\w+:)?text-\[\d+px\]$/.test(cls))
+    expect(pixelSizes, `px type does not scale: ${pixelSizes.join(', ')}`).toEqual([])
   })
 
   // `line-clamp-2` clamps at two lines but a one-word name still occupies one, which would leave
   // the price sitting higher on some cards than on the card beside it. Both lines are reserved
-  // in em, so the box holds its shape at either type size without a second magic number.
-  it('reserves both name lines so the price sits at one height across a row', () => {
+  // in em, so the box holds its shape at either type size without a second magic number — and
+  // only from 22.5rem, where the second column arrives and a card first has a neighbour to line
+  // up with. In one column the reservation is a blank line under every short name.
+  it('reserves both name lines where cards share a row, and only there', () => {
     const { container } = renderList([product(), product({ id: 'p2', name: 'A very much longer product name that will certainly need both of its lines' })])
     const [short, long] = cards(container).map(({ name }) => classesOf(name))
-    expect(short).toContain('min-h-[2.75em]')
+    expect(short).toContain('min-[22.5rem]:min-h-[2.75em]')
+    expect(short).not.toContain('min-h-[2.75em]')
     expect(short).toEqual(long)
   })
 
