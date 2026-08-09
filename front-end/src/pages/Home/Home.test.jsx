@@ -24,3 +24,20 @@ describe('Home layout', () => {
     expect(screen.getByText('Product radar').closest('section')).toHaveClass('search-layer')
   })
 })
+
+describe('Home page chrome', () => {
+  it('keeps the search-layer token and its z-index as utilities', () => {
+    // `.search-layer`'s z-40 is a three-way contract with Header (z-50) and TabBar (z-40);
+    // both files cite it by name in comments. The token must survive the CSS retirement.
+    render(
+      <MemoryRouter>
+        <Home isSignedIn={false} />
+      </MemoryRouter>
+    )
+
+    const layer = screen.getByText('Product radar').closest('section')
+    expect(layer.className).toContain('search-layer')
+    expect(layer.className).toContain('relative')
+    expect(layer.className).toContain('z-40')
+  })
+})

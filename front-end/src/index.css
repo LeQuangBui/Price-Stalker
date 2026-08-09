@@ -269,6 +269,7 @@ button:focus-visible,
   font-size: 14px;
   min-height: 44px;
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .retry-btn:hover {
@@ -285,6 +286,7 @@ button:focus-visible,
   border-radius: var(--radius);
   color: var(--danger);
   background: var(--bg-primary);
+  flex-wrap: wrap;
 }
 
 .empty-state {
