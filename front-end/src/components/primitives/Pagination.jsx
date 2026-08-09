@@ -5,11 +5,13 @@ import { cx } from '../../lib/cx'
 // Home.css AND Bookmarks.css, which meant /alerts — which imports neither — was styled entirely
 // by bundle-order leakage, and Bookmarks' `border: none` silently stripped Home's border app-wide.
 const BUTTON = [
-  'inline-flex min-h-11 items-center justify-center',
+  'inline-flex min-h-11 cursor-pointer items-center justify-center',
   'rounded-[var(--radius-sm)] border border-[color-mix(in_srgb,var(--primary)_42%,var(--border))]',
   'bg-oxblood px-5 py-2.5 text-sm font-semibold text-white',
-  'shadow-[var(--shadow-sm)] transition-colors',
-  'enabled:hover:bg-oxblood-deep',
+  // `transition`, not `transition-colors` — the hover lift and shadow below are transform and
+  // box-shadow, which transition-colors does not animate.
+  'shadow-[var(--shadow-sm)] transition',
+  'enabled:hover:bg-oxblood-deep enabled:hover:-translate-y-px enabled:hover:shadow-[var(--shadow)]',
   'disabled:cursor-not-allowed disabled:border-transparent disabled:bg-tertiary disabled:text-ink-mute',
 ].join(' ')
 
