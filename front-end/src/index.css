@@ -286,7 +286,12 @@ button:focus-visible,
   border-radius: var(--radius);
   color: var(--danger);
   background: var(--bg-primary);
-  flex-wrap: wrap;
+  /* `anywhere`, not `break-word`: an error string often carries an unbroken URL, whose length
+     becomes this row's min-content floor and overflows the box at 320px. Only `anywhere` feeds
+     those break points into intrinsic sizing, so only `anywhere` lets the row shrink. Do not
+     reach for `flex-wrap: wrap` here — line breaking uses each item's *unwrapped* width, so a
+     long message would drop Retry onto its own line even on desktop. */
+  overflow-wrap: anywhere;
 }
 
 .empty-state {
