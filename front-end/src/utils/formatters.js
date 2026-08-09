@@ -10,7 +10,21 @@ export function formatPrice(value, currency) {
 
   if (currency) {
     try {
-      return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(numeric)
+      // đồng is pinned to vi-VN rather than left on the reader's browser language. Two reasons,
+      // and the second one is the load-bearing one. A Vietnamese price tracker should render
+      // Vietnamese currency the Vietnamese way whatever language the phone is set to; and the
+      // string then has ONE width. Left on the ambient locale the same value is `12.900.000 ₫`
+      // in vi-VN but `VND 12,900,000` in en-AU — four characters wider — and the product card is
+      // overflow-hidden around a string with no break opportunity in it (Intl puts a no-break
+      // space before the ₫), so the overflow is sliced off the end of the number with no ellipsis
+      // and no scrollbar. Every column width behind the two-up grid is measured against the
+      // vi-VN string, so the grid only holds if that is the string everyone gets.
+      //
+      // Other currencies deliberately keep the ambient locale — nobody should read US dollars in
+      // Vietnamese grouping. Their rendered width is therefore NOT guaranteed and the grid makes
+      // no promise about them.
+      const locale = currency === 'VND' ? 'vi-VN' : undefined
+      return new Intl.NumberFormat(locale, { style: 'currency', currency }).format(numeric)
     } catch {
       // Unknown currency code — fall through to plain number formatting.
     }

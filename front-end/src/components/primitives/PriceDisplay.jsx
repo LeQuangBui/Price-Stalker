@@ -1,14 +1,39 @@
 import { cx } from '../../lib/cx'
 import { formatPrice } from '../../utils/formatters'
 
-// `sm` is the card price, and it steps with the two-up product grid rather than holding one
-// size. A price cannot wrap — Intl puts a non-breaking space before the ₫ — and the card clips
-// silently, so the number has to fit the column outright: 16px across the 360-389 band (88px of
-// text in a 97px interior), 18px from 390 (99px in 112px), and back to the full 24px at `sm:`,
-// where the grid is no longer squeezing. 16px everywhere was the simpler option and was rejected:
-// the product name above it is 15px semibold, so a flat 16px price flattens the hierarchy.
+// The card price steps with the two-up product grid rather than holding one size. A price cannot
+// wrap — Intl puts a no-break space before the ₫ — and the card clips silently, so the number has
+// to fit the column outright: the full 24px while the grid is still one column and the card is
+// wide, 16px across the two-up squeeze, 18px once the column has grown a little, and 24px again
+// at `sm:`, where the grid is no longer squeezing. 16px everywhere was the simpler option and was
+// rejected: the product name above it is smaller, so a flat 16px price flattens the hierarchy.
+//
+// Every step is rem, and the whole ladder is really a statement about how much room is inside the
+// card, which is a rem quantity: below `sm:` the page gutters resolve to 1rem a side, the page
+// padding to 1.5rem and the card padding to 1rem, so the interior is (viewport − 7rem − 2px) in
+// one column whatever the reader's font size is. px breakpoints broke that. The gutters, the
+// padding and the type all grow when a reader raises the browser's default font size but a px
+// breakpoint does not move, so the column arrived at the same viewport width with less room in it
+// and more type to fit: measured against the compiled stylesheet, the px ladder clipped from 360
+// to 438px at a 20px default font and from 360 to 520px at 24px.
+//
+// `min-[22.5rem]` MUST stay identical to the grid's own two-up breakpoint in ProductList — see
+// PRODUCT_GRID, which carries the same warning. If the column arrived at one width and the price
+// stepped down at another, the band between them would show two columns at 24px, which does not
+// fit. It is one decision written in two files, so it has to stay one number; a test asserts it.
+//
+// The 17rem step is the low end of the same rule. 24px of 9-digit price measures 9.4rem and the
+// one-column interior is (viewport − 7rem), so the full size only fits from about 15.96rem of
+// viewport — measured, to the pixel, as the width where clipping stops. 17rem takes that with a
+// rem of headroom. At a default font it is 272px, below any phone, so the one-column 320px case
+// keeps its 24px price; at a 24px default font it is 408px, and it is what keeps a 320px phone on
+// "Very Large" from slicing digits off a 36px price in a 150px card. Prices of ten digits or more
+// are outside what this ladder can hold in two columns and were not designed for.
+export const CARD_PRICE_SIZE =
+  'text-base min-[17rem]:text-2xl min-[22.5rem]:text-base min-[24.375rem]:text-lg sm:text-2xl'
+
 const SIZES = {
-  sm: 'text-base min-[390px]:text-lg sm:text-2xl',
+  sm: CARD_PRICE_SIZE,
   md: 'text-4xl',
   lg: 'text-display-sm',
   xl: 'text-display',
@@ -18,12 +43,20 @@ const SIZES = {
  * The hero number of a price tracker: serif display face, tabular figures,
  * always rendered at its final value (never animated). Optional struck-through
  * `was` price for drops.
+ *
+ * `reserveWas` fixes the block's shape for callers that lay prices out in a row of cards: the
+ * struck slot always takes a line of its own, and it is always there even when there is no drop
+ * to show. Without it a card with no old price is a row shorter than the sale card beside it, and
+ * the pair flips between one row and two as the window widens. Off by default — the detail page
+ * shows one price on its own and wants it inline.
  */
-export default function PriceDisplay({ value, currency, was, size = 'md', className }) {
+export default function PriceDisplay({ value, currency, was, size = 'md', reserveWas = false, className }) {
+  const hasWas = was != null && was !== ''
+
   return (
-    // Wrapping is load-bearing on a two-up card: at 390px the value and the struck price total
-    // ~195px against a ~112px interior, and a nowrap row would put the `was` price under the
-    // card's `overflow-hidden`. The row gap only ever applies once they actually wrap.
+    // Wrapping is load-bearing on a two-up card: in the narrow band the value and the struck price
+    // together are far wider than the interior, and a nowrap row would put the `was` price under
+    // the card's `overflow-hidden`. The row gap only ever applies once they actually wrap.
     <span className={cx('inline-flex flex-wrap items-end gap-x-3 gap-y-1', className)}>
       <span
         className={cx(
@@ -33,9 +66,20 @@ export default function PriceDisplay({ value, currency, was, size = 'md', classN
       >
         {formatPrice(value, currency)}
       </span>
-      {was != null && was !== '' ? (
-        <span className="pb-1 text-sm tabular-nums text-ink-mute line-through">
-          {formatPrice(was, currency)}
+      {hasWas || reserveWas ? (
+        <span
+          className={cx(
+            'pb-1 text-sm tabular-nums text-ink-mute line-through',
+            // `basis-full` takes the whole flex line, so the struck price sits under the value at
+            // every width instead of only at the widths where it happens not to fit beside it.
+            reserveWas && 'basis-full',
+            // Reserved but empty. `invisible` keeps the box and its height while taking the text
+            // out of the a11y tree; an empty span would collapse and reserve nothing, so the
+            // placeholder needs a character in it.
+            !hasWas && 'invisible'
+          )}
+        >
+          {hasWas ? formatPrice(was, currency) : '\u00a0'}
         </span>
       ) : null}
     </span>
