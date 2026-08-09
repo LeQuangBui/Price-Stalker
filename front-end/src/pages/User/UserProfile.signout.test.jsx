@@ -43,6 +43,13 @@ describe('UserProfile sign out', () => {
     expect(await screen.findByRole('button', { name: /sign out/i })).toBeVisible()
   })
 
+  // `.btn` is where the 44px touch target lives (index.css). Guarding the rule alone leaves the
+  // usage free to drop the class, so assert the button actually opts in.
+  it('carries the .btn primitive that supplies the 44px touch target', async () => {
+    renderProfile()
+    expect((await screen.findByRole('button', { name: /sign out/i })).className).toMatch(/(^|\s)btn(\s|$)/)
+  })
+
   it('calls onSignOut when pressed', async () => {
     const onSignOut = renderProfile()
     await userEvent.click(await screen.findByRole('button', { name: /sign out/i }))

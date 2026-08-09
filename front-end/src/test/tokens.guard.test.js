@@ -32,18 +32,17 @@ describe('design token guard (one token system)', () => {
     expect(offenders, `Raw hex in component CSS — use a var(--token):\n${offenders.join('\n')}`).toEqual([])
   })
 
-  it('JSX className/style use tokens, not raw hex colors', () => {
+  // Whole-file scan, like the sibling width.guard. Chunking on `className="…"` / `style={{…}}`
+  // literals missed any class string hoisted to a const — e.g. Pagination.jsx's `const BUTTON`,
+  // which is the reference pattern the rest of the conversion copies.
+  it('JS/JSX uses tokens, not raw hex colors', () => {
     const offenders = []
     for (const file of files) {
       if (!/\.(jsx|js)$/.test(file)) continue
       if (file.includes(`${join('src', 'test')}`) || /\.test\.(jsx|js)$/.test(file)) continue
-      const text = readFileSync(file, 'utf8')
-      const attrChunks = text.match(/className="[^"]*"|style=\{\{[^}]*\}\}/g) || []
-      for (const chunk of attrChunks) {
-        const hits = (chunk.match(HEX) || []).filter((h) => !ALLOW.has(h.toLowerCase()))
-        if (hits.length) offenders.push(`${file}: ${hits.join(', ')}`)
-      }
+      const hits = (readFileSync(file, 'utf8').match(HEX) || []).filter((h) => !ALLOW.has(h.toLowerCase()))
+      if (hits.length) offenders.push(`${file}: ${hits.join(', ')}`)
     }
-    expect(offenders, `Raw hex in JSX className/style — use tokens:\n${offenders.join('\n')}`).toEqual([])
+    expect(offenders, `Raw hex in JS/JSX — use tokens:\n${offenders.join('\n')}`).toEqual([])
   })
 })

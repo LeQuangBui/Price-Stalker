@@ -257,6 +257,9 @@ button:focus-visible,
 }
 
 .retry-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 6px 14px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
