@@ -36,6 +36,27 @@ describe('cascade layer guard', () => {
   })
 })
 
+describe('shared control primitives', () => {
+  function block(name) {
+    const start = css.indexOf(`\n${name} {`)
+    return start === -1 ? '' : css.slice(start, css.indexOf('}', start))
+  }
+
+  it('.btn meets the 44px touch-target floor', () => {
+    expect(block('.btn')).toMatch(/min-height:\s*44px/)
+  })
+
+  it('.retry-btn meets the 44px touch-target floor', () => {
+    expect(block('.retry-btn')).toMatch(/min-height:\s*44px/)
+  })
+
+  it('every semantic colour token is bridged to a Tailwind utility', () => {
+    for (const token of ['--color-success', '--color-success-deep']) {
+      expect(css).toContain(token)
+    }
+  })
+})
+
 describe('safe-area opt-in', () => {
   const html = readFileSync(join(SRC, '..', 'index.html'), 'utf8')
 

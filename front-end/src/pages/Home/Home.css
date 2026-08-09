@@ -25,46 +25,6 @@
   align-self: flex-start;
 }
 
-.pagination {
-  display: flex;
-  gap: 12px;
-  justify-content: center;
-  margin-top: 32px;
-}
-
-.pagination button {
-  padding: 10px 20px;
-  font-size: 14px;
-  font-weight: 600;
-  border: 1px solid color-mix(in srgb, var(--primary) 42%, var(--border));
-  border-radius: var(--radius-sm);
-  background: var(--primary);
-  color: white;
-  cursor: pointer;
-  transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
-  box-shadow: var(--shadow-sm);
-}
-
-.pagination button:hover:not(:disabled) {
-  background: var(--primary-dark);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow);
-}
-
-.pagination button:disabled {
-  background: var(--bg-tertiary);
-  color: var(--text-muted);
-  cursor: not-allowed;
-}
-
-.pagination-info {
-  padding: 10px 16px;
-  display: flex;
-  align-items: center;
-  color: var(--text-secondary);
-  font-weight: 500;
-}
-
 .loading-text {
   color: var(--text-secondary);
   text-align: center;

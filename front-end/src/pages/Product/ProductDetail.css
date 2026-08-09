@@ -109,41 +109,9 @@
   background: var(--primary);
 }
 
-.no-image {
-  min-height: 320px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--bg-tertiary);
-  border-radius: var(--radius);
-  color: var(--text-muted);
-}
-
-.product-info {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.product-info h1 {
-  margin: 0;
-  font-size: 32px;
-  line-height: 1.25;
-}
-
 .product-sku {
   margin: 0;
   color: var(--text-muted);
-}
-
-.product-price {
-  padding: 24px;
-  background: var(--bg-tertiary);
-  border-radius: 16px;
-  border: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
 }
 
 .price-flash,
@@ -337,8 +305,7 @@
   color: var(--success-dark);
 }
 
-.error-message,
-.error {
+.error-message {
   color: var(--danger);
 }
 
