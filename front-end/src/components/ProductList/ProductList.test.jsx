@@ -12,6 +12,10 @@ function renderList(products) {
   return render(<MemoryRouter><ProductList products={products} /></MemoryRouter>)
 }
 
+// Exact class tokens — `toContain` on the raw string would let `sm:grid-cols-2` satisfy a
+// check for `grid-cols-2`, which is the one confusion these assertions exist to catch.
+const classesOf = (el) => el.className.split(/\s+/)
+
 describe('ProductList', () => {
   it('renders an EmptyState when there are no products', () => {
     renderList([])
@@ -25,11 +29,23 @@ describe('ProductList', () => {
     }
   })
 
-  it('stacks to one column on phones and widens from sm up', () => {
+  // Vietnamese e-commerce is two-up on phones, but the card is `overflow-hidden` and a price
+  // string cannot wrap, so the second column only pays off once a legible price fits. At 320px
+  // the inner box is 77px and nothing on the type scale fits, so 320 stays single-column.
+  it('stays one column at 320 and goes two-up from 360', () => {
     const { container } = renderList([product()])
     const grid = container.firstChild
-    expect(grid.className).toContain('grid-cols-1')
-    expect(grid.className).toContain('sm:grid-cols-2')
+    expect(classesOf(grid)).toContain('grid-cols-1')
+    expect(classesOf(grid)).toContain('min-[360px]:grid-cols-2')
+    // `sm:` is 640px — four phone widths too late for the second column.
+    expect(classesOf(grid)).not.toContain('sm:grid-cols-2')
+  })
+
+  it('keeps the three- and four-column desktop steps', () => {
+    const { container } = renderList([product()])
+    const grid = container.firstChild
+    expect(classesOf(grid)).toContain('lg:grid-cols-3')
+    expect(classesOf(grid)).toContain('xl:grid-cols-4')
   })
 
   it('links each card to its product', () => {

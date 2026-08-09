@@ -3,10 +3,14 @@ import EmptyState from '../primitives/EmptyState'
 import PriceDisplay from '../primitives/PriceDisplay'
 import { getPrimaryImage, getTrackedPrice, hasFlashSalePrice, hasOriginalPrice } from '../../utils/formatters'
 
-// Mobile-up: one column on phones, widening with the viewport. The old
-// `repeat(auto-fill, minmax(230px, 1fr))` needed 478px of content for two columns, so a 390px
-// phone only ever got one — explicit column counts make the phone case deliberate.
-export const PRODUCT_GRID = 'grid grid-cols-1 gap-[18px] sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+// Mobile-up: two columns from 360px, matching how Vietnamese storefronts lay out a phone.
+// The second column is gated on the price fitting, not on a stock breakpoint. The card is
+// `overflow-hidden` and a formatted price contains a non-breaking space, so a price too wide
+// for its column is sliced with no ellipsis and no scrollbar. At 320px the card interior is
+// 77px, under the narrowest step on the type scale, so 320 keeps its single column; 360 clears
+// it, which is why the break sits there rather than at `sm:` (640px, four phone widths late).
+export const PRODUCT_GRID =
+  'grid grid-cols-1 gap-[18px] min-[360px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
 
 const CARD = [
   'group block overflow-hidden rounded-2xl border border-line bg-surface',
