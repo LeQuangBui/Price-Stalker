@@ -4,16 +4,22 @@ import { formatPrice } from '../../utils/formatters'
 // The card price steps with the two-up product grid rather than holding one size. A price cannot
 // wrap — Intl puts a no-break space before the ₫ — and the card clips silently, so the number has
 // to fit the column outright: the full 24px while the grid is still one column and the card is
-// wide, 16px across the two-up squeeze, 18px once the column has grown a little, and 24px again
-// at `sm:`, where the grid is no longer squeezing. 16px everywhere was the simpler option and was
-// rejected: the product name above it is smaller, so a flat 16px price flattens the hierarchy.
-// The ladder is what keeps the number on one line; `wrap-anywhere` on the value span below is the
-// backstop for when it cannot, and the two are meant to be read together.
+// wide, 16px for the whole two-up squeeze, and 24px again at `sm:`, where the grid is no longer
+// squeezing. The ladder is what keeps the number on one line; `wrap-anywhere` on the value span
+// below is the backstop for when it cannot, and the two are meant to be read together.
+//
+// An 18px step at 24.375rem was tried and taken out again. It raised the type faster than the
+// column grew, so wrapping stopped being monotonic in viewport width: a round 9-digit price held
+// one line at 375px and 384px and broke at 390px and 393px — iPhone 12 through 15, and Pixel —
+// because those widths had just stepped up to 18px while the column had barely moved. The first
+// measurements missed it by using mixed-digit fixtures. `0` is 47% wider than `1` in this face
+// and Vietnamese shelf prices are round numbers, so `100.000.000 ₫` is the string to design
+// against, not `122.222.229 ₫`.
 //
 // Every step is rem, and the whole ladder is really a statement about how much room is inside the
 // card, which is a rem quantity: below `sm:` the page gutters resolve to 1rem a side, the page
-// padding to 1.5rem and the card padding to 1rem, so the interior is (viewport − 7rem − 2px) in
-// one column whatever the reader's font size is. px breakpoints broke that. The gutters, the
+// padding to 1.5rem and the card padding to 0.75rem, so the interior is (viewport − 6.5rem − 2px)
+// in one column whatever the reader's font size is. px breakpoints broke that. The gutters, the
 // padding and the type all grow when a reader raises the browser's default font size but a px
 // breakpoint does not move, so the column arrived at the same viewport width with less room in it
 // and more type to fit: measured against the compiled stylesheet, the px ladder clipped from 360
@@ -24,10 +30,10 @@ import { formatPrice } from '../../utils/formatters'
 // stepped down at another, the band between them would show two columns at 24px, which does not
 // fit. It is one decision written in two files, so it has to stay one number; a test asserts it.
 //
-// The 17rem step is the low end of the same rule. 24px of 9-digit price measures 9.4rem and the
-// one-column interior is (viewport − 7rem), so the full size only fits from about 15.96rem of
-// viewport — measured, to the pixel, as the width where clipping stops. 17rem takes that with a
-// rem of headroom. At a default font it is 272px, below any phone, so the one-column 320px case
+// The 17rem step is the low end of the same rule. 24px of 9-digit price measures about 9.4rem
+// against a one-column interior of (viewport − 6.5rem), so the full size stops fitting somewhere
+// below 16rem of viewport — measured as the width where clipping starts. 17rem clears that with
+// headroom. At a default font it is 272px, below any phone, so the one-column 320px case
 // keeps its 24px price; at a 24px default font it is 408px, and it is what keeps a 320px phone on
 // "Very Large" from slicing digits off a 36px price in a 150px card.
 //
@@ -42,7 +48,7 @@ import { formatPrice } from '../../utils/formatters'
 // span carries `wrap-anywhere`, so such a price breaks across two lines with every digit intact.
 // The ladder still makes no promise to fit one on a single line.
 export const CARD_PRICE_SIZE =
-  'text-base min-[17rem]:text-2xl min-[22.5rem]:text-base min-[24.375rem]:text-lg sm:text-2xl'
+  'text-base min-[17rem]:text-2xl min-[22.5rem]:text-base sm:text-2xl'
 
 const SIZES = {
   sm: CARD_PRICE_SIZE,

@@ -6,7 +6,7 @@ import { getPrimaryImage, getTrackedPrice, hasFlashSalePrice, hasOriginalPrice }
 // Mobile-up: two columns from 22.5rem, matching how Vietnamese storefronts lay out a phone.
 // The second column is gated on the price fitting, not on a stock breakpoint. The card is
 // `overflow-hidden` and a formatted price contains a no-break space, so a price too wide for its
-// column is sliced with no ellipsis and no scrollbar. A second column at 320px would leave a 77px
+// column is sliced with no ellipsis and no scrollbar. A second column at 320px would leave an 85px
 // interior, under the narrowest step on the type scale — an 8-digit price is 99px at 16px — so 320
 // keeps its single column; 22.5rem clears it, which is why the break sits there rather than at
 // `sm:` (640px, four phone widths late).

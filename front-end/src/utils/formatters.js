@@ -30,7 +30,10 @@ export function formatPrice(value, currency) {
       // on the value, which applies to every currency and not only to đồng, so an over-wide
       // rendering now wraps onto a second line with all of it readable. The grid still does not
       // promise a non-VND price will fit on one line — only that none of it will disappear.
-      const locale = currency === 'VND' ? 'vi-VN' : undefined
+      // Case-folded on purpose: `Intl` accepts currency codes case-insensitively, so a backend
+      // that sends `vnd` would format perfectly well and quietly do it in the reader's language,
+      // which is the one thing this pin exists to prevent.
+      const locale = String(currency).toUpperCase() === 'VND' ? 'vi-VN' : undefined
       return new Intl.NumberFormat(locale, { style: 'currency', currency }).format(numeric)
     } catch {
       // Unknown currency code — fall through to plain number formatting.

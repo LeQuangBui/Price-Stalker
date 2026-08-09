@@ -11,8 +11,8 @@ function parts(container) {
 
 const NBSP = '\u00a0'
 
-// Exact class tokens. A substring check would let `min-[24.375rem]:text-lg` satisfy a test for
-// `text-lg`, which would hide a missing base step.
+// Exact class tokens. A substring check would let `min-[17rem]:text-2xl` satisfy a test for
+// `text-2xl`, which would hide a missing base step.
 const classesOf = (el) => el.className.split(/\s+/)
 
 // Resolve the size ladder the way the cascade does — every step is a min-width query, they are
@@ -50,7 +50,7 @@ describe('PriceDisplay', () => {
   // Intl.NumberFormat puts a non-breaking space before the ₫ glyph, so a price string cannot
   // break; inside an `overflow-hidden` card, a price wider than the column is silently sliced
   // rather than ellipsised. The size therefore has to follow the room in the card, which below
-  // `sm:` is (viewport − 7rem) in one column: gutters, page padding and card padding are all rem.
+  // `sm:` is (viewport − 6.5rem) in one column: gutters, page padding and card padding are all rem.
   it('applies the ladder to the card price', () => {
     const { container } = render(<PriceDisplay value={12900000} size="sm" />)
     const classes = classesOf(parts(container).value)
@@ -58,14 +58,14 @@ describe('PriceDisplay', () => {
   })
 
   // At 320px on a default font the grid is deliberately still one column and 24px of price fits
-  // its 206px interior with room to spare. Dropping to 16px there left the struck `was` price,
+  // its 214px interior with room to spare. Dropping to 16px there left the struck `was` price,
   // which is 14px, reading as loud as the price the shopper would actually pay.
   it('is full size at 320px, where the grid is still one column', () => {
     expect(sizeAtRem(320 / 16)).toBe('text-2xl')
   })
 
   // Same 320px phone, but the reader has set the browser default to 24px: the card interior is
-  // 150px, not 206px, and 24px of type has become 36px. Full size slices about 62px off a 9-digit
+  // 150px, not 214px, and 24px of type has become 36px. Full size slices about 62px off a 9-digit
   // price. The ladder reads the viewport in rem, so this case falls out of the same rule.
   it('is not full size on a 320px phone with a 24px default font, where it would not fit', () => {
     expect(sizeAtRem(320 / 24)).toBe('text-base')
@@ -73,8 +73,18 @@ describe('PriceDisplay', () => {
 
   it('steps down for the two-up squeeze and recovers once the column is wide again', () => {
     expect(sizeAtRem(22.5)).toBe('text-base')
-    expect(sizeAtRem(24.375)).toBe('text-lg')
     expect(sizeAtRem(40)).toBe('text-2xl')
+  })
+
+  // An 18px step used to sit at 24.375rem, and it came back out. It raised the type faster than
+  // the column grew, so wrapping stopped being monotonic in viewport width: a round 9-digit price
+  // held one line at 375px and 384px and broke at 390px and 393px — iPhone 12 through 15, and
+  // Pixel — which had just stepped up while the column had barely moved. One size across the band
+  // means a wider phone can never do worse than a narrower one that already worked.
+  it('holds one size across the whole two-up band', () => {
+    for (const rem of [22.5, 23, 24.375, 26, 30, 35, 39.9]) {
+      expect(sizeAtRem(rem), `${rem}rem`).toBe('text-base')
+    }
   })
 
   // The gutters, the card padding and the price itself are all rem, so they grow when a reader

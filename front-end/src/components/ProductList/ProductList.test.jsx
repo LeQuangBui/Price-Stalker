@@ -38,7 +38,7 @@ describe('ProductList', () => {
 
   // Vietnamese e-commerce is two-up on phones, but the card is `overflow-hidden` and a price
   // string cannot wrap, so the second column only pays off once a legible price fits. At 320px
-  // the inner box is 77px and nothing on the type scale fits, so 320 stays single-column.
+  // the inner box is 85px and nothing on the type scale fits, so 320 stays single-column.
   it('stays one column at 320 and goes two-up from 22.5rem', () => {
     const { container } = renderList([product()])
     const grid = container.firstChild
