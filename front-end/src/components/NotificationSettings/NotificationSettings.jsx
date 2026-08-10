@@ -26,7 +26,9 @@ export default function NotificationSettings() {
             max-content would drop the button onto its own line at every width under ~700px,
             desktop included — the same trap `.page-error` fell into in slice 2b-i. */}
         <div className="min-w-0">
-          <h3 className="text-base font-bold text-[var(--text-primary)]">Price-drop notifications</h3>
+          {/* h2: this is a section heading on /profile, under that page's h1 and beside its
+              Bookmarks heading. The size is set by `text-base` either way. */}
+          <h2 className="text-base font-bold text-[var(--text-primary)]">Price-drop notifications</h2>
           <p className="mt-1 text-sm text-[var(--text-secondary)]">
             Get a browser notification the moment a price you track drops — even with the tab closed.
           </p>

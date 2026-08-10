@@ -371,7 +371,13 @@ export default function Bookmarks() {
                       ladder. */}
                   <div className="mb-[18px] flex flex-col items-start gap-4 lg:flex-row lg:items-stretch lg:justify-between">
                     <div>
-                      <h3 className="mb-2.5 text-[1.375rem]">{bookmark.name}</h3>
+                      {/* h2, not h3. Every state of this page went h1 straight to h3, and the
+                          card title is the only thing under the page heading — there is no level
+                          for it to be nested inside. The tag was expensive to change while
+                          `Bookmarks.css` keyed rules to it; it does not any more. `.empty-state h3`
+                          in index.css still does, which is why the shared empty state keeps its
+                          own level. */}
+                      <h2 className="mb-2.5 text-[1.375rem]">{bookmark.name}</h2>
                       {/* A wrapping row, unchanged by this commit: `flex-direction: column` used to
                           reach it from UserProfile.css through the shared `bookmark-info` name, and
                           left with that file one commit ago. The utilities below are a 1:1 of what

@@ -12,6 +12,11 @@ import { cx } from '../../lib/cx'
 export default function EmptyState({ title, children, action, className }) {
   return (
     <div className={cx('empty-state', className)} role="status">
+      {/* Still h3 while its four consumers sit at three different depths, and while `.empty-state
+          h3` in index.css keys the 20px size to the tag. Under /profile's Bookmarks h2 that reads
+          correctly; on Bookmarks' own empty state it is an h1 -> h3 skip, the last one left on
+          either page. Fixing it means a level prop AND unkeying that rule, which is a change to
+          every consumer — not something to fold into a card-title promotion. */}
       <h3>{title}</h3>
       {children ? <p>{children}</p> : null}
       {action}

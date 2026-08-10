@@ -148,7 +148,11 @@ function ProfileBody({ user }) {
       {/* `.bookmarks-section` had exactly one rule — a margin on this heading — so the wrapper keeps
           the grouping and loses the class. */}
       <div>
-        <h3 className="mb-[18px]">Bookmarks ({user.bookmarks?.length || 0})</h3>
+        {/* h2, with NotificationSettings' heading above it. This page also went h1 straight to h3
+            in every state; these are the two section headings under the page title and nothing
+            sits between. No CSS is keyed to either tag — index.css styles h1, h2 and h3
+            identically — so both render exactly as before. */}
+        <h2 className="mb-[18px]">Bookmarks ({user.bookmarks?.length || 0})</h2>
         {user.bookmarks && user.bookmarks.length > 0 ? (
           <div className="flex flex-col gap-4">
             {user.bookmarks.map((bookmark) => (
