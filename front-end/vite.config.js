@@ -48,7 +48,16 @@ export default defineConfig(({ mode }) => {
     },
     test: {
       environment: 'jsdom',
-      setupFiles: './src/test/setup.js'
+      setupFiles: './src/test/setup.js',
+      // The suite runs in one fixed zone on every machine. Intl.DateTimeFormat with no `timeZone`
+      // renders in the host's, so a chart test that pins the instant but not the zone asserts
+      // against "03:43" on a UTC+10 laptop and "17:43" on a UTC runner — different strings, and
+      // the browser-measured widths behind them only exist for one of the two. The component is
+      // right to render in the reader's own zone; only the tests need to agree on one.
+      // Vitest assigns these into the worker's process.env before any test module loads, and Node
+      // re-reads TZ on assignment, so this wins over whatever TZ the shell exports.
+      // src/test/timezone.guard.test.js holds it to that.
+      env: { TZ: 'UTC' }
     }
   }
 })

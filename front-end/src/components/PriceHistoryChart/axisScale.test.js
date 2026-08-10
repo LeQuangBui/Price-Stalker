@@ -20,7 +20,7 @@ import {
 //     a number and comparing it to the gridline, over the whole price matrix. The version of this
 //     module that placed ticks at low + k/4 of the span and rounded the label afterwards fails it
 //     on 9.3% of endpoint ticks, by up to 33%.
-//   - that the width estimate never under-reserves is checked against widths.fixture.json, 6,239
+//   - that the width estimate never under-reserves is checked against widths.fixture.json, 7,673
 //     strings measured in a real browser in both faces the app renders in. The previous suite
 //     asserted `estimateLabelWidth(w) <= ceil(estimateLabelWidth(w)) + TICK_GAP - TICK_GAP`, which
 //     is true of any advance table at all: halving the digit advance kept it green while 35 ticks
@@ -42,6 +42,10 @@ const MAGNITUDES = [0, 199000, 1290000, 12900000, 45000000, 129000000, 129000000
 const SPANS = [0, 0.0001, 0.001, 0.01, 0.05, 0.2, 0.5, 1, 3, 9]
 
 const DAY = 24 * 60 * 60 * 1000
+// An instant, not a wall clock. Which strings the date axis writes for it depends on the zone as
+// well — 17:43 in UTC, 03:43 the next day at UTC+10 — and the fixture below only holds measurements
+// for strings that were actually rendered. vite.config.js pins the run to UTC so both ends of that
+// agree on every machine; src/test/timezone.guard.test.js fails first if the pin ever comes off.
 const END = Date.UTC(2026, 0, 26, 17, 43)
 const HISTORIES = [DAY / 8, DAY / 4, DAY, 2 * DAY, 3 * DAY, 20 * DAY, 100 * DAY, 400 * DAY, 1100 * DAY]
 // Every count the chart can draw. Eight labels leave room the tenth does not: a matrix that stops

@@ -59,7 +59,7 @@ export const DATE_FONT_SIZE = 11
 //   digit     '4' 0.650 em   (Inter's default figures are proportional, not tabular: '1' is 0.471)
 //   separator ',' '.' and ':' 0.307 em, U+00A0 0.290 em
 //   other     CJK ideographs 1.024 em, 'W' 0.988 em
-// widths.fixture.json carries those measurements for 6,239 strings and the suite checks this
+// widths.fixture.json carries those measurements for 7,673 strings and the suite checks this
 // function against every one of them. That check is the point: an earlier version of this table
 // was internally consistent, passed every test, and still under-reserved for '万' and for a group
 // separator, which is exactly the failure a test written against the arithmetic cannot see.

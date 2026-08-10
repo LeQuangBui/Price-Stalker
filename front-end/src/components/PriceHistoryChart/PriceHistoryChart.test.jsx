@@ -18,7 +18,7 @@ import {
 const digitsOf = (text) => text.replace(/\D/g, '')
 
 // What the browser will actually draw this string as, in user units. axisScale.test.js pins
-// estimateLabelWidth to 6,239 real browser measurements, so the estimate is a sound upper bound
+// estimateLabelWidth to 7,673 real browser measurements, so the estimate is a sound upper bound
 // wherever the running locale takes us; where the exact string is in the fixture, the measurement
 // is used as well and the larger of the two has to fit.
 const drawnWidth = (text, fontSize) =>
@@ -34,6 +34,9 @@ const getPriceHistory = vi.fn()
 vi.mock('../../api/products', () => ({ getPriceHistory: (...args) => getPriceHistory(...args) }))
 
 const DAY = 24 * 60 * 60 * 1000
+// Fixed instant, and the run is fixed to UTC in vite.config.js so it is a fixed wall clock too:
+// the chart writes its dates in the reader's zone, which would otherwise make the labels this file
+// lays out differ from one machine to the next.
 const END = Date.UTC(2026, 0, 26, 17, 43)
 
 // A 12.9M to 45M laptop — the range whose ticks all rendered as "00.000 d" before the fix.
