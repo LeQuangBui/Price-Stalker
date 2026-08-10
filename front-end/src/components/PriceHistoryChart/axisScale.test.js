@@ -6,8 +6,8 @@ import {
   axisTicks,
   currencySymbol,
   dateLabels,
+  dateLabelX,
   estimateLabelWidth,
-  labelAnchor,
   DATE_FONT_SIZE,
   TICK_FONT_SIZE,
   TICK_GAP
@@ -20,7 +20,7 @@ import {
 //     a number and comparing it to the gridline, over the whole price matrix. The version of this
 //     module that placed ticks at low + k/4 of the span and rounded the label afterwards fails it
 //     on 9.3% of endpoint ticks, by up to 33%.
-//   - that the width estimate never under-reserves is checked against widths.fixture.json, 1,891
+//   - that the width estimate never under-reserves is checked against widths.fixture.json, 6,239
 //     strings measured in a real browser in both faces the app renders in. The previous suite
 //     asserted `estimateLabelWidth(w) <= ceil(estimateLabelWidth(w)) + TICK_GAP - TICK_GAP`, which
 //     is true of any advance table at all: halving the digit advance kept it green while 35 ticks
@@ -32,8 +32,10 @@ import {
 
 const LOCALES = ['vi-VN', 'en-AU', 'en-US', 'ja-JP', 'de-DE', 'fr-FR', 'ko-KR']
 
-// Real Vietnamese price points, plus the two degenerate ends: a stored 0 and a car.
-const MAGNITUDES = [0, 199000, 1290000, 12900000, 45000000, 129000000, 1290000000, 45000000000]
+// Real Vietnamese price points, plus the degenerate ends: a stored 0, a car, and a figure only a
+// scrape of the wrong field produces — which is the one that opens the gutter widest and squeezes
+// the date axis hardest.
+const MAGNITUDES = [0, 199000, 1290000, 12900000, 45000000, 129000000, 1290000000, 45000000000, 9999635434151]
 
 // Fraction of the price the series moves across. 9 is a tenfold rise over a product's whole
 // tracked life; 0 is a series that never moved.
@@ -42,9 +44,16 @@ const SPANS = [0, 0.0001, 0.001, 0.01, 0.05, 0.2, 0.5, 1, 3, 9]
 const DAY = 24 * 60 * 60 * 1000
 const END = Date.UTC(2026, 0, 26, 17, 43)
 const HISTORIES = [DAY / 8, DAY / 4, DAY, 2 * DAY, 3 * DAY, 20 * DAY, 100 * DAY, 400 * DAY, 1100 * DAY]
-const POINT_COUNTS = [8, 10]
+// Every count the chart can draw. Eight labels leave room the tenth does not: a matrix that stops
+// at eight had nothing to say about the pair of dates that ran into each other on the default view.
+const POINT_COUNTS = Array.from({ length: 19 }, (_, i) => i + 2)
 
 const CURRENCIES = ['VND', 'USD', 'EUR', 'JPY', 'KRW', 'AUD', 'XPF', 'CHF']
+
+// Chart geometry, copied from the component: the viewBox is 800 wide, the plot ends 20 units short
+// of its right edge, and it starts at whatever gutter the y-axis labels asked for.
+const CHART_WIDTH = 800
+const RIGHT_PADDING = 20
 
 function eachChart(visit) {
   for (const locale of LOCALES) {
@@ -67,6 +76,58 @@ function eachDateAxis(visit) {
       }
     }
   }
+}
+
+// How narrow the plot can get. Every price in the matrix is put to the axis against every currency,
+// exactly as the component sizes its gutter, and the widest any of them asks for is the tightest the
+// date labels ever have to be — read off the y axis rather than guessed at, so a wider currency or
+// a longer number moves this on its own.
+const WIDEST_GUTTER = (() => {
+  let widest = 0
+  eachChart(({ locale, ticks }) => {
+    for (const code of CURRENCIES) {
+      widest = Math.max(widest, axisGutter([...ticks.map((tick) => tick.label), currencySymbol(code, locale)]))
+    }
+  })
+  return widest
+})()
+const GUTTERS = [44, Math.round((44 + WIDEST_GUTTER) / 2), WIDEST_GUTTER]
+
+// Which readings get dated, and where their gridlines sit: the component's own arithmetic. Ten
+// readings or fewer are all dated; above that every nth one is, so ten labels is the most the axis
+// ever carries and twenty readings are drawn at half the spacing of ten.
+function datedIndices(count) {
+  const stride = count <= 10 ? 1 : Math.ceil(count / 10)
+  const indices = []
+  for (let i = 0; i < count; i += stride) indices.push(i)
+  return indices
+}
+
+// The same axes, laid out the way the component lays them out: the labels chosen knowing where they
+// will land. This is the path that ships — dateLabels without a layout only answers the
+// distinctness question.
+function eachDateLayout(visit) {
+  for (const gutter of GUTTERS) {
+    const innerWidth = CHART_WIDTH - gutter - RIGHT_PADDING
+    eachDateAxis(({ locale, history, count, times }) => {
+      const indices = datedIndices(count)
+      const dated = indices.map((i) => times[i])
+      const xs = indices.map((i) => gutter + (i / (count - 1)) * innerWidth)
+      visit({
+        locale, history, count, gutter, xs,
+        labels: dateLabels(dated, locale, { xs, viewWidth: CHART_WIDTH })
+      })
+    })
+  }
+}
+
+// Where the browser will paint this label, given the x the chart clamped it to. The clamp works off
+// the estimate and the estimate never under-reserves, so the measured box always sits inside the
+// box the clamp reasoned about.
+function drawnSpan(label, x) {
+  const drawn = measuredWidth(label, DATE_FONT_SIZE)
+  const left = dateLabelX(x, label, CHART_WIDTH) - drawn / 2
+  return [left, left + drawn]
 }
 
 // The inverse of the formatter: what quantity does this string say? Built out of Intl for the same
@@ -235,6 +296,11 @@ describe('label width estimate', () => {
     eachDateAxis(({ locale, labels }) => {
       for (const label of labels) if (!(label in widths.em)) unmeasured.add(`${locale}: "${label}"`)
     })
+    // The layout-aware ladder reaches wordings the distinctness ladder never gets to, and those are
+    // the ones the reader actually sees.
+    eachDateLayout(({ locale, labels }) => {
+      for (const label of labels) if (!(label in widths.em)) unmeasured.add(`${locale}: "${label}"`)
+    })
     for (const locale of LOCALES) {
       for (const code of CURRENCIES) {
         const unit = currencySymbol(code, locale)
@@ -321,28 +387,85 @@ describe('x-axis date labels', () => {
     }
   })
 
-  it('anchors the ends inward so no label leaves the viewBox', () => {
+  it('clamps the ends inward so no label leaves the viewBox', () => {
     const outside = []
-    const chartWidth = 800
-    // The widest gutter the y-axis can ask for still leaves the first date at x = gutter, and the
-    // last is always at chartWidth - 20.
-    for (const gutter of [44, 105, 199]) {
-      const innerWidth = chartWidth - gutter - 20
 
-      eachDateAxis(({ locale, labels }) => {
-        labels.forEach((label, index) => {
-          const x = gutter + (index / (labels.length - 1)) * innerWidth
-          const drawn = measuredWidth(label, DATE_FONT_SIZE)
-          const anchor = labelAnchor(x, label, chartWidth)
-          const left = anchor === 'start' ? x : anchor === 'end' ? x - drawn : x - drawn / 2
-          if (left < 0 || left + drawn > chartWidth) {
-            outside.push(`${locale} gutter ${gutter}: "${label}" spans ${left.toFixed(1)}..${(left + drawn).toFixed(1)}`)
-          }
-        })
+    eachDateLayout(({ locale, gutter, count, xs, labels }) => {
+      labels.forEach((label, index) => {
+        const [left, right] = drawnSpan(label, xs[index])
+        if (left < 0 || right > CHART_WIDTH) {
+          outside.push(`${locale} gutter ${gutter}, ${count} readings: "${label}" spans ${left.toFixed(1)}..${right.toFixed(1)}`)
+        }
       })
-    }
+    })
 
     expect(outside, `Date labels the viewport would cut:\n${outside.slice(0, 20).join('\n')}`).toEqual([])
+  })
+
+  it('leaves a gap between one date and the next', () => {
+    const collisions = []
+
+    eachDateLayout(({ locale, gutter, count, xs, labels }) => {
+      let previous = null
+      labels.forEach((label, index) => {
+        const [left, right] = drawnSpan(label, xs[index])
+        if (previous && left < previous.right) {
+          collisions.push(`${locale} gutter ${gutter}, ${count} readings: "${previous.label}" ends at ${previous.right.toFixed(1)} but "${label}" starts at ${left.toFixed(1)}`)
+        }
+        previous = { label, right }
+      })
+    })
+
+    // Pinning the last label's far end to its gridline instead of clamping its centre pulled it
+    // half its own width to the left, into the label before it: ten readings on the default 1 Day
+    // view put "27.1., 01 Uhr" and "27.1., 03 Uhr" 15.7 units on top of each other. Neither was cut
+    // off and neither was repeated, and a reader could not read either of them.
+    expect(collisions, `Dates drawn on top of each other:\n${collisions.slice(0, 20).join('\n')}`).toEqual([])
+  })
+
+  it('buys the room with shorter wording, never with fewer labels or repeated ones', () => {
+    // Making room by dropping gridlines is the other way to stop labels colliding, and it is the
+    // one that loses readings. Every gridline keeps a label, and that label still names an instant
+    // no other one names, however tight the plot gets.
+    const lost = []
+
+    eachDateLayout(({ locale, gutter, count, labels }) => {
+      const expected = datedIndices(count).length
+      if (labels.length !== expected) lost.push(`${locale} gutter ${gutter}: ${labels.length} labels for ${expected} dated readings`)
+      if (new Set(labels).size !== labels.length) {
+        lost.push(`${locale} gutter ${gutter}, ${count} readings: ${labels.join(' | ')}`)
+      }
+    })
+
+    expect(lost, `Readings the axis stopped naming:\n${lost.slice(0, 20).join('\n')}`).toEqual([])
+  })
+
+  it('takes the wordier format when there is room and a shorter one when there is not', () => {
+    // The whole mechanism in one case: nine readings across a day and a half, so the format has to
+    // carry an hour. Widen the y-axis gutter until the labels no longer fit and the axis answers
+    // with a narrower rendering of the same instants rather than with an overlap.
+    const count = 9
+    const times = Array.from({ length: count }, (_, i) =>
+      new Date(END - 1.5 * DAY + (1.5 * DAY * i) / (count - 1)).toISOString())
+
+    const shortened = []
+    for (const locale of LOCALES) {
+      const width = (gutter) => {
+        const xs = Array.from({ length: count }, (_, i) =>
+          gutter + (i / (count - 1)) * (CHART_WIDTH - gutter - RIGHT_PADDING))
+        const labels = dateLabels(times, locale, { xs, viewWidth: CHART_WIDTH })
+        return Math.max(...labels.map((label) => measuredWidth(label, DATE_FONT_SIZE)))
+      }
+
+      const roomy = width(44)
+      const cramped = width(WIDEST_GUTTER)
+      expect(cramped, `${locale} widened its dates for a ${WIDEST_GUTTER}-unit gutter`).toBeLessThanOrEqual(roomy)
+      if (cramped < roomy) shortened.push(locale)
+    }
+
+    // A locale whose dates are short enough either way is entitled to keep them, so the assertion
+    // above passes for most of the list on its own. Somebody has to be doing the work.
+    expect(shortened.length, 'no locale shortened its dates when the plot narrowed').toBeGreaterThan(0)
   })
 })
 

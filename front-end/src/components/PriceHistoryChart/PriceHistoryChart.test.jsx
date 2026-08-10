@@ -18,13 +18,17 @@ import {
 const digitsOf = (text) => text.replace(/\D/g, '')
 
 // What the browser will actually draw this string as, in user units. axisScale.test.js pins
-// estimateLabelWidth to 1,891 real browser measurements, so the estimate is a sound upper bound
+// estimateLabelWidth to 6,239 real browser measurements, so the estimate is a sound upper bound
 // wherever the running locale takes us; where the exact string is in the fixture, the measurement
 // is used as well and the larger of the two has to fit.
 const drawnWidth = (text, fontSize) =>
   Math.max(estimateLabelWidth(text, fontSize), (widths.em[text] ?? 0) * fontSize)
 
 const CHART_WIDTH = 800
+// A label clamped hard against the right edge lands on 800 - w/2 and then spans w/2 either side,
+// which in binary comes back a fifteenth decimal past 800. That is arithmetic, not a clipped glyph:
+// a real overrun is user units, not 1e-13 of one.
+const ROUNDING = 1e-9
 
 const getPriceHistory = vi.fn()
 vi.mock('../../api/products', () => ({ getPriceHistory: (...args) => getPriceHistory(...args) }))
@@ -66,12 +70,14 @@ const nodes = (container, role) => [...container.querySelectorAll(`text.chart-la
 const textsOf = (list) => list.map((node) => node.textContent)
 const attr = (node, name) => Number(node.getAttribute(name))
 
-// Where the browser will put this label's box, given the anchor the component chose.
+// Where the browser will put this label's box. Date labels are middle-anchored and the component
+// moves the x instead, so the box is the x with half the drawn width on either side; a label whose
+// anchor had been pulled to one end would sit somewhere else entirely, which is why the anchor is
+// asserted rather than read.
 function span(node, fontSize) {
   const width = drawnWidth(node.textContent, fontSize)
-  const x = attr(node, 'x')
-  const anchor = node.getAttribute('text-anchor')
-  const left = anchor === 'start' ? x : anchor === 'end' ? x - width : x - width / 2
+  expect(node.getAttribute('text-anchor'), `"${node.textContent}" is not middle-anchored`).toBe('middle')
+  const left = attr(node, 'x') - width / 2
   return [left, left + width]
 }
 
@@ -201,27 +207,57 @@ describe('PriceHistoryChart plot', () => {
 })
 
 describe('PriceHistoryChart x-axis', () => {
+  // Ten readings is the count the chart draws by default and the count the plot is tightest at;
+  // eight leave enough slack to hide a collision, which is how one shipped.
+  const HISTORIES = [DAY / 4, DAY, 3 * DAY, 20 * DAY, 100 * DAY, 400 * DAY]
+  const COUNTS = [8, 10, 12, 20]
+
   it('keeps every date label inside the viewBox', async () => {
     // A history far shorter than the range button is the case that clipped: the last label sits
     // 20 units from the right edge, and "thg 1 26" is 41 units wide from its middle.
-    for (const history of [DAY / 4, 3 * DAY, 100 * DAY, 400 * DAY]) {
-      const { container, unmount } = await renderChart(series(12900000, 45000000, 8, history))
-      for (const node of nodes(container, 'chart-date')) {
-        const [left, right] = span(node, DATE_FONT_SIZE)
-        expect(left, `"${node.textContent}" starts at ${left.toFixed(1)}`).toBeGreaterThanOrEqual(0)
-        expect(right, `"${node.textContent}" ends at ${right.toFixed(1)}`).toBeLessThanOrEqual(CHART_WIDTH)
+    for (const history of HISTORIES) {
+      for (const count of COUNTS) {
+        const { container, unmount } = await renderChart(series(12900000, 45000000, count, history))
+        for (const node of nodes(container, 'chart-date')) {
+          const [left, right] = span(node, DATE_FONT_SIZE)
+          expect(left, `"${node.textContent}" starts at ${left.toFixed(1)}`).toBeGreaterThanOrEqual(-ROUNDING)
+          expect(right, `"${node.textContent}" ends at ${right.toFixed(1)}`).toBeLessThanOrEqual(CHART_WIDTH + ROUNDING)
+        }
+        unmount()
       }
-      unmount()
+    }
+  })
+
+  it('does not draw one date on top of the next', async () => {
+    for (const history of HISTORIES) {
+      for (const count of COUNTS) {
+        const { container, unmount } = await renderChart(series(12900000, 45000000, count, history))
+        const boxes = nodes(container, 'chart-date')
+          .map((node) => ({ text: node.textContent, box: span(node, DATE_FONT_SIZE) }))
+          .sort((a, b) => a.box[0] - b.box[0])
+
+        for (let i = 1; i < boxes.length; i += 1) {
+          expect(
+            boxes[i].box[0],
+            `"${boxes[i - 1].text}" ends at ${boxes[i - 1].box[1].toFixed(1)} but "${boxes[i].text}" starts at ${boxes[i].box[0].toFixed(1)}`
+          ).toBeGreaterThanOrEqual(boxes[i - 1].box[1])
+        }
+        unmount()
+      }
     }
   })
 
   it('gives every date a string no other date uses, whatever range is selected', async () => {
     for (const history of [DAY / 8, DAY / 4, 3 * DAY, 20 * DAY, 400 * DAY]) {
-      const { container, unmount } = await renderChart(series(12900000, 45000000, 8, history))
-      const labels = textsOf(nodes(container, 'chart-date'))
-      expect(labels).toHaveLength(8)
-      expect(new Set(labels).size, `${history / DAY}d of history: ${labels.join(' | ')}`).toBe(8)
-      unmount()
+      for (const count of COUNTS) {
+        const { container, unmount } = await renderChart(series(12900000, 45000000, count, history))
+        const labels = textsOf(nodes(container, 'chart-date'))
+        // Ten readings or fewer are all dated; above that the chart dates every nth one.
+        if (count <= 10) expect(labels).toHaveLength(count)
+        expect(labels.length).toBeGreaterThanOrEqual(6)
+        expect(new Set(labels).size, `${history / DAY}d of history: ${labels.join(' | ')}`).toBe(labels.length)
+        unmount()
+      }
     }
   })
 })

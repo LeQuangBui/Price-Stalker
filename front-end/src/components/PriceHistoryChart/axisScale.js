@@ -15,14 +15,18 @@
 //
 // X axis. The date format is chosen from the span the data actually covers, not from the range
 // button that was pressed. A product with three days of history viewed on "All" used to get eight
-// gridlines all reading "thg 1 26" — one distinct label out of eight.
+// gridlines all reading "thg 1 26" — one distinct label out of eight. It is also chosen from the
+// room the plot has: ten labels sharing 700 units cannot each be 90 wide, so a format that would
+// not lay out gives way to a narrower rendering of the same instant.
 //
-// Three invariants hold this together, each established by construction and fuzzed in
+// Four invariants hold this together, each established by construction and fuzzed in
 // axisScale.test.js rather than argued for:
 //   1. No two labels on an axis render the same string.
 //   2. Every y-axis label states the exact value of the gridline it sits on.
 //   3. No label's box crosses the edge of the viewBox: the y-axis gutter is measured from the
-//      labels actually drawn, and the date labels at the ends are anchored inward.
+//      labels actually drawn, and a date label's x is clamped to keep its box inside.
+//   4. No two date labels overlap. Clamping and the format ladder are both settled against the
+//      same layout the browser will perform, so fitting is decided rather than hoped for.
 //
 // Exact figures are not lost. The chart's aria-label speaks low, high and latest in full, every
 // data point carries a full-precision <title>, and the unit is stated once above the axis.
@@ -53,9 +57,9 @@ export const DATE_FONT_SIZE = 11
 // both faces the app can render in — Inter, and the system sans the display=swap link leaves on
 // screen for every cold load:
 //   digit     '4' 0.650 em   (Inter's default figures are proportional, not tabular: '1' is 0.471)
-//   separator ',' and '.' 0.307 em, U+00A0 0.290 em
+//   separator ',' '.' and ':' 0.307 em, U+00A0 0.290 em
 //   other     CJK ideographs 1.024 em, 'W' 0.988 em
-// widths.fixture.json carries those measurements for 1,891 strings and the suite checks this
+// widths.fixture.json carries those measurements for 6,239 strings and the suite checks this
 // function against every one of them. That check is the point: an earlier version of this table
 // was internally consistent, passed every test, and still under-reserved for '万' and for a group
 // separator, which is exactly the failure a test written against the arithmetic cannot see.
@@ -64,13 +68,15 @@ const ADVANCE_DIGIT = 0.7
 const ADVANCE_OTHER = 1.05
 
 // Space, no-break space and narrow no-break space all serve as group separators across locales;
-// ICU writes Vietnamese compact units with U+00A0 rather than a plain space.
-const SEPARATORS = new Set([' ', '\u00a0', '\u202f', ',', '.', '\u2019', "'"])
+// ICU writes Vietnamese compact units with U+00A0 rather than a plain space. The colon joins them
+// for the date axis: it measures 0.307 em, exactly what the comma and full stop do, and charging a
+// clock time 1.05 em for each of its colons is what makes "03:43:12 AM" look unplaceable.
+const SEPARATORS = new Set([' ', '\u00a0', '\u202f', ',', '.', ':', '\u2019', "'"])
 
 // Floor keeps the axis off the left edge when labels are very short ("5 Tr"); ceiling stops a
-// pathological label from eating the plot. Neither binds for any realistic price — over 100,000
-// fuzzed spans the widest gutter asked for was 106u, for "1.000.000.000" — they are guard rails,
-// not layout.
+// pathological label from eating the plot. Neither binds for any realistic price — over 40,000
+// fuzzed spans across seven locales and eight currencies the widest gutter asked for was 143u, for
+// "9,999,900,000,000" — they are guard rails, not layout.
 const MIN_GUTTER = 44
 const MAX_GUTTER = 200
 
@@ -84,8 +90,8 @@ export function estimateLabelWidth(label, fontSize = TICK_FONT_SIZE) {
   return advances * fontSize
 }
 
-function widestLabelWidth(labels) {
-  return labels.reduce((max, label) => Math.max(max, estimateLabelWidth(label)), 0)
+function widestLabelWidth(labels, fontSize = TICK_FONT_SIZE) {
+  return labels.reduce((max, label) => Math.max(max, estimateLabelWidth(label, fontSize)), 0)
 }
 
 export function axisGutter(labels) {
@@ -274,19 +280,69 @@ const DAY_MS = 24 * 60 * 60 * 1000
 // Coarsest first: the least detail that still tells two gridlines apart is the most readable one.
 // A clock time with no date is only offered when the whole series fits inside a day, because
 // outside one it says nothing about which day the reading belongs to.
+//
+// Within one level of detail the fullest rendering comes first and progressively shorter ways of
+// naming the same instant follow it, because which of them is legible depends on how much room the
+// plot has. Ten gridlines share 736 user units at the narrowest gutter and 637 at the widest, so a
+// label gets 82 units at best and 71 at worst — and the two at the ends get less again, because the
+// clamp has moved them off their own gridlines. Four things come off, in that order, each measured
+// in Chromium at 11px: the month stops being spelled out, the hour loses its leading zero, the
+// clock goes to 24 hours so no "AM", "Uhr" or "오전" has to be carried (ko-KR's "1. 26. 오전 03시"
+// is 77u and its "1. 26. 03시" is 55u), and last of all the month drops out and the day names the
+// reading alone ("26일 03시", 50u) — which is only reached at a span short enough that no two
+// readings share a day. Carrying the minute is the odd one out: it is more detail, not less, but in
+// a locale that spells the hour it is the cheaper way to say the same thing (de-DE's "26.1., 03:43"
+// is 56u against 67u for "26.1., 03 Uhr"), so it is tried before the month is given up. Every rung
+// below is taken by some locale at some width; none of them is there for symmetry.
 const WITHIN_DAY_FORMATS = [
   { hour: '2-digit', minute: '2-digit' },
-  { hour: '2-digit', minute: '2-digit', second: '2-digit' }
+  { hour: '2-digit', minute: '2-digit', second: '2-digit' },
+  { hour: 'numeric', minute: '2-digit', second: '2-digit' },
+  { hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' }
 ]
-// The month turns numeric as soon as an hour has to be carried too: ten "03 giờ 25 thg 1" at 77
-// user units apiece need 770 of the 735 the plot has, and they overlapped by up to 41; the same
-// reading as "03 giờ 25/1" is 56 and they do not touch.
 const ACROSS_DAY_FORMATS = [
   { month: 'short', year: '2-digit' },
+  { month: 'numeric', year: '2-digit' },
   { month: 'short', day: 'numeric' },
+  { month: 'numeric', day: 'numeric' },
   { month: 'numeric', day: 'numeric', hour: '2-digit' },
-  { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }
+  { month: 'numeric', day: 'numeric', hour: 'numeric' },
+  { month: 'numeric', day: 'numeric', hour: '2-digit', hourCycle: 'h23' },
+  { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' },
+  { month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit' },
+  { day: 'numeric', hour: '2-digit' },
+  { day: 'numeric', hour: '2-digit', hourCycle: 'h23' },
+  { day: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }
 ]
+
+/**
+ * Where a date label's box lands, given the gridline it belongs to.
+ *
+ * The last gridline sits 20 units from the right edge, so a middle-anchored label wider than 40
+ * units ran past it and the viewport cut the tail off. Clamping the centre moves the label by only
+ * the overhang — half a unit for "thg 1 26" — where anchoring its far end inward moved it by half
+ * its own width and drove it into the label before it: de-DE's default view had "27.1., 01 Uhr"
+ * and "27.1., 03 Uhr" rendering as one smear 15.7 units deep. Nothing was cut off and nothing was
+ * repeated, and both labels were still unreadable.
+ */
+export function dateLabelX(x, label, viewWidth, fontSize = DATE_FONT_SIZE) {
+  const half = estimateLabelWidth(label, fontSize) / 2
+  return Math.min(Math.max(x, half), viewWidth - half)
+}
+
+// Do these labels, placed and clamped the way the chart will place and clamp them, leave each
+// other alone? Asking the layout rather than dividing the plot into equal slots is what covers the
+// two ends, where the clamp has moved a label off its gridline and it no longer owns a whole slot.
+function labelsAreClear(labels, xs, viewWidth, fontSize) {
+  let previousRight = -Infinity
+  for (let i = 0; i < labels.length; i += 1) {
+    const half = estimateLabelWidth(labels[i], fontSize) / 2
+    const centre = dateLabelX(xs[i], labels[i], viewWidth, fontSize)
+    if (centre - half < previousRight) return false
+    previousRight = centre + half
+  }
+  return true
+}
 
 /**
  * Labels for the timestamps drawn along the bottom of the chart.
@@ -294,36 +350,48 @@ const ACROSS_DAY_FORMATS = [
  * The format comes from the span these readings actually cover, then from whether that format can
  * tell them apart — never from the range button, which is what put eight identical "thg 1 26"
  * labels under a product that had been tracked for three days.
+ *
+ * `layout` is optional; pass `{ xs, viewWidth }` — the x of every gridline being labelled, and the
+ * width of the viewBox — and the coarsest format that both tells the readings apart *and* lays out
+ * without collision wins. Telling them apart comes first and is never traded away for room; where
+ * it cannot be had at all, because the readings share an instant, the coarsest format that lays out
+ * is taken instead. The count of labels is not a lever here — the chart draws the same number of
+ * them either way, in shorter words.
  */
-export function dateLabels(times, locale) {
+export function dateLabels(times, locale, layout) {
   const dates = times.map((time) => new Date(time))
   const stamps = dates.map((date) => date.getTime()).filter(Number.isFinite)
   const span = stamps.length ? Math.max(...stamps) - Math.min(...stamps) : 0
+  const fontSize = layout?.fontSize ?? DATE_FONT_SIZE
 
-  let coarsest = null
+  // Nothing beats telling the readings apart, and among formats that do equally well on that, one
+  // that lays out beats one that does not. Between two that both lay out, the coarser is already in
+  // hand and is kept; between two that do not, the narrower is kept, because the overlap it leaves
+  // is the smaller of the two.
+  let best = null
+
   for (const options of span < DAY_MS ? WITHIN_DAY_FORMATS : ACROSS_DAY_FORMATS) {
     const formatter = new Intl.DateTimeFormat(locale, options)
     const labels = dates.map((date) => (Number.isFinite(date.getTime()) ? formatter.format(date) : ''))
-    if (!coarsest) coarsest = labels
-    if (labelsAreDistinct(labels)) return labels
+    const distinct = labelsAreDistinct(labels)
+
+    if (!layout) {
+      if (distinct) return labels
+      if (!best) best = { labels }
+      continue
+    }
+
+    const clear = labelsAreClear(labels, layout.xs, layout.viewWidth, fontSize)
+    if (distinct && clear) return labels
+
+    const standing = (distinct ? 2 : 0) + (clear ? 1 : 0)
+    const width = widestLabelWidth(labels, fontSize)
+    if (!best || standing > best.standing || (standing === best.standing && !clear && width < best.width)) {
+      best = { labels, standing, width }
+    }
   }
 
-  return coarsest ?? []
-}
-
-/**
- * Which end of a date label to pin to its gridline, so the label's box stays inside the viewBox.
- *
- * A middle-anchored label at the last point sits 20 units from the right edge, so anything wider
- * than 40 units ran past it and the viewport cut the tail off: "thg 1 26" rendered as "thg 1 2",
- * which reads as the year 2. Anchoring rather than widening the padding keeps every label attached
- * to the gridline it belongs to.
- */
-export function labelAnchor(x, label, viewWidth, fontSize = DATE_FONT_SIZE) {
-  const half = estimateLabelWidth(label, fontSize) / 2
-  if (x - half < 0) return 'start'
-  if (x + half > viewWidth) return 'end'
-  return 'middle'
+  return best?.labels ?? []
 }
 
 // The unit, stated once above the axis instead of repeated on every tick. Whatever the locale calls

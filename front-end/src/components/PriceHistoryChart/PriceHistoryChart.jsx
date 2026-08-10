@@ -6,7 +6,7 @@ import {
   axisTicks,
   currencySymbol,
   dateLabels,
-  labelAnchor,
+  dateLabelX,
   CAPTION_FONT_SIZE,
   DATE_FONT_SIZE,
   TICK_FONT_SIZE,
@@ -103,12 +103,19 @@ export default function PriceHistoryChart({ productId, currency }) {
       `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`
     ).join(' ')
 
-    // Roughly ten dates along the bottom, and their wording decided by the span those ten cover —
-    // a three-day history viewed on "All" wrote "thg 1 26" under every one of them when the range
-    // button chose the format.
+    // Roughly ten dates along the bottom, and their wording decided by the span those ten cover
+    // and by the room the plot has for them — a three-day history viewed on "All" wrote "thg 1 26"
+    // under every one of them when the range button chose the format, and a wording long enough to
+    // tell them apart then ran them into each other. The gridlines the labels belong to go in with
+    // them, because the two at the ends get clamped away from their own x and no longer have an
+    // equal share of the plot to sit in.
     const dated = points.filter((point, i) =>
       priceHistory.length <= 10 || i % Math.ceil(priceHistory.length / 10) === 0)
-    const dates = dateLabels(dated.map((point) => point.recordedAt))
+    const dates = dateLabels(dated.map((point) => point.recordedAt), undefined, {
+      xs: dated.map((point) => point.x),
+      viewWidth: chartWidth,
+      fontSize: DATE_FONT_SIZE
+    })
 
     return (
       <svg
@@ -190,14 +197,15 @@ export default function PriceHistoryChart({ productId, currency }) {
           </circle>
         ))}
 
-        {/* The last date sits 20 units from the right edge, so a middle-anchored label wider than
-            40 units ran past the viewBox and lost its tail: labelAnchor pins the ends inward. */}
+        {/* The last date sits 20 units from the right edge, so a label wider than 40 units ran past
+            the viewBox and lost its tail. dateLabelX slides it back in by the overhang alone, which
+            keeps it as close to its own gridline as the edge allows. */}
         {dated.map((p, i) => (
           <text
             key={`date-${p.x}`}
-            x={p.x}
+            x={dateLabelX(p.x, dates[i], chartWidth)}
             y={padding.top + innerHeight + 20}
-            textAnchor={labelAnchor(p.x, dates[i], chartWidth)}
+            textAnchor="middle"
             fontSize={DATE_FONT_SIZE}
             className="chart-label chart-date"
           >
