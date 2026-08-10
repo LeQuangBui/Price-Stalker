@@ -59,10 +59,12 @@ export const DATE_FONT_SIZE = 11
 //   digit     '4' 0.650 em   (Inter's default figures are proportional, not tabular: '1' is 0.471)
 //   separator ',' '.' and ':' 0.307 em, U+00A0 0.290 em
 //   other     CJK ideographs 1.024 em, 'W' 0.988 em
-// widths.fixture.json carries those measurements for 7,673 strings and the suite checks this
-// function against every one of them. That check is the point: an earlier version of this table
-// was internally consistent, passed every test, and still under-reserved for '万' and for a group
-// separator, which is exactly the failure a test written against the arithmetic cannot see.
+// widths.fixture.json carries an advance for each of the 105 glyphs the axes can write and a width
+// for each of 7,673 whole strings, and the suite holds this function above both: above the sum of
+// its glyphs for every label it produces, whatever the runtime's locale data made of it, and above
+// the measured width for every string on file. That check is the point: an earlier version of this
+// table was internally consistent, passed every test, and still under-reserved for '万' and for a
+// group separator, which is exactly the failure a test written against the arithmetic cannot see.
 const ADVANCE_SEPARATOR = 0.32
 const ADVANCE_DIGIT = 0.7
 const ADVANCE_OTHER = 1.05

@@ -34,11 +34,22 @@ describe('test timezone', () => {
   })
 
   it('renders a fixed instant the same way for every locale the chart is tested in', () => {
-    // A whole-hour zone would pass an hours-only check while still moving the minute; asserting the
-    // rendered string catches UTC+5:30 as well.
+    // A whole-hour zone would pass an hours-only check while still moving the minute; reading the
+    // clock out catches UTC+5:30 as well.
     const clock = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
     expect(clock.format(new Date(INSTANT))).toBe('17:43')
-    expect(new Intl.DateTimeFormat('vi-VN', { hour: '2-digit', minute: '2-digit' }).format(new Date(INSTANT)))
-      .toBe('17:43')
+
+    // The other locales are read as parts, not as rendered strings. How a locale words a clock is a
+    // property of the runtime's ICU data rather than of the zone — a build carrying less of it
+    // renders this instant in whatever it falls back to, and then the string differs while the zone
+    // is perfectly right. The hour and the minute are what this file is about, so those are what it
+    // asks for; the hour cycle is pinned because otherwise ko-KR answers 05 and means 17.
+    for (const locale of ['vi-VN', 'en-AU', 'en-US', 'ja-JP', 'de-DE', 'fr-FR', 'ko-KR']) {
+      const parts = new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+        .formatToParts(new Date(INSTANT))
+      const value = (type) => parts.find((part) => part.type === type)?.value
+      expect(value('hour'), `${locale} put this instant at hour ${value('hour')}`).toBe('17')
+      expect(value('minute'), `${locale} put this instant at minute ${value('minute')}`).toBe('43')
+    }
   })
 })

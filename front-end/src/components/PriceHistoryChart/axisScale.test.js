@@ -20,11 +20,21 @@ import {
 //     a number and comparing it to the gridline, over the whole price matrix. The version of this
 //     module that placed ticks at low + k/4 of the span and rounded the label afterwards fails it
 //     on 9.3% of endpoint ticks, by up to 33%.
-//   - that the width estimate never under-reserves is checked against widths.fixture.json, 7,673
-//     strings measured in a real browser in both faces the app renders in. The previous suite
-//     asserted `estimateLabelWidth(w) <= ceil(estimateLabelWidth(w)) + TICK_GAP - TICK_GAP`, which
-//     is true of any advance table at all: halving the digit advance kept it green while 35 ticks
-//     clipped in Chrome.
+//   - that the width estimate never under-reserves is checked against widths.fixture.json, which
+//     holds two kinds of browser measurement taken in both faces the app renders in: an advance
+//     for each of the 105 glyphs the axes can write, and a width for each of 7,673 whole strings.
+//     The previous suite asserted `estimateLabelWidth(w) <= ceil(estimateLabelWidth(w)) +
+//     TICK_GAP - TICK_GAP`, which is true of any advance table at all: halving the digit advance
+//     kept it green while 35 ticks clipped in Chrome.
+//
+// The two measurements answer different questions and both are needed. Glyph advances bound every
+// string, including the ones this run does not produce: `Intl` output is a property of the
+// runtime's ICU data, not of the code, so the set of strings is not enumerable and a fixture keyed
+// on it can never be complete. A CI runner whose ICU wrote ko-KR's day-period-first pattern with
+// the English "PM" — "PM 02:43" where this machine renders "오후 02:43" — failed a suite that
+// demanded every produced string be listed, over code nobody had touched. Whole-string widths stay
+// because they are the stronger check where they exist: a sum of advances misses kerning, and 63
+// of the 7,673 strings draw up to 0.0044 em wider than their own glyphs add up to.
 //
 // formatPrice passes `undefined` on this branch, so the reader's own browser locale decides how
 // every number is written. Anything asserted for one locale has to hold for all of them, and this
@@ -125,6 +135,37 @@ function eachDateLayout(visit) {
   }
 }
 
+// Every string the axes put on screen, mapped to where it came from. Built once: the layout-aware
+// sweep is the expensive one and two tests read it.
+//
+// What is in here depends on the runtime — ICU decides whether ko-KR's afternoon is "오후" or "PM",
+// and a reduced build answers differently from a full one. That is why nothing below asserts the
+// contents of this set. It is a supply of real labels to hold the estimate against, not a spec.
+const AXIS_STRINGS = (() => {
+  const strings = new Map()
+  const add = (text, where) => { if (!strings.has(text)) strings.set(text, where) }
+
+  eachChart(({ locale, base, max, ticks }) => {
+    for (const { label } of ticks) add(label, `${locale} ${base}-${max}`)
+  })
+  eachDateAxis(({ locale, history, count, labels }) => {
+    for (const label of labels) add(label, `${locale} ${(history / DAY).toFixed(2)}d over ${count} points`)
+  })
+  // The layout-aware ladder reaches wordings the distinctness ladder never gets to, and those are
+  // the ones the reader actually sees.
+  eachDateLayout(({ locale, gutter, count, labels }) => {
+    for (const label of labels) add(label, `${locale} gutter ${gutter}, ${count} readings`)
+  })
+  for (const locale of LOCALES) {
+    for (const code of CURRENCIES) {
+      const unit = currencySymbol(code, locale)
+      if (unit) add(unit, `${locale} ${code}`)
+    }
+  }
+
+  return strings
+})()
+
 // Where the browser will paint this label, given the x the chart clamped it to. The clamp works off
 // the estimate and the estimate never under-reserves, so the measured box always sits inside the
 // box the clamp reasoned about.
@@ -172,12 +213,34 @@ function readsAs(label, locale) {
   return Number(digits) * scale
 }
 
-// The largest reading the browser gave this string, in em. Absent means the fixture and the code
-// have drifted: re-measure rather than skip, or the width tests stop covering anything.
+const glyphName = (glyph) => `"${glyph}" (U+${glyph.codePointAt(0).toString(16).toUpperCase().padStart(4, '0')})`
+
+// Glyphs in this string the fixture has no advance for. A label the axes can write is made of
+// characters somebody has to have measured; which characters those are is a bounded question with
+// a stable answer, where which strings get composed out of them is neither.
+function unmeasuredGlyphs(text) {
+  const missing = []
+  for (const glyph of text) if (typeof widths.glyph[glyph] !== 'number') missing.push(glyphName(glyph))
+  return missing
+}
+
+// What this string is worth on its glyphs alone, in em. Holds for a string nobody listed, which is
+// the point; it is a shade under the truth where the face kerns, and `measuredWidth` prefers the
+// whole-string reading for exactly that reason.
+function glyphFloor(text) {
+  let advances = 0
+  for (const glyph of text) advances += widths.glyph[glyph] ?? 0
+  return advances
+}
+
+// The widest the browser is known to draw this string, in user units: its own measurement where the
+// fixture has one, and its glyphs' advances where it does not. A glyph with no advance behind it is
+// a real gap and fails here — but it names one character, not a string, so the fix is one
+// measurement rather than another sweep of a corpus that changes with the runtime.
 function measuredWidth(text, fontSize) {
-  const em = widths.em[text]
-  expect(em, `"${text}" is not in widths.fixture.json — re-measure it in a browser`).toBeTypeOf('number')
-  return em * fontSize
+  const missing = unmeasuredGlyphs(text)
+  expect(missing, `No measured advance for ${missing.join(', ')}, in "${text}" — measure it in a browser`).toEqual([])
+  return Math.max(glyphFloor(text), widths.em[text] ?? 0) * fontSize
 }
 
 describe('y-axis gridlines', () => {
@@ -281,7 +344,33 @@ describe('y-axis gridlines', () => {
 })
 
 describe('label width estimate', () => {
-  it('never claims a label is narrower than the browser draws it', () => {
+  it('reserves at least what its glyphs measure, for every string the axes produce', () => {
+    // The guarantee that holds for a string nobody enumerated. A label is worth no less than its
+    // characters' advances added up, so an estimate that clears that sum cannot cut a label short,
+    // whatever wording the runtime's ICU handed the axis.
+    const under = []
+
+    for (const [text, where] of AXIS_STRINGS) {
+      const missing = unmeasuredGlyphs(text)
+      if (missing.length) {
+        under.push(`${where}: no measured advance for ${missing.join(', ')}, in "${text}"`)
+        continue
+      }
+      const estimate = estimateLabelWidth(text, 1)
+      const floor = glyphFloor(text)
+      if (estimate < floor) {
+        under.push(`${where}: "${text}" estimated ${estimate.toFixed(3)}em, its glyphs measure ${floor.toFixed(3)}em`)
+      }
+    }
+
+    expect(under, `Labels the estimate under-reserves for:\n${under.slice(0, 20).join('\n')}`).toEqual([])
+  })
+
+  it('never claims a label is narrower than the browser drew it, over every string on file', () => {
+    // The tighter check, and the only one that sees kerning: a whole string measured in one piece,
+    // where the sum above measures its glyphs apart. It covers fewer strings than the axes can
+    // write and is not asked to cover them all — being a subset is what stopped it turning a
+    // difference in ICU data into a test failure.
     const under = []
 
     for (const [text, em] of Object.entries(widths.em)) {
@@ -292,27 +381,19 @@ describe('label width estimate', () => {
     expect(under, `Labels the estimate under-reserves for:\n${under.slice(0, 20).join('\n')}`).toEqual([])
   })
 
-  it('is measured against every string the axes can produce', () => {
-    const unmeasured = new Set()
-    eachChart(({ locale, ticks }) => {
-      for (const { label } of ticks) if (!(label in widths.em)) unmeasured.add(`${locale}: "${label}"`)
-    })
-    eachDateAxis(({ locale, labels }) => {
-      for (const label of labels) if (!(label in widths.em)) unmeasured.add(`${locale}: "${label}"`)
-    })
-    // The layout-aware ladder reaches wordings the distinctness ladder never gets to, and those are
-    // the ones the reader actually sees.
-    eachDateLayout(({ locale, labels }) => {
-      for (const label of labels) if (!(label in widths.em)) unmeasured.add(`${locale}: "${label}"`)
-    })
-    for (const locale of LOCALES) {
-      for (const code of CURRENCIES) {
-        const unit = currencySymbol(code, locale)
-        if (unit && !(unit in widths.em)) unmeasured.add(`${locale}: "${unit}"`)
+  it('has a measured advance for every glyph the axes can write', () => {
+    // Not the same statement as the first test, which only reads the glyphs this run happened to
+    // produce. This one is the ratchet: the repertoire on file has to stay a superset of what any
+    // runtime writes, and a gap in it is named as one character rather than as a list of strings.
+    const unmeasured = new Map()
+    for (const [text, where] of AXIS_STRINGS) {
+      for (const glyph of text) {
+        if (typeof widths.glyph[glyph] !== 'number') unmeasured.set(glyph, `${glyphName(glyph)} in "${text}" (${where})`)
       }
     }
 
-    expect([...unmeasured], `Strings with no browser measurement behind them:\n${[...unmeasured].slice(0, 20).join('\n')}`).toEqual([])
+    const gaps = [...unmeasured.values()]
+    expect(gaps, `Glyphs with no browser measurement behind them:\n${gaps.slice(0, 20).join('\n')}`).toEqual([])
   })
 
   it('grows with the label, so a longer currency widens the axis instead of being cut', () => {
@@ -469,7 +550,14 @@ describe('x-axis date labels', () => {
 
     // A locale whose dates are short enough either way is entitled to keep them, so the assertion
     // above passes for most of the list on its own. Somebody has to be doing the work.
-    expect(shortened.length, 'no locale shortened its dates when the plot narrowed').toBeGreaterThan(0)
+    //
+    // This one does want the runtime to carry data for the seven locales, unlike the width checks
+    // above: a build that resolves them all to the same data has one locale in this list, and one
+    // locale that keeps its wording is a legitimate outcome rather than a bug in the ladder.
+    expect(
+      shortened.length,
+      `no locale shortened its dates when the plot narrowed, out of ${new Set(LOCALES.map((l) => new Intl.DateTimeFormat(l).resolvedOptions().locale)).size} this runtime tells apart`
+    ).toBeGreaterThan(0)
   })
 })
 
@@ -504,7 +592,11 @@ describe('currency symbol', () => {
   it('uses whatever the reader\'s locale calls the currency', () => {
     expect(currencySymbol('VND', 'vi-VN')).toBe('₫')
     expect(currencySymbol('VND', 'en-US')).toBe('₫')
-    expect(currencySymbol('VND', 'en-AU')).toBe('VND')
+    // en-AU is the one in the chart's list that writes the code where the others write the symbol,
+    // which is the whole reason this is read out of Intl instead of tabulated. It does ask the
+    // runtime to carry en-AU: a build that has only the root locale answers "₫" here and is right
+    // to, so a failure on this line is a question about the runtime, not about the axis.
+    expect(currencySymbol('VND', 'en-AU'), 'this runtime resolves en-AU to something else').toBe('VND')
   })
 
   it('prints nothing rather than guessing when there is no usable currency', () => {
