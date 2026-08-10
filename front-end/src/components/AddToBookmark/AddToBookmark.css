@@ -68,6 +68,15 @@
 
 .bookmark-dropdown-status.error {
   color: var(--danger);
+  /* The box travels with the component that renders it. These three used to come from
+     `UserProfile.css`'s `.no-bookmarks, .error` box plus its `.error` override (retired later in
+     2b-ii), matched via the bare `error` token from a stylesheet this component's page never
+     imports. Same values, higher specificity, later emit, so nothing moves on screen today.
+     `padding` is not re-homed: `.bookmark-dropdown-status` above already sets 16px and already
+     wins. */
+  background: var(--bg-primary);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius);
 }
 
 .bookmark-existing-list,

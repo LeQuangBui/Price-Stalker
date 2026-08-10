@@ -57,6 +57,26 @@ describe('shared control primitives', () => {
   })
 })
 
+// `.bookmark-dropdown-status.error` used to draw its box — background, border, radius — from
+// UserProfile.css's `.no-bookmarks, .error` rule, in a stylesheet the product page never imports.
+// Slice 2b-ii retires that file, so the three declarations were re-homed onto the component that
+// renders the element. Asserted here because nothing renders it under test and no screenshot
+// covers it.
+describe('re-homed cross-file boxes', () => {
+  const addToBookmark = readFileSync(
+    join(SRC, 'components', 'AddToBookmark', 'AddToBookmark.css'), 'utf8',
+  )
+  const start = addToBookmark.indexOf('.bookmark-dropdown-status.error')
+  const errorRule = addToBookmark.slice(start, addToBookmark.indexOf('}', start))
+
+  it('AddToBookmark owns its error box instead of inheriting it from another page', () => {
+    expect(start).toBeGreaterThan(-1)
+    expect(errorRule).toMatch(/background:\s*var\(--bg-primary\)/)
+    expect(errorRule).toMatch(/border:\s*1px solid var\(--danger\)/)
+    expect(errorRule).toMatch(/border-radius:\s*var\(--radius\)/)
+  })
+})
+
 describe('safe-area opt-in', () => {
   const html = readFileSync(join(SRC, '..', 'index.html'), 'utf8')
 
