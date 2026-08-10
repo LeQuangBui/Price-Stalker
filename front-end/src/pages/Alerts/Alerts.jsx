@@ -188,7 +188,7 @@ export default function Alerts() {
               return (
                 <section key={alert.id} className="alert-card">
                   <div className="alert-card-main">
-                    <div className="alert-card-info">
+                    <div>
                       <AppLink to={`/products/${alert.product?.id}`} className="alert-product-link">
                         {alert.product?.name || 'Unknown product'}
                       </AppLink>
