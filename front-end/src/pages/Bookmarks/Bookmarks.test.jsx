@@ -59,6 +59,9 @@ describe('Bookmarks page', () => {
     renderPage()
     expect(await screen.findByText(/internal server error/i)).toBeVisible()
     expect(screen.getByRole('button', { name: /retry/i })).toBeVisible()
+    // The page announces "Loading bookmarks…" and then used to say nothing at all. A failed fetch
+    // is worth interrupting for, and the Retry beside it has to be findable.
+    expect(screen.getByRole('alert')).toHaveTextContent(/internal server error/i)
   })
 
   it('shows an empty state with a create affordance when there are no bookmarks', async () => {
