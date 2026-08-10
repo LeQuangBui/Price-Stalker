@@ -312,7 +312,7 @@ export default function Bookmarks() {
                       <h3>{bookmark.name}</h3>
                       <div className="bookmark-info">
                         <span className="product-count">{draft.products.length} products</span>
-                        <span className="bookmark-date">Created {formatDate(bookmark.createdAt)}</span>
+                        <span>Created {formatDate(bookmark.createdAt)}</span>
                         {dirty && <span className="bookmark-dirty">Unsaved changes</span>}
                       </div>
                     </div>
