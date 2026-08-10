@@ -75,6 +75,18 @@ describe('re-homed cross-file boxes', () => {
     expect(errorRule).toMatch(/border:\s*1px solid var\(--danger\)/)
     expect(errorRule).toMatch(/border-radius:\s*var\(--radius\)/)
   })
+
+  // Same shape, second instance. `Bookmarks.css` was the only file declaring colour and background
+  // on `.bookmark-name-input`, and AddToBookmark's own rule set neither — so the retirement left
+  // the field's ink to preflight and its ground to the dropdown behind it. Both happen to match,
+  // which is why nothing moved on screen and why nothing else here would go red.
+  it('AddToBookmark owns its name field colours instead of inheriting them from another page', () => {
+    const from = addToBookmark.indexOf('.bookmark-name-input {')
+    const rule = addToBookmark.slice(from, addToBookmark.indexOf('}', from))
+    expect(from).toBeGreaterThan(-1)
+    expect(rule).toMatch(/color:\s*var\(--text-primary\)/)
+    expect(rule).toMatch(/background:\s*var\(--bg-primary\)/)
+  })
 })
 
 describe('safe-area opt-in', () => {

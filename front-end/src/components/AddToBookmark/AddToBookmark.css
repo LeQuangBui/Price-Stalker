@@ -145,6 +145,12 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   font-size: 14px;
+  /* Re-homed, same as the error box above. `Bookmarks.css` was the only declarer of these two on
+     this name and it retired in 2b-ii, so the field was left drawing its ink from preflight and its
+     ground from whatever the dropdown happened to paint. That is a no-op today only because both
+     coincidences hold; neither is this component's to rely on. */
+  color: var(--text-primary);
+  background: var(--bg-primary);
 }
 
 .bookmark-name-input:focus {
