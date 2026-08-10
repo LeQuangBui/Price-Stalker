@@ -82,7 +82,6 @@ const BESPOKE = new Set([
   'confirm-dialog-title',
   'danger',
   'empty-state',
-  'empty-state-cta',
   'error',
   'error-message',
   'page-error',
@@ -143,7 +142,9 @@ const BESPOKE = new Set([
 // written; 2b-i's retirements (`ProductList.css`, `Home.css`) predate it and cannot be recovered
 // from a set that did not exist.
 //
-// Names below are the 46 that 2b-ii spent retiring `Bookmarks.css` and `UserProfile.css`.
+// Names below are the 46 that 2b-ii spent retiring `Bookmarks.css` and `UserProfile.css`, plus
+// `empty-state-cta` — an `index.css` rule rather than a stylesheet retirement, moved here when its
+// last consumer went to `btn btn-primary`. RETIRED is not only for whole-file conversions.
 const RETIRED = new Set([
   'bookmark-actions',
   'bookmark-card',
@@ -168,6 +169,7 @@ const RETIRED = new Set([
   'create-bookmark-form',
   'delete-btn',
   'editor-actions',
+  'empty-state-cta',
   'expand-btn',
   'no-bookmarks',
   'or-divider',
