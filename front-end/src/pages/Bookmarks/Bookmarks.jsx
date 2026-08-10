@@ -391,6 +391,13 @@ export default function Bookmarks() {
                       >
                         {isCollapsed ? 'Expand' : 'Collapse'}
                       </button>
+                      {/* 16px -> 14px, and intended. `.delete-btn` was the one button on this page
+                          Bookmarks.css never gave a `font-size` to — the five-selector group at the
+                          top of the file covered Create, Collapse, Submit, Save and Expand, and
+                          Delete was not in it — so it inherited body 16px. `.btn` is 14px, which is
+                          the house size every other control here was already using. `.remove-product-btn`
+                          below is the same story and the same call. This is the only value in the
+                          conversion that moved, so it is noted rather than left to be found. */}
                       <button
                         onClick={() => handleDelete(bookmark.id)}
                         className="btn btn-danger"
@@ -459,28 +466,45 @@ export default function Bookmarks() {
                                 )}
 
                                 <div className="flex min-w-0 flex-1 flex-col justify-center gap-1.5">
-                                  <span className="font-semibold text-ink">{product.name}</span>
+                                  {/* `wrap-anywhere` here too, and it took a realistic fixture to
+                                      see it. A product name is a long run of short words, so its
+                                      min-content is one word wide and usually harmless — but real
+                                      shelf names carry model numbers, and this column's floor is
+                                      the widest of the two lines in it. At 68 characters this span
+                                      is 137.19px and its link is the widest element in `<main>`. */}
+                                  <span className="font-semibold text-ink wrap-anywhere">{product.name}</span>
                                   {/* Not PriceDisplay. Its smallest step is 16px and its value span
                                       is hard-coded text-ink; this is a sub-24px green line with one
                                       consumer, and neither a new size nor an overridable colour is
                                       worth adding to the primitive for it.
 
                                       `wrap-anywhere` because a formatted price is one unbreakable
-                                      run of digits and separators, and its min-content width was
-                                      this row's floor. Measured at 320px with a 24px browser
-                                      default: the row pushed the page to a 373px scroll width
-                                      against a 305px client, and only this span mattered —
-                                      ablating the NAME span changed nothing, ablating this one
-                                      took 68px of overflow down to 31. `anywhere` and not
-                                      `break-word`: only `anywhere` feeds break opportunities into
-                                      intrinsic sizing, which is the whole mechanism here. Third
-                                      price span in this phase to need it. */}
+                                      run of digits and separators, and its min-content width is one
+                                      of this row's two floors — not the only one, as this note
+                                      first claimed. That reading came from the test fixture's
+                                      "Espresso Machine", 16 characters and no token longer than
+                                      eight, which cannot floor anything; ablating the name span
+                                      changed nothing because there was nothing to ablate.
+
+                                      Re-measured at 320px / 24px browser default with a 68-character
+                                      name and the header ablated, since the header pins the page at
+                                      394 whatever these two do (see the carry-forward doc). Against
+                                      a 305px client: 337px with the name unwrapped, 336px with it
+                                      wrapped, 305px — an exact fit — once `.add-by-url-input`'s
+                                      `min-width: 250px` goes too. The two mask each other almost
+                                      exactly, which is why fixing either alone moves the page by a
+                                      pixel and looks like it did nothing. AddByUrl is slice 2b-iv.
+
+                                      `anywhere` and not `break-word`: only `anywhere` feeds break
+                                      opportunities into intrinsic sizing, which is the whole
+                                      mechanism here. Third price span in this phase to need it. */}
                                   <span className="font-bold text-success wrap-anywhere">
                                     {formatPrice(getTrackedPrice(product), product.currency)}
                                   </span>
                                 </div>
                               </AppLink>
 
+                              {/* 16px -> 14px, same call as Delete above. */}
                               <button
                                 type="button"
                                 className="btn btn-danger"

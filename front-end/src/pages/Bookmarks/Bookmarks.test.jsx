@@ -226,16 +226,26 @@ describe('Bookmarks page markup after the CSS retirement', () => {
     }
   })
 
-  // A formatted price is one unbreakable run of digits and separators, so its min-content width
-  // becomes the product row's floor and pushes the page sideways at a raised browser font.
-  // Measured at 320px / 24px root: 68px of page overflow with this missing, 31px with it — and
-  // ablating the product NAME span instead changed nothing, so this is the span that matters.
+  // Both lines in the product row's text column, not just the price. A formatted price is one
+  // unbreakable run of digits and separators; a real product name carries model numbers. Either
+  // one's min-content becomes the column's floor and pushes the page sideways at a raised browser
+  // font, and the fixture above cannot show it — "Espresso Machine" is 16 characters with no token
+  // longer than eight, which is why the first measurement of this row read the price as the only
+  // floor. Re-measured at 320px / 24px root with a 68-character name and the header ablated:
+  // 337px against a 305px client with the name unwrapped, 336px with it wrapped, an exact 305px
+  // once AddByUrl's `min-width: 250px` goes with it in slice 2b-iv.
+  //
   // `anywhere`, never `break-word`: only `anywhere` feeds break opportunities into intrinsic
-  // sizing. Asserted because nothing else in the tree would go red if it were dropped.
-  it('lets the price break so it cannot floor the row at a raised font size', async () => {
+  // sizing. Asserted because nothing else in the tree would go red if either were dropped.
+  it('lets the price and the name break so neither can floor the row at a raised font size', async () => {
+    getBookmarks.mockResolvedValue({
+      content: [bookmark({ products: [product({ name: 'Breville Barista Express Impress BES876BSS' })] })],
+      totalPages: 1,
+    })
     renderPage()
     await userEvent.click(await screen.findByRole('button', { name: /^expand$/i }))
     expect(classesOf(screen.getByText(/1[.,]290[.,]000/))).toContain('wrap-anywhere')
+    expect(classesOf(screen.getByText(/^Breville Barista Express/))).toContain('wrap-anywhere')
   })
 
   // The split halves of Bookmarks.css:225-231. Neither element can be reached by a descendant
