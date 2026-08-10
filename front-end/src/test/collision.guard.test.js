@@ -12,15 +12,13 @@ const SRC = join(dirname(fileURLToPath(import.meta.url)), '..')
 // bare name) is what makes this a ratchet: adding the class to a THIRD file, or re-adding it to
 // a file it was removed from, is a new violation even though the name is listed. This list may
 // only ever shrink. Do not add to it, or widen an entry, to make a build pass.
+// Compound state-modifier classes, and nothing else. Each is only ever written as a
+// descendant/compound of an owning block (`.foo.success`, `.bar .active`), so the declarations
+// never meet on one element. Verified: no live collision. Recorded as permitted, not as debt.
+// `bookmark-name-input` left this list with Bookmarks.css — AddToBookmark.css is its only owner
+// now, and a listed non-collision fails the stale-entry test below.
 const ALLOWED = new Map([
-  // Retired with Bookmarks.css in slice 2b-ii's second half. `bookmark-info` and `no-bookmarks`
-  // left this list when UserProfile.css went: Bookmarks.css still defines both, but a single owner
-  // is not a collision and a listed non-collision fails the stale-entry test below.
-  ['bookmark-name-input', ['AddToBookmark.css', 'Bookmarks.css']],
-  ['error', ['AddToBookmark.css', 'Alerts.css', 'Bookmarks.css']], // all resolve to var(--danger)
-  // Compound state-modifier classes. Each is only ever written as a descendant/compound of an
-  // owning block (`.foo.success`, `.bar .active`), so the declarations never meet on one element.
-  // Verified: no live collision. Recorded as permitted, not as debt.
+  ['error', ['AddToBookmark.css', 'Alerts.css']], // both resolve to var(--danger)
   ['success', ['AddToBookmark.css', 'ProductDetail.css']],
   ['danger', ['Alerts.css', 'ConfirmDialog.css', 'ProductDetail.css']],
   ['active', ['PriceHistoryChart.css', 'ProductDetail.css', 'ProductSearch.css']],

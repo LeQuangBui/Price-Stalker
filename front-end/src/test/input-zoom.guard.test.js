@@ -13,7 +13,6 @@ const FLOOR = 16
 // second test fails on any entry that no longer violates, so a fix must delete its entry.
 const ALLOWED = new Map([
   ['ProductSearch.css .search-select', 15],   // a <select>, same file — slice 2b-iv
-  ['Bookmarks.css .bookmark-name-input', 15], // slice 2b-ii retires this file
   ['AddToBookmark.css .bookmark-name-input', 14],
   ['ProductDetail.css .panel-input', 15],
 ])

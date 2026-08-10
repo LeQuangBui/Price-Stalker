@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import Bookmarks from './Bookmarks'
@@ -157,5 +157,107 @@ describe('Bookmarks page', () => {
 
     await userEvent.click(within(dialog).getByRole('button', { name: /^delete$/i }))
     await waitFor(() => expect(deleteBookmark).toHaveBeenCalledWith('b1'))
+  })
+})
+
+// Exact class tokens — `toContain` on the raw string would let `md:grid-cols-2` satisfy a check for
+// `grid-cols-2`, which is the one confusion these assertions exist to catch. Same helper as
+// ProductList.test.jsx.
+const classesOf = (el) => el.className.split(/\s+/)
+
+describe('Bookmarks page markup after the CSS retirement', () => {
+  beforeEach(() => {
+    getBookmarks.mockResolvedValue({ content: [bookmark({ products: [product()] })], totalPages: 1 })
+  })
+
+  it('carries no class owned by a retired stylesheet', async () => {
+    const { container } = renderPage()
+    await screen.findByRole('heading', { name: /kitchen watch/i })
+    await userEvent.click(screen.getByRole('button', { name: /^expand$/i }))
+
+    for (const cls of [
+      'bookmarks-container', 'bookmarks-header', 'bookmarks-subtitle', 'bookmarks-header-actions',
+      'create-bookmark-btn', 'secondary-header-btn', 'submit-btn', 'save-btn', 'expand-btn',
+      'create-bookmark-form', 'bookmark-name-input', 'bookmarks-grid', 'bookmark-card',
+      'bookmark-header', 'bookmark-info', 'product-count', 'bookmark-date', 'bookmark-dirty',
+      'bookmark-actions', 'delete-btn', 'bookmark-editor', 'product-search-panel', 'or-divider',
+      'editor-actions', 'bookmark-products', 'bookmark-card-skeleton', 'product-preview',
+      'product-preview-link', 'product-preview-placeholder', 'product-preview-info',
+      'product-name', 'product-price', 'remove-product-btn', 'bookmark-empty', 'no-bookmarks',
+      'save-error', 'empty-state-cta',
+    ]) {
+      expect(container.querySelector(`.${cls}`), `${cls} should be gone`).toBeNull()
+    }
+  })
+
+  it('is one column on phones, two from md and three from xl', async () => {
+    const { container } = renderPage()
+    await screen.findByRole('heading', { name: /kitchen watch/i })
+    const grid = classesOf(container.querySelector('section').parentElement)
+    expect(grid).toContain('grid-cols-1')
+    expect(grid).toContain('md:grid-cols-2')
+    expect(grid).toContain('xl:grid-cols-3')
+    expect(grid).not.toContain('grid-cols-2')
+  })
+
+  it('gives every control the .btn primitive that carries the 44px floor', async () => {
+    renderPage()
+    await screen.findByRole('heading', { name: /kitchen watch/i })
+    await userEvent.click(screen.getByRole('button', { name: /^expand$/i }))
+
+    for (const name of [/new bookmark/i, /collapse all/i, /^collapse$/i, /^delete$/i, /^save$/i, /^remove$/i]) {
+      expect(classesOf(screen.getByRole('button', { name })), `${name} is not on .btn`).toContain('btn')
+    }
+  })
+
+  it('keeps the create-bookmark input above the 16px iOS zoom floor, and keeps its focus ring', async () => {
+    renderPage()
+    await userEvent.click(await screen.findByRole('button', { name: /new bookmark/i }))
+    const input = screen.getByPlaceholderText(/bookmark name/i)
+    expect(classesOf(input)).toContain('text-base')
+    expect(classesOf(input)).not.toContain('bookmark-name-input')
+    // The 3px oxblood ring reached this input from AddToBookmark.css through the class name being
+    // dropped here. index.css's :focus-visible rule covers a / button / [role="button"] and not a
+    // bare input, so without these the field's only focus cue is the UA default outline. Asserted
+    // rather than trusted: nothing else in the tree would go red if they were dropped.
+    // No `transition-colors` — focus:ring-2 is a box-shadow and transition-colors cannot animate it.
+    for (const utility of ['focus:border-oxblood', 'focus:ring-2', 'focus:ring-oxblood/20']) {
+      expect(classesOf(input), `${utility} missing — the focus ring left with the class`).toContain(utility)
+    }
+  })
+
+  // A formatted price is one unbreakable run of digits and separators, so its min-content width
+  // becomes the product row's floor and pushes the page sideways at a raised browser font.
+  // Measured at 320px / 24px root: 68px of page overflow with this missing, 31px with it — and
+  // ablating the product NAME span instead changed nothing, so this is the span that matters.
+  // `anywhere`, never `break-word`: only `anywhere` feeds break opportunities into intrinsic
+  // sizing. Asserted because nothing else in the tree would go red if it were dropped.
+  it('lets the price break so it cannot floor the row at a raised font size', async () => {
+    renderPage()
+    await userEvent.click(await screen.findByRole('button', { name: /^expand$/i }))
+    expect(classesOf(screen.getByText(/1[.,]290[.,]000/))).toContain('wrap-anywhere')
+  })
+
+  // The split halves of Bookmarks.css:225-231. Neither element can be reached by a descendant
+  // selector any more, so the box lives in one const written onto both — and the <img> arm has
+  // never rendered under test before the withImage fixture above, which is precisely where two
+  // halves of a split rule drift apart unseen.
+  it('sizes the thumbnail and its placeholder from the same tokens', async () => {
+    getBookmarks.mockResolvedValue({ content: [bookmark({ products: [withImage()] })], totalPages: 1 })
+    renderPage()
+    await userEvent.click(await screen.findByRole('button', { name: /^expand$/i }))
+    const img = classesOf(screen.getByRole('img', { name: /espresso machine/i }))
+
+    getBookmarks.mockResolvedValue({ content: [bookmark({ products: [product()] })], totalPages: 1 })
+    cleanup()
+    renderPage()
+    await userEvent.click(await screen.findByRole('button', { name: /^expand$/i }))
+    const placeholder = classesOf(screen.getByText(/no image/i))
+
+    for (const token of ['h-[4.25rem]', 'w-[4.25rem]', 'shrink-0', 'rounded-[var(--radius-sm)]']) {
+      expect(img, `<img> lost ${token}`).toContain(token)
+      expect(placeholder, `placeholder lost ${token}`).toContain(token)
+    }
+    expect(img).toContain('object-cover')
   })
 })
