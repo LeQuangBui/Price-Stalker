@@ -38,7 +38,7 @@ export default function ProductList({ products }) {
             </div>
             <div className="p-4 pb-[18px]">
               <span
-                className="mb-2.5 block truncate text-[15px] font-semibold text-ink transition-colors group-hover:text-oxblood"
+                className="mb-2.5 block truncate text-[0.9375rem] font-semibold text-ink transition-colors group-hover:text-oxblood"
                 title={product.name}
               >
                 {product.name}

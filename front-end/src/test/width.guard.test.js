@@ -11,9 +11,11 @@ const LIMIT = 320
 //   `grid-template-columns: repeat(auto-fill, minmax(380px, 1fr))` — a real 380px minimum, over
 //   LIMIT, but not `width:`/`w-[…]` syntax so neither regex sees it. Bookmarks.css is Phase 2's
 //   to convert; this guard doesn't cover it yet.
-// - Sub-LIMIT values that combine to overflow, e.g. ProductSearch.css:33 and AddByUrl.css:11 are
-//   both `min-width: 250px` — individually under the floor, so deliberately unflagged, even
-//   though two of them in a nowrap flex row would already exceed a 360px viewport.
+// - Sub-LIMIT values that combine to overflow. `AddByUrl.css:11`'s `min-width: 250px` is the one
+//   still standing: under the floor individually, so deliberately unflagged, even though it wraps
+//   in the same row as `.search-input` inside an expanded bookmark card. `.search-input` carried
+//   the same 250px until slice 2b-ii and now uses `flex: 1 1 250px; min-width: 0`, which keeps the
+//   wrap and drops the floor. Slice 2b-iv gives AddByUrl the same treatment.
 
 // Only `width` and `min-width` can force a viewport to overflow. The lookbehind requires that
 // nothing directly before "width" is a word character or a hyphen — i.e. "width" must sit at a
