@@ -57,6 +57,38 @@ describe('shared control primitives', () => {
   })
 })
 
+// `.bookmark-dropdown-status.error` used to draw its box — background, border, radius — from
+// UserProfile.css's `.no-bookmarks, .error` rule, in a stylesheet the product page never imports.
+// Slice 2b-ii retires that file, so the three declarations were re-homed onto the component that
+// renders the element. Asserted here because nothing renders it under test and no screenshot
+// covers it.
+describe('re-homed cross-file boxes', () => {
+  const addToBookmark = readFileSync(
+    join(SRC, 'components', 'AddToBookmark', 'AddToBookmark.css'), 'utf8',
+  )
+  const start = addToBookmark.indexOf('.bookmark-dropdown-status.error')
+  const errorRule = addToBookmark.slice(start, addToBookmark.indexOf('}', start))
+
+  it('AddToBookmark owns its error box instead of inheriting it from another page', () => {
+    expect(start).toBeGreaterThan(-1)
+    expect(errorRule).toMatch(/background:\s*var\(--bg-primary\)/)
+    expect(errorRule).toMatch(/border:\s*1px solid var\(--danger\)/)
+    expect(errorRule).toMatch(/border-radius:\s*var\(--radius\)/)
+  })
+
+  // Same shape, second instance. `Bookmarks.css` was the only file declaring colour and background
+  // on `.bookmark-name-input`, and AddToBookmark's own rule set neither — so the retirement left
+  // the field's ink to preflight and its ground to the dropdown behind it. Both happen to match,
+  // which is why nothing moved on screen and why nothing else here would go red.
+  it('AddToBookmark owns its name field colours instead of inheriting them from another page', () => {
+    const from = addToBookmark.indexOf('.bookmark-name-input {')
+    const rule = addToBookmark.slice(from, addToBookmark.indexOf('}', from))
+    expect(from).toBeGreaterThan(-1)
+    expect(rule).toMatch(/color:\s*var\(--text-primary\)/)
+    expect(rule).toMatch(/background:\s*var\(--bg-primary\)/)
+  })
+})
+
 describe('safe-area opt-in', () => {
   const html = readFileSync(join(SRC, '..', 'index.html'), 'utf8')
 

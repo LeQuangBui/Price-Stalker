@@ -54,6 +54,24 @@ describe('NotificationSettings', () => {
     expect(sendTest).toHaveBeenCalledTimes(1)
   })
 
+  // Hand-rolled, this button was 77.77x36 at 320px and the only sub-44px control left inside
+  // `<main>` on /profile. `.btn` carries the flat 44px floor and `min-h-11` grows it with the
+  // reader; `shrink-0` is what pinned its right edge 71px past a 320px viewport at a 24px browser
+  // default, so its absence is asserted too. Nothing else in the tree measures this element.
+  it('puts the toggle on the button primitive, with a floor that grows and no shrink pin', () => {
+    for (const subscribed of [false, true]) {
+      usePushNotifications.mockReturnValue({ ...base, subscribed })
+      const { unmount } = render(<NotificationSettings />)
+      const toggle = screen.getByRole('button', { name: subscribed ? /turn off/i : /enable/i })
+      const classes = toggle.className.split(/\s+/)
+      expect(classes).toContain('btn')
+      expect(classes).toContain('min-h-11')
+      expect(classes).toContain(subscribed ? 'btn-secondary' : 'btn-primary')
+      expect(classes).not.toContain('shrink-0')
+      unmount()
+    }
+  })
+
   it('surfaces a blocked-permission note', () => {
     usePushNotifications.mockReturnValue({ ...base, permission: 'denied' })
 

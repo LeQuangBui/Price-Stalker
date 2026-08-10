@@ -6,7 +6,7 @@ import NotificationSettings from '../../components/NotificationSettings/Notifica
 import AppLink from '../../components/AppLink'
 import Kicker from '../../components/primitives/Kicker'
 import ErrorState from '../../components/primitives/ErrorState'
-import './UserProfile.css'
+import EmptyState from '../../components/primitives/EmptyState'
 
 /**
  * Sign Out is the app's ONLY sign-out control (the header's was retired in Phase 1), so it
@@ -31,6 +31,31 @@ function SignOutSection({ onSignOut, navigate }) {
     </section>
   )
 }
+
+// A px cap, like the shell's own max-w-[1400px]. A cap does not gate content against a rem-sized
+// box the way a breakpoint does — it only stops the measure getting too long — so it does not need
+// to grow with the reader.
+const PAGE = 'mx-auto max-w-[900px]'
+
+// 20px of padding on a phone, 32 from md: up. 32px each side is a fifth of a 320px viewport, and
+// NotificationSettings nests its own p-5 card inside this one: measured at 320px, the drop hands
+// that card 207px -> 231px of width.
+//
+// It did NOT widen that card's description on its own — the column was a flex item at its
+// min-content width next to a `shrink-0` button, so `justify-between` spent the new room on the gap
+// and the prose stayed at 102.55px over six lines. That was NotificationSettings' to fix and it now
+// has: `min-w-0` on the text column, and the button on `.btn` without `shrink-0`.
+const SECTION = 'mb-6 rounded-[var(--radius-lg)] border border-line bg-paper p-5 shadow-[var(--shadow-sm)] md:p-8'
+
+// These two were the page's 42px touch targets — the retired UserProfile.css set min-height: 42px
+// on a hand-rolled link style — and they are <a> elements, which are the easiest thing to quietly
+// unpick from a button primitive later. The floor should not leave with the class, so it is written
+// out even though `.btn` already carries one.
+//
+// Not a duplicate of it, either: `.btn`'s floor is a flat 44px and `min-h-11` is 2.75rem, so it
+// grows with the reader's browser font. Measured at 320px: 42px before, 44px after at a 16px root
+// and 66px at a 24px root.
+const ACTION_LINK = 'btn btn-secondary min-h-11'
 
 export default function UserProfile() {
   const [user, setUser] = useState(null)
@@ -64,8 +89,8 @@ export default function UserProfile() {
   if (loading) {
     body = (
       <>
-        <div className="skeleton" style={{ height: '32px', width: '40%', marginBottom: '20px' }} />
-        <div className="skeleton" style={{ height: '160px' }} />
+        <div className="skeleton mb-5 h-8 w-2/5" />
+        <div className="skeleton h-40" />
       </>
     )
   } else if (error) {
@@ -80,9 +105,19 @@ export default function UserProfile() {
   // fixed position in the tree means it is the same DOM node in every state, so it never
   // unmounts (or flickers) as the fetch settles or is retried.
   return (
-    <div className="user-profile-container">
+    <div className={PAGE}>
       {body}
       <SignOutSection onSignOut={onSignOut} navigate={navigate} />
+    </div>
+  )
+}
+
+// Label above value on a phone, label-left / value-right from md: up.
+function ProfileItem({ label, value }) {
+  return (
+    <div className="flex flex-col gap-4 border-b border-line-soft py-4 last:border-b-0 md:flex-row md:justify-between">
+      <span className="font-semibold text-ink-soft">{label}</span>
+      <span className="font-medium">{value}</span>
     </div>
   )
 }
@@ -91,48 +126,50 @@ function ProfileBody({ user }) {
   return (
     <>
       <Kicker>Account</Kicker>
-      <h1 className="font-display text-display-sm font-semibold text-ink" style={{ marginTop: '12px', marginBottom: '24px' }}>
+      <h1 className="mt-3 mb-6 font-display text-display-sm font-semibold text-ink">
         Your profile
       </h1>
 
-      <div className="profile-section">
-        <div className="profile-item">
-          <span className="profile-label">Username:</span>
-          <span className="profile-value">{user.username}</span>
-        </div>
-
-        <div className="profile-item">
-          <span className="profile-label">Email:</span>
-          <span className="profile-value">{user.email}</span>
-        </div>
-
-        <div className="profile-item">
-          <span className="profile-label">Member since:</span>
-          <span className="profile-value">{formatDate(user.createdAt)}</span>
-        </div>
+      <div className={SECTION}>
+        <ProfileItem label="Username:" value={user.username} />
+        <ProfileItem label="Email:" value={user.email} />
+        <ProfileItem label="Member since:" value={formatDate(user.createdAt)} />
       </div>
 
-      <div className="profile-actions">
-        <AppLink to="/bookmarks" className="profile-action-link">View Bookmarks</AppLink>
-        <AppLink to="/alerts" className="profile-action-link">Manage Alerts</AppLink>
+      <div className="mb-8 flex flex-wrap gap-3">
+        <AppLink to="/bookmarks" className={ACTION_LINK}>View Bookmarks</AppLink>
+        <AppLink to="/alerts" className={ACTION_LINK}>Manage Alerts</AppLink>
       </div>
 
-      <div className="profile-section">
+      <div className={SECTION}>
         <NotificationSettings />
       </div>
 
-      <div className="bookmarks-section">
-        <h3>Bookmarks ({user.bookmarks?.length || 0})</h3>
+      {/* `.bookmarks-section` had exactly one rule — a margin on this heading — so the wrapper keeps
+          the grouping and loses the class. */}
+      <div>
+        {/* h2, with NotificationSettings' heading above it. This page also went h1 straight to h3
+            in every state; these are the two section headings under the page title and nothing
+            sits between. No CSS is keyed to either tag — index.css styles h1, h2 and h3
+            identically — so both render exactly as before. */}
+        <h2 className="mb-[18px]">Bookmarks ({user.bookmarks?.length || 0})</h2>
         {user.bookmarks && user.bookmarks.length > 0 ? (
-          <div className="bookmarks-list">
+          <div className="flex flex-col gap-4">
             {user.bookmarks.map((bookmark) => (
-              <div key={bookmark.id} className="bookmark-item">
-                <div className="bookmark-info">
-                  <span className="bookmark-name">{bookmark.name || 'Unnamed'}</span>
-                  <span className="bookmark-date">
+              <div key={bookmark.id} className="rounded-[var(--radius)] border border-line bg-paper p-5">
+                <div className="flex flex-col gap-1.5">
+                  {/* Prominent again. This line is weight 700 and was meant to lead the card, but
+                      `Bookmarks.css`'s `.bookmark-info` block (retired in 2b-ii) was reaching it
+                      through the shared class name and rendering it at 14px in the same grey as the
+                      two meta lines under it. */}
+                  <span className="font-bold">{bookmark.name || 'Unnamed'}</span>
+                  {/* These two carried `bookmark-date`, whose only rule lived in this page's own
+                      retired stylesheet and whose third call site is in Bookmarks.jsx. Written out
+                      here rather than left to a name that would resolve to nothing. */}
+                  <span className="text-sm text-ink-soft">
                     Created {formatDate(bookmark.createdAt)}
                   </span>
-                  <span className="bookmark-date">
+                  <span className="text-sm text-ink-soft">
                     {bookmark.products?.length || 0} products
                   </span>
                 </div>
@@ -140,10 +177,12 @@ function ProfileBody({ user }) {
             ))}
           </div>
         ) : (
-          <p className="no-bookmarks">No bookmarks yet.</p>
+          // No `action` — a design call, not a test constraint. All four queries in
+          // UserProfile.signout.test.jsx already filter by name, so a CTA here would not make any
+          // of them ambiguous; this panel is a summary of another page and the CTA belongs there.
+          <EmptyState title="No bookmarks yet." />
         )}
       </div>
-
     </>
   )
 }

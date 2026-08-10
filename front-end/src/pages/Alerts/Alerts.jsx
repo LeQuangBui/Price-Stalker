@@ -174,7 +174,11 @@ export default function Alerts() {
         <div className="empty-state">
           <h3>No price alerts yet</h3>
           <p>Set an alert on any product and we&apos;ll notify you when the price drops below your target.</p>
-          <AppLink to="/" className="empty-state-cta">Browse products</AppLink>
+          {/* The house button, not `.empty-state-cta`. That class was the last sub-44px CTA in the
+              tree — 10px padding around inherited 16px type computes to 42px — and this was its
+              only remaining call site, so the rule left with it. Bookmarks' empty state had
+              already moved to `btn btn-primary`; the two had silently diverged. */}
+          <AppLink to="/" className="btn btn-primary">Browse products</AppLink>
         </div>
       )}
 
@@ -188,7 +192,7 @@ export default function Alerts() {
               return (
                 <section key={alert.id} className="alert-card">
                   <div className="alert-card-main">
-                    <div className="alert-card-info">
+                    <div>
                       <AppLink to={`/products/${alert.product?.id}`} className="alert-product-link">
                         {alert.product?.name || 'Unknown product'}
                       </AppLink>

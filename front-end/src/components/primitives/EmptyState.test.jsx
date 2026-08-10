@@ -23,6 +23,14 @@ describe('EmptyState', () => {
     expect(screen.getByRole('button', { name: /add one/i })).toBeVisible()
   })
 
+  // Every consumer announces its loading state and then falls silent, so the outcome of the fetch
+  // was the one thing a screen reader never heard. `status`, not `alert` — an empty list is an
+  // outcome, not a problem.
+  it('announces itself politely', () => {
+    render(<EmptyState title="Nothing here" />)
+    expect(screen.getByRole('status')).toHaveTextContent(/nothing here/i)
+  })
+
   it('composes an extra className', () => {
     const { container } = render(<EmptyState title="X" className="mt-10" />)
     expect(container.firstChild.className).toContain('mt-10')

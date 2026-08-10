@@ -319,24 +319,6 @@ button:focus-visible,
   line-height: 1.5;
 }
 
-.empty-state-cta {
-  margin-top: 4px;
-  display: inline-flex;
-  align-items: center;
-  padding: 10px 18px;
-  border: none;
-  border-radius: var(--radius-sm);
-  background: var(--primary);
-  color: #fff;
-  font-weight: 600;
-  text-decoration: none;
-  cursor: pointer;
-}
-
-.empty-state-cta:hover {
-  background: var(--primary-dark);
-}
-
 .skeleton {
   position: relative;
   overflow: hidden;
