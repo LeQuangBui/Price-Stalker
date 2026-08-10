@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { getPriceHistory } from '../../api/products'
 import { formatPrice } from '../../utils/formatters'
+import { axisGutter, axisTicks, currencySymbol, TICK_FONT_SIZE, TICK_GAP } from './axisScale'
 import './PriceHistoryChart.css'
 
 const TIME_RANGES = [
@@ -72,17 +73,35 @@ export default function PriceHistoryChart({ productId, currency }) {
     const prices = priceHistory.map(h => h.price)
     const minPrice = Math.min(...prices)
     const maxPrice = Math.max(...prices)
-    const priceRange = maxPrice - minPrice || 1
+
+    // The axis owns the domain, the tick labels and the width they need. Sizing the gutter from the
+    // labels themselves is what keeps a 129.000.000 ₫ motorbike from running off the left edge the
+    // way a hardcoded 60 units did.
+    const { low, high, ticks } = axisTicks(minPrice, maxPrice)
+    const priceRange = high - low
+    const unit = currencySymbol(currency)
 
     const chartHeight = 300
     const chartWidth = 800
-    const padding = { top: 20, right: 20, bottom: 60, left: 60 }
+    // The unit caption shares the ticks' right edge, so it is sized with them.
+    const gutter = axisGutter([...ticks.map(tick => tick.label), unit])
+    // Top padding leaves room for the unit caption to clear the highest tick.
+    const padding = { top: 26, right: 20, bottom: 60, left: gutter }
     const innerWidth = chartWidth - padding.left - padding.right
     const innerHeight = chartHeight - padding.top - padding.bottom
 
+    // role="img" makes the SVG opaque to assistive tech, so this sentence — not the gridlines — is
+    // the entire chart for a screen reader. It quotes every figure at full precision, which matters
+    // more now that the visible ticks are abbreviated.
+    const rangeLabel = TIME_RANGES.find(range => range.value === timeRange)?.label ?? timeRange
+    const description = `Price history over ${rangeLabel}. `
+      + `Low ${formatPrice(minPrice, currency)}, `
+      + `high ${formatPrice(maxPrice, currency)}, `
+      + `latest ${formatPrice(prices[prices.length - 1], currency)}.`
+
     const points = priceHistory.map((h, i) => {
       const x = padding.left + (i / (priceHistory.length - 1 || 1)) * innerWidth
-      const y = padding.top + innerHeight - ((h.price - minPrice) / priceRange) * innerHeight
+      const y = padding.top + innerHeight - ((h.price - low) / priceRange) * innerHeight
       return { x, y, price: h.price, recordedAt: h.recordedAt }
     })
 
@@ -95,7 +114,7 @@ export default function PriceHistoryChart({ productId, currency }) {
         className="price-chart"
         viewBox={`0 0 ${chartWidth} ${chartHeight}`}
         role="img"
-        aria-label={`Price history over ${timeRange}. Low ${formatPrice(minPrice, currency)}, high ${formatPrice(maxPrice, currency)}, latest ${formatPrice(prices[prices.length - 1], currency)}.`}
+        aria-label={description}
       >
         <line
           x1={padding.left}
@@ -114,8 +133,19 @@ export default function PriceHistoryChart({ productId, currency }) {
           strokeWidth="1"
         />
 
-        {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
-          const price = minPrice + priceRange * ratio
+        {unit && (
+          <text
+            x={padding.left - TICK_GAP}
+            y={padding.top - 13}
+            textAnchor="end"
+            fontSize="11"
+            className="chart-label"
+          >
+            {unit}
+          </text>
+        )}
+
+        {ticks.map(({ ratio, label }) => {
           const y = padding.top + innerHeight - ratio * innerHeight
           return (
             <g key={ratio}>
@@ -128,13 +158,13 @@ export default function PriceHistoryChart({ productId, currency }) {
                 strokeWidth="1"
               />
               <text
-                x={padding.left - 10}
+                x={padding.left - TICK_GAP}
                 y={y + 4}
                 textAnchor="end"
-                fontSize="12"
+                fontSize={TICK_FONT_SIZE}
                 className="chart-label"
               >
-                {formatPrice(Math.round(price), currency)}
+                {label}
               </text>
             </g>
           )
