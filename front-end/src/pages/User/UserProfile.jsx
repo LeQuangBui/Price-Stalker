@@ -41,9 +41,10 @@ const PAGE = 'mx-auto max-w-[900px]'
 // NotificationSettings nests its own p-5 card inside this one: measured at 320px, the drop hands
 // that card 207px -> 231px of width.
 //
-// It does NOT widen that card's description, which stays at 102.55px over six lines. That column
-// is a flex item sitting at its min-content width next to a `shrink-0` button, so `justify-between`
-// spends the new room on the gap instead. The fix belongs to NotificationSettings, not here.
+// It did NOT widen that card's description on its own — the column was a flex item at its
+// min-content width next to a `shrink-0` button, so `justify-between` spent the new room on the gap
+// and the prose stayed at 102.55px over six lines. That was NotificationSettings' to fix and it now
+// has: `min-w-0` on the text column, and the button on `.btn` without `shrink-0`.
 const SECTION = 'mb-6 rounded-[var(--radius-lg)] border border-line bg-paper p-5 shadow-[var(--shadow-sm)] md:p-8'
 
 // These two were the page's 42px touch targets — the retired UserProfile.css set min-height: 42px
