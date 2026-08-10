@@ -167,9 +167,16 @@ describe('PriceHistoryChart y-axis', () => {
     // Abbreviated ticks make this the only place the exact figures survive, so it has to carry
     // every digit — whatever grouping the reader's locale uses. The gridlines now run past the
     // data as well, so these must be the data's own numbers, not the axis bounds.
-    const clause = (word) => description.slice(description.indexOf(word), description.indexOf('.', description.indexOf(word)))
-    expect(digitsOf(clause('Low'))).toContain('12900000')
-    expect(digitsOf(clause('high'))).toContain('45000000')
+    // Cut the sentence on its own clause words, not on punctuation. Every separator a price could
+    // be cut on belongs to some locale's grouping: vi-VN writes 12.900.000 and en-US ₫12,900,000,
+    // so keying on either "." or "," reads one clause as the first two or three digits of its own
+    // number and passes for the wrong reason. These words come from the component, not from Intl.
+    const clause = (word, next) => description.slice(
+      description.indexOf(word),
+      next ? description.indexOf(next, description.indexOf(word)) : description.length
+    )
+    expect(digitsOf(clause('Low', ', high'))).toContain('12900000')
+    expect(digitsOf(clause('high', ', latest'))).toContain('45000000')
     expect(digitsOf(clause('latest'))).toContain('31500000')
     expect(description).toContain('Price history over 1 Day')
   })
