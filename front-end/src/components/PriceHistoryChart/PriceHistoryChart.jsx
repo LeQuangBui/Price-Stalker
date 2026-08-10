@@ -1,7 +1,17 @@
 import { useState, useEffect } from 'react'
 import { getPriceHistory } from '../../api/products'
 import { formatPrice } from '../../utils/formatters'
-import { axisGutter, axisTicks, currencySymbol, TICK_FONT_SIZE, TICK_GAP } from './axisScale'
+import {
+  axisGutter,
+  axisTicks,
+  currencySymbol,
+  dateLabels,
+  labelAnchor,
+  CAPTION_FONT_SIZE,
+  DATE_FONT_SIZE,
+  TICK_FONT_SIZE,
+  TICK_GAP
+} from './axisScale'
 import './PriceHistoryChart.css'
 
 const TIME_RANGES = [
@@ -37,25 +47,6 @@ export default function PriceHistoryChart({ productId, currency }) {
     fetchPriceHistory()
   }, [productId, timeRange, reloadKey])
 
-  const formatDate = (dateString, range) => {
-    const date = new Date(dateString)
-
-    switch (range) {
-      case '1d':
-        return date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
-      case '5d':
-        return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit' })
-      case '1m':
-      case '6m':
-        return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-      case '1y':
-      case 'all':
-        return date.toLocaleDateString(undefined, { month: 'short', year: '2-digit' })
-      default:
-        return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-    }
-  }
-
   const renderChart = () => {
     if (loading) return <div className="skeleton chart-skeleton" aria-hidden="true" />
     if (error) {
@@ -76,7 +67,9 @@ export default function PriceHistoryChart({ productId, currency }) {
 
     // The axis owns the domain, the tick labels and the width they need. Sizing the gutter from the
     // labels themselves is what keeps a 129.000.000 ₫ motorbike from running off the left edge the
-    // way a hardcoded 60 units did.
+    // way a hardcoded 60 units did. `low` and `high` are the snapped gridline bounds rather than the
+    // data's own min and max, so the line has to be plotted against them or it would drift off its
+    // own gridlines.
     const { low, high, ticks } = axisTicks(minPrice, maxPrice)
     const priceRange = high - low
     const unit = currencySymbol(currency)
@@ -91,8 +84,9 @@ export default function PriceHistoryChart({ productId, currency }) {
     const innerHeight = chartHeight - padding.top - padding.bottom
 
     // role="img" makes the SVG opaque to assistive tech, so this sentence — not the gridlines — is
-    // the entire chart for a screen reader. It quotes every figure at full precision, which matters
-    // more now that the visible ticks are abbreviated.
+    // the entire chart for a screen reader. It quotes the data's own low, high and latest at full
+    // precision: the ticks are abbreviated and the outer gridlines now sit a step beyond the data,
+    // so this is the only place the exact figures appear.
     const rangeLabel = TIME_RANGES.find(range => range.value === timeRange)?.label ?? timeRange
     const description = `Price history over ${rangeLabel}. `
       + `Low ${formatPrice(minPrice, currency)}, `
@@ -108,6 +102,13 @@ export default function PriceHistoryChart({ productId, currency }) {
     const pathData = points.map((p, i) =>
       `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`
     ).join(' ')
+
+    // Roughly ten dates along the bottom, and their wording decided by the span those ten cover —
+    // a three-day history viewed on "All" wrote "thg 1 26" under every one of them when the range
+    // button chose the format.
+    const dated = points.filter((point, i) =>
+      priceHistory.length <= 10 || i % Math.ceil(priceHistory.length / 10) === 0)
+    const dates = dateLabels(dated.map((point) => point.recordedAt))
 
     return (
       <svg
@@ -138,17 +139,17 @@ export default function PriceHistoryChart({ productId, currency }) {
             x={padding.left - TICK_GAP}
             y={padding.top - 13}
             textAnchor="end"
-            fontSize="11"
-            className="chart-label"
+            fontSize={CAPTION_FONT_SIZE}
+            className="chart-label chart-unit"
           >
             {unit}
           </text>
         )}
 
-        {ticks.map(({ ratio, label }) => {
+        {ticks.map(({ ratio, value, label }) => {
           const y = padding.top + innerHeight - ratio * innerHeight
           return (
-            <g key={ratio}>
+            <g key={value}>
               <line
                 x1={padding.left}
                 x2={padding.left + innerWidth}
@@ -162,7 +163,7 @@ export default function PriceHistoryChart({ productId, currency }) {
                 y={y + 4}
                 textAnchor="end"
                 fontSize={TICK_FONT_SIZE}
-                className="chart-label"
+                className="chart-label chart-tick"
               >
                 {label}
               </text>
@@ -189,23 +190,20 @@ export default function PriceHistoryChart({ productId, currency }) {
           </circle>
         ))}
 
-        {points.map((p, i) => {
-          const showLabel = priceHistory.length <= 10 || i % Math.ceil(priceHistory.length / 10) === 0
-          if (!showLabel) return null
-
-          return (
-            <text
-              key={`label-${i}`}
-              x={p.x}
-              y={padding.top + innerHeight + 20}
-              textAnchor="middle"
-              fontSize="11"
-              className="chart-label"
-            >
-              {formatDate(p.recordedAt, timeRange)}
-            </text>
-          )
-        })}
+        {/* The last date sits 20 units from the right edge, so a middle-anchored label wider than
+            40 units ran past the viewBox and lost its tail: labelAnchor pins the ends inward. */}
+        {dated.map((p, i) => (
+          <text
+            key={`date-${p.x}`}
+            x={p.x}
+            y={padding.top + innerHeight + 20}
+            textAnchor={labelAnchor(p.x, dates[i], chartWidth)}
+            fontSize={DATE_FONT_SIZE}
+            className="chart-label chart-date"
+          >
+            {dates[i]}
+          </text>
+        ))}
       </svg>
     )
   }

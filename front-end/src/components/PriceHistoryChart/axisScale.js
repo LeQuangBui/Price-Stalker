@@ -1,58 +1,76 @@
-// Y-axis domain, tick labelling and gutter sizing for the price chart.
+// Domain, tick placement, labelling and gutter sizing for the price chart's two axes.
 //
-// The visible ticks are deliberately abbreviated — "12,9 Tr" in vi-VN, "12.9M" in en-US — rather
-// than full currency strings. A full VND amount renders 56-114 user units wide at 12px depending
-// on locale and magnitude, against a viewBox only 800 units across, so printing one per tick ran
-// every label off the left edge and the SVG viewport cut the leading digits off. Ticks that read
-// "00.000 ₫" for 12.900.000 ₫ are worse than no ticks at all.
+// Y axis. Gridlines sit on round numbers — 0, 5 Tr, 10 Tr, 15 Tr — rather than at low + k/4 of
+// the span, so each label is an exact statement of the value under it. Placing a tick at an
+// arbitrary value and rounding its label afterwards produces an axis that is confident and wrong:
+// a gridline drawn at 1.290.000 ₫ came out labelled "1 Tr", 22.5% below the price it marked, on
+// the very line that carries the lowest price the product has ever been. Snapping the value
+// instead makes the abbreviation lossless, at the cost of a domain that reaches a little past the
+// data — the conventional trade, and the reason a chart's axis usually starts on a round number.
 //
-// Two invariants hold everything together:
-//   1. The five labels in a chart are always mutually distinct (see axisTicks) — an abbreviation
-//      that collapses two gridlines into the same string helps nobody.
-//   2. The gutter is measured from the labels actually being rendered (see axisGutter), so a
-//      longer currency or a bigger price widens the axis instead of getting clipped.
+// Labels stay abbreviated ("12,9 Tr" in vi-VN, "12.9M" in en-US). A full VND amount renders
+// 56-114 user units wide at 12px depending on locale and magnitude, against a viewBox only 800
+// units across, so printing one per tick ran every label off the left edge and the SVG viewport
+// cut the leading digits off. Ticks reading "00.000 ₫" for 12.900.000 ₫ are worse than no ticks.
 //
-// Exact figures are not lost: the chart's aria-label speaks the low, high and latest values in
-// full, every data point carries a full-precision <title>, and the unit is stated once above the
-// axis.
+// X axis. The date format is chosen from the span the data actually covers, not from the range
+// button that was pressed. A product with three days of history viewed on "All" used to get eight
+// gridlines all reading "thg 1 26" — one distinct label out of eight.
+//
+// Three invariants hold this together, each established by construction and fuzzed in
+// axisScale.test.js rather than argued for:
+//   1. No two labels on an axis render the same string.
+//   2. Every y-axis label states the exact value of the gridline it sits on.
+//   3. No label's box crosses the edge of the viewBox: the y-axis gutter is measured from the
+//      labels actually drawn, and the date labels at the ends are anchored inward.
+//
+// Exact figures are not lost. The chart's aria-label speaks low, high and latest in full, every
+// data point carries a full-precision <title>, and the unit is stated once above the axis.
 
-const TICK_RATIOS = [0, 0.25, 0.5, 0.75, 1]
+const TARGET_TICKS = 5
 const MAX_COMPACT_FRACTION_DIGITS = 3
+const MAX_PLAIN_FRACTION_DIGITS = 6
 
 // Gap between the longest tick label and the axis line. Exported so the component positions labels
 // against the same constant the gutter reserves for them; if these two drift apart, clipping
 // silently returns.
 export const TICK_GAP = 10
 
-// Tick labels are drawn at this size. The component reads it from here so the size the gutter is
-// computed against and the size actually rendered cannot drift apart.
+// The three text sizes in the chart. The component reads all of them from here so the size the
+// gutter is computed against and the size actually rendered cannot drift apart, and so the tests
+// can select a node by the role it plays instead of by a hardcoded "11".
 export const TICK_FONT_SIZE = 12
+export const CAPTION_FONT_SIZE = 11
+export const DATE_FONT_SIZE = 11
 
 // Nothing measures text at render time — there is no layout engine in the middle of a React render,
 // and the viewBox is fixed while the element is fluid, so a pixel measurement would be the wrong
-// unit anyway. The gutter is therefore estimated from the characters in the label.
+// unit anyway. Label widths are therefore estimated from the characters in the label.
 //
-// Advances are a fraction of the font size, so the estimate holds at any tick size, and each is an
+// Advances are a fraction of the font size, so the estimate holds at any text size, and each is an
 // upper bound rather than an average: under-reserving costs the reader a digit, over-reserving
-// costs a little plot width. Measured in a headless browser in the app's sans stack, where Inter's
-// default figures turn out to be proportional rather than tabular — the digits are not all one
-// width, and '1' is barely half of '4':
-//   widest digit '4' 0.646em · widest Latin letter 'M' 0.903em · comma / no-break space 0.288em
-// The digit bound sits well above that 0.646em because the stack falls through to the system sans
-// whenever Inter has not loaded and those digits are wider. Everything that is neither digit nor
-// separator is charged a whole em, which assumes nothing at all about the glyph — enough for a
-// Latin unit suffix, and for a compact unit in a script whose forms are full-width.
-const ADVANCE_SEPARATOR = 0.3
+// costs a little plot width. Every bound below was measured glyph by glyph in a real browser, in
+// both faces the app can render in — Inter, and the system sans the display=swap link leaves on
+// screen for every cold load:
+//   digit     '4' 0.650 em   (Inter's default figures are proportional, not tabular: '1' is 0.471)
+//   separator ',' and '.' 0.307 em, U+00A0 0.290 em
+//   other     CJK ideographs 1.024 em, 'W' 0.988 em
+// widths.fixture.json carries those measurements for 1,891 strings and the suite checks this
+// function against every one of them. That check is the point: an earlier version of this table
+// was internally consistent, passed every test, and still under-reserved for '万' and for a group
+// separator, which is exactly the failure a test written against the arithmetic cannot see.
+const ADVANCE_SEPARATOR = 0.32
 const ADVANCE_DIGIT = 0.7
-const ADVANCE_OTHER = 1
+const ADVANCE_OTHER = 1.05
 
 // Space, no-break space and narrow no-break space all serve as group separators across locales;
 // ICU writes Vietnamese compact units with U+00A0 rather than a plain space.
 const SEPARATORS = new Set([' ', '\u00a0', '\u202f', ',', '.', '\u2019', "'"])
 
-// Floor keeps the axis off the left edge when labels are very short ("5 N"); ceiling stops a
-// pathological label from eating the plot. Neither binds for any realistic price — the widest
-// label this module can emit estimates at ~120u — they are guard rails, not layout.
+// Floor keeps the axis off the left edge when labels are very short ("5 Tr"); ceiling stops a
+// pathological label from eating the plot. Neither binds for any realistic price — over 100,000
+// fuzzed spans the widest gutter asked for was 106u, for "1.000.000.000" — they are guard rails,
+// not layout.
 const MIN_GUTTER = 44
 const MAX_GUTTER = 200
 
@@ -66,80 +84,246 @@ export function estimateLabelWidth(label, fontSize = TICK_FONT_SIZE) {
   return advances * fontSize
 }
 
+function widestLabelWidth(labels) {
+  return labels.reduce((max, label) => Math.max(max, estimateLabelWidth(label)), 0)
+}
+
 export function axisGutter(labels) {
-  const widest = labels.reduce((max, label) => Math.max(max, estimateLabelWidth(label)), 0)
-  return Math.min(MAX_GUTTER, Math.max(MIN_GUTTER, Math.ceil(widest) + TICK_GAP))
+  return Math.min(MAX_GUTTER, Math.max(MIN_GUTTER, Math.ceil(widestLabelWidth(labels)) + TICK_GAP))
+}
+
+// 1, 2, 2.5 and 5 times a power of ten: the intervals a reader can add up without thinking, and
+// the only ones whose multiples stay short in compact notation. Rounding the raw step UP to one of
+// these is what buys accurate labels — the step, not the label, absorbs the rounding.
+const NICE_MULTIPLES = [1, 2, 2.5, 5, 10]
+
+function niceStep(raw) {
+  if (!(raw > 0) || !Number.isFinite(raw)) return 1
+  const power = Math.pow(10, Math.floor(Math.log10(raw)))
+  const mantissa = raw / power
+  const multiple = NICE_MULTIPLES.find((candidate) => mantissa <= candidate * (1 + 1e-9)) ?? 10
+  return multiple * power
+}
+
+// How many multiples of `step` fit under (or over) `value`. Snapped to the nearest integer when
+// the division lands within floating-point noise of one, so a value already sitting exactly on a
+// gridline does not gain a spurious extra gridline beneath it.
+function stepIndex(value, step, round) {
+  const exact = value / step
+  const nearest = Math.round(exact)
+  if (Math.abs(exact - nearest) <= 1e-9 * Math.max(1, Math.abs(nearest))) return nearest
+  return round(exact)
+}
+
+// index * step accumulates error once the power of ten goes negative — 7 x 0.1 is
+// 0.7000000000000001 — and a gridline a fifteenth decimal off its step cannot be labelled exactly.
+// Trimming to 15 significant figures drops the noise without putting a floor under the step.
+function tickValue(index, step) {
+  return Number((index * step).toPrecision(15))
 }
 
 // A series where every reading is identical has no range to draw. The old `maxPrice - minPrice || 1`
-// spanned the whole axis across a single dong, which rounded the five ticks onto two or three
-// identical strings and pinned the line to the floor as though the price had bottomed out. Give a
-// flat series a real band around its value instead, so the ticks are distinct prices and the line
-// sits mid-chart where a flat line belongs.
-export function axisDomain(min, max) {
-  if (max > min) return { low: min, high: max }
+// spanned the whole axis across a single dong, which rounded the ticks onto two or three identical
+// strings and pinned the line to the floor as though the price had bottomed out. Give a flat series
+// a real band around its value instead.
+//
+// The band is clamped at zero for a non-negative series. A stored 0 is a real out-of-stock reading
+// or a parse artefact — formatters.js guards for it elsewhere — and an axis answering it with
+// "-1 ₫" states a price that cannot exist.
+function paddedRange(min, max) {
+  if (max > min) return [min, max]
   const padding = Math.max(Math.abs(min) * 0.05, 1)
-  return { low: min - padding, high: min + padding }
+  return [min >= 0 ? Math.max(0, min - padding) : min - padding, min + padding]
+}
+
+/**
+ * The drawn domain and the gridlines inside it.
+ *
+ * `low` and `high` are the snapped bounds, which reach at most one step past the data; the line and
+ * the points must be plotted against them, not against the raw min and max, or the curve will not
+ * line up with its own gridlines. `values` are the gridline positions, every one an exact multiple
+ * of `step`.
+ */
+export function axisDomain(min, max) {
+  const [rawLow, rawHigh] = paddedRange(min, max)
+  const step = niceStep((rawHigh - rawLow) / (TARGET_TICKS - 1))
+
+  const firstIndex = stepIndex(rawLow, step, Math.floor)
+  const lastIndex = Math.max(firstIndex + 1, stepIndex(rawHigh, step, Math.ceil))
+
+  const values = []
+  for (let index = firstIndex; index <= lastIndex; index += 1) values.push(tickValue(index, step))
+
+  return { low: values[0], high: values[values.length - 1], step, values }
 }
 
 function labelsAreDistinct(labels) {
   return new Set(labels).size === labels.length
 }
 
-function compactLabels(values, locale, digits) {
-  const format = new Intl.NumberFormat(locale, {
+// The power of ten ICU folds into a compact unit for this value — 10^6 behind "Tr" in vi-VN, 10^4
+// behind "万" in ja-JP. Read back out of the formatter rather than tabulated here, because which
+// unit applies at which magnitude is a property of the locale's data, not of the number.
+function compactScale(value, locale) {
+  if (!value) return 1
+  const parts = new Intl.NumberFormat(locale, {
     notation: 'compact',
     compactDisplay: 'short',
-    minimumFractionDigits: digits,
-    maximumFractionDigits: digits
-  })
-  return values.map((value) => format.format(value))
+    maximumFractionDigits: 20,
+    numberingSystem: 'latn'
+  }).formatToParts(Math.abs(value))
+
+  let mantissa = ''
+  for (const part of parts) {
+    if (part.type === 'integer') mantissa += part.value
+    else if (part.type === 'fraction') mantissa += `.${part.value}`
+  }
+
+  const exponent = Math.round(Math.log10(Math.abs(value) / Number(mantissa)))
+  return Number.isFinite(exponent) ? Math.pow(10, exponent) : 1
 }
 
-// Decimals needed for full grouped numbers to separate ticks a `step` apart. One digit finer than
-// the step itself, so neighbouring values differ by ~10 units in the last place and cannot round
-// together.
-function plainFractionDigits(step) {
-  if (!(step > 0)) return 0
-  return Math.min(6, Math.max(0, Math.ceil(-Math.log10(step)) + 1))
+// Decimal places needed to write `ratio` exactly, or null if it needs more than an axis should.
+function exactDecimals(ratio, limit) {
+  for (let digits = 0; digits <= limit; digits += 1) {
+    const scaled = ratio * Math.pow(10, digits)
+    if (Math.abs(scaled - Math.round(scaled)) <= 1e-9 * Math.max(1, Math.abs(scaled))) return digits
+  }
+  return null
 }
 
-function plainLabels(values, locale, digits) {
-  const format = new Intl.NumberFormat(locale, {
-    minimumFractionDigits: digits,
+function format(locale, options) {
+  return new Intl.NumberFormat(locale, { minimumFractionDigits: 0, ...options })
+}
+
+// Compact labels, or null when compact notation cannot state these values exactly, cannot state
+// them in one unit, or cannot keep them apart.
+function compactLabels(values, step, locale) {
+  const magnitudes = values.filter((value) => value !== 0).map(Math.abs)
+  if (!magnitudes.length) return null
+
+  const scale = compactScale(Math.max(...magnitudes), locale)
+  // One tick set, one unit. "950 / 975 / 1 N / 1,03 N / 1,05 N" switches scale halfway up the axis
+  // and leaves the reader to notice; when the ticks straddle a compact boundary, write them out in
+  // full instead. Zero is exempt — it carries no unit in any locale and reads correctly beside one.
+  if (values.some((value) => value !== 0 && compactScale(value, locale) !== scale)) return null
+
+  const digits = exactDecimals(step / scale, MAX_COMPACT_FRACTION_DIGITS)
+  if (digits === null) return null
+
+  const formatter = format(locale, {
+    notation: 'compact',
+    compactDisplay: 'short',
     maximumFractionDigits: digits
   })
-  return values.map((value) => format.format(value))
+  const labels = values.map((value) => formatter.format(value))
+  return labelsAreDistinct(labels) ? labels : null
+}
+
+// Full grouped numbers, for spans too tight or too awkwardly placed for compact notation. Every
+// value is a whole multiple of the step, so the step's own precision writes all of them exactly;
+// the loop past it only exists so the distinctness invariant is checked here too rather than
+// assumed, which is how the previous fallback quietly escaped it.
+function plainLabels(values, step, locale) {
+  const exact = exactDecimals(step, MAX_PLAIN_FRACTION_DIGITS) ?? 0
+  let widest = null
+
+  for (let digits = exact; digits <= MAX_PLAIN_FRACTION_DIGITS; digits += 1) {
+    const formatter = format(locale, { maximumFractionDigits: digits })
+    const labels = values.map((value) => formatter.format(value))
+    widest = labels
+    if (labelsAreDistinct(labels)) return labels
+  }
+
+  return widest
 }
 
 /**
- * Five evenly spaced ticks over the price domain, labelled as compactly as the span allows.
- *
- * Fraction digits are derived from the data, not guessed: the shortest compact form that keeps all
- * five labels distinct wins, so a wide span reads "1 Tr / 33 Tr / 65 Tr / 97 Tr / 129 Tr" while a
- * span narrow enough to need them gets "12,90 Tr / 12,91 Tr / …". Spans too tight for compact
- * notation at any precision fall back to full grouped numbers.
+ * Gridlines over the price domain, each labelled with its own exact value.
  *
  * `locale` exists so tests can pin a locale. Production passes nothing, matching formatPrice, which
  * on this branch also resolves against the reader's browser locale.
  */
 export function axisTicks(min, max, locale) {
-  const { low, high } = axisDomain(min, max)
-  const values = TICK_RATIOS.map((ratio) => low + (high - low) * ratio)
+  const { low, high, step, values } = axisDomain(min, max)
 
-  let labels = null
-  for (let digits = 0; digits <= MAX_COMPACT_FRACTION_DIGITS && !labels; digits += 1) {
-    const candidate = compactLabels(values, locale, digits)
-    if (labelsAreDistinct(candidate)) labels = candidate
-  }
+  // Both forms state the value exactly, so the axis takes whichever is narrower. Compact usually
+  // wins by a mile ("15 Tr" against "15.000.000"), but a step fine enough to need three decimals
+  // inverts it — "124,775 Mio." is 97 user units against 83 for writing the number out — and an
+  // abbreviation that costs width has nothing left to recommend it.
+  const compact = compactLabels(values, step, locale)
+  const plain = plainLabels(values, step, locale)
+  const labels = compact && widestLabelWidth(compact) <= widestLabelWidth(plain) ? compact : plain
 
-  if (!labels) labels = plainLabels(values, locale, plainFractionDigits((high - low) / 4))
+  const range = high - low
 
   return {
     low,
     high,
-    ticks: values.map((value, index) => ({ ratio: TICK_RATIOS[index], value, label: labels[index] }))
+    step,
+    ticks: values.map((value, index) => ({
+      ratio: range > 0 ? (value - low) / range : 0,
+      value,
+      label: labels[index]
+    }))
   }
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000
+
+// Coarsest first: the least detail that still tells two gridlines apart is the most readable one.
+// A clock time with no date is only offered when the whole series fits inside a day, because
+// outside one it says nothing about which day the reading belongs to.
+const WITHIN_DAY_FORMATS = [
+  { hour: '2-digit', minute: '2-digit' },
+  { hour: '2-digit', minute: '2-digit', second: '2-digit' }
+]
+// The month turns numeric as soon as an hour has to be carried too: ten "03 giờ 25 thg 1" at 77
+// user units apiece need 770 of the 735 the plot has, and they overlapped by up to 41; the same
+// reading as "03 giờ 25/1" is 56 and they do not touch.
+const ACROSS_DAY_FORMATS = [
+  { month: 'short', year: '2-digit' },
+  { month: 'short', day: 'numeric' },
+  { month: 'numeric', day: 'numeric', hour: '2-digit' },
+  { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }
+]
+
+/**
+ * Labels for the timestamps drawn along the bottom of the chart.
+ *
+ * The format comes from the span these readings actually cover, then from whether that format can
+ * tell them apart — never from the range button, which is what put eight identical "thg 1 26"
+ * labels under a product that had been tracked for three days.
+ */
+export function dateLabels(times, locale) {
+  const dates = times.map((time) => new Date(time))
+  const stamps = dates.map((date) => date.getTime()).filter(Number.isFinite)
+  const span = stamps.length ? Math.max(...stamps) - Math.min(...stamps) : 0
+
+  let coarsest = null
+  for (const options of span < DAY_MS ? WITHIN_DAY_FORMATS : ACROSS_DAY_FORMATS) {
+    const formatter = new Intl.DateTimeFormat(locale, options)
+    const labels = dates.map((date) => (Number.isFinite(date.getTime()) ? formatter.format(date) : ''))
+    if (!coarsest) coarsest = labels
+    if (labelsAreDistinct(labels)) return labels
+  }
+
+  return coarsest ?? []
+}
+
+/**
+ * Which end of a date label to pin to its gridline, so the label's box stays inside the viewBox.
+ *
+ * A middle-anchored label at the last point sits 20 units from the right edge, so anything wider
+ * than 40 units ran past it and the viewport cut the tail off: "thg 1 26" rendered as "thg 1 2",
+ * which reads as the year 2. Anchoring rather than widening the padding keeps every label attached
+ * to the gridline it belongs to.
+ */
+export function labelAnchor(x, label, viewWidth, fontSize = DATE_FONT_SIZE) {
+  const half = estimateLabelWidth(label, fontSize) / 2
+  if (x - half < 0) return 'start'
+  if (x + half > viewWidth) return 'end'
+  return 'middle'
 }
 
 // The unit, stated once above the axis instead of repeated on every tick. Whatever the locale calls
