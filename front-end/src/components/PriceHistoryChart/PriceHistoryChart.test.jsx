@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import PriceHistoryChart from './PriceHistoryChart'
 import widths from './widths.fixture.json'
 import {
@@ -269,5 +270,67 @@ describe('PriceHistoryChart x-axis', () => {
         unmount()
       }
     }
+  })
+})
+
+// Characterization of the shell — header, range buttons, error and empty branches — written ahead
+// of the CSS retirement and green against the unconverted component. Queries are by role, name and
+// text. The one look at className is an invariant, not a token: "the selected button is styled
+// unlike the other five" is true of `.active` today and stays true of whatever utilities carry the
+// selected fill afterwards, so nothing here needs an edit when the stylesheet goes.
+describe('PriceHistoryChart shell', () => {
+  const RANGE_LABELS = ['1 Day', '5 Days', '1 Month', '6 Months', '1 Year', 'All']
+
+  it('renders the heading and all six range buttons', async () => {
+    await renderChart(series(12900000, 45000000))
+    expect(screen.getByRole('heading', { level: 3, name: 'Price History' })).toBeInTheDocument()
+    for (const label of RANGE_LABELS) {
+      expect(screen.getByRole('button', { name: label })).toBeInTheDocument()
+    }
+  })
+
+  it('styles exactly the selected range apart, and moves the mark on click', async () => {
+    await renderChart(series(12900000, 45000000))
+    expect(getPriceHistory).toHaveBeenLastCalledWith('p1', '1d')
+
+    // The button whose className no other range button shares. Exactly one must exist — zero
+    // would mean the selected range is not marked at all, two that the mark failed to move.
+    const marked = () => {
+      const classes = RANGE_LABELS.map((label) => screen.getByRole('button', { name: label }).className)
+      const unique = classes.filter((cls) => classes.indexOf(cls) === classes.lastIndexOf(cls))
+      expect(unique, 'exactly one range button styled apart from the rest').toHaveLength(1)
+      return RANGE_LABELS[classes.indexOf(unique[0])]
+    }
+    expect(marked()).toBe('1 Day')
+
+    await userEvent.click(screen.getByRole('button', { name: 'All' }))
+    await waitFor(() => expect(getPriceHistory).toHaveBeenLastCalledWith('p1', 'all'))
+    expect(marked()).toBe('All')
+    await screen.findByRole('img')
+  })
+
+  it('shows the fetch error with a Retry that refetches', async () => {
+    getPriceHistory.mockRejectedValueOnce(new Error('History fetch failed'))
+    getPriceHistory.mockResolvedValueOnce(series(12900000, 45000000))
+    render(<PriceHistoryChart productId="p1" currency="VND" />)
+
+    expect(await screen.findByText('History fetch failed')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    expect(await screen.findByRole('img')).toBeInTheDocument()
+    expect(screen.queryByText('History fetch failed')).toBeNull()
+  })
+
+  it('says so when there is no history', async () => {
+    getPriceHistory.mockResolvedValue([])
+    render(<PriceHistoryChart productId="p1" currency="VND" />)
+    expect(await screen.findByText('No price history available')).toBeInTheDocument()
+  })
+
+  it('holds a skeleton while the fetch is pending', () => {
+    getPriceHistory.mockReturnValue(new Promise(() => {}))
+    const { container } = render(<PriceHistoryChart productId="p1" currency="VND" />)
+    const skeleton = container.querySelector('.skeleton')
+    expect(skeleton).not.toBeNull()
+    expect(skeleton).toHaveAttribute('aria-hidden', 'true')
   })
 })
