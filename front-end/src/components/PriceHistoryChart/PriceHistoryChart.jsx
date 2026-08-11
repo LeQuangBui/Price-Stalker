@@ -231,7 +231,9 @@ export default function PriceHistoryChart({ productId, currency }) {
   return (
     <div className="rounded-[var(--radius-lg)] border border-line bg-paper p-5 shadow-[var(--shadow-sm)] md:p-8">
       <div className="mb-7 flex flex-col flex-wrap items-start gap-4 md:flex-row md:items-center md:justify-between">
-        <h3 className="m-0 text-2xl font-bold text-ink">Price History</h3>
+        {/* leading-[1.15] because text-2xl brings its own 2rem line-height — the retired rule
+            inherited the base heading 1.15, and without this the title grows 4.4px taller. */}
+        <h3 className="m-0 text-2xl font-bold leading-[1.15] text-ink">Price History</h3>
         <div className="flex w-full flex-wrap justify-between gap-2 rounded-[var(--radius-sm)] bg-ground p-1 md:w-auto md:justify-normal">
           {TIME_RANGES.map(range => (
             <button
