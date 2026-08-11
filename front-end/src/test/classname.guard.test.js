@@ -45,19 +45,7 @@ const BESPOKE = new Set([
   'page-error',
   'price-chart',
   'price-history-chart',
-  'product-search',
-  'product-search-row',
   'retry-btn',
-  'search-button',
-  'search-dropdown',
-  'search-dropdown-btn',
-  'search-dropdown-info',
-  'search-dropdown-item',
-  'search-dropdown-name',
-  'search-dropdown-price',
-  'search-input',
-  'search-select',
-  'search-status',
   'skeleton',
   'skip-link',
   'sr-only',
@@ -93,16 +81,18 @@ const BESPOKE = new Set([
 // despite the generic name, so its rule dies with it and it moves here in the same commit.
 // `AddToBookmark.css` spends seventeen more: the fifteen `add-to-bookmark*` / `bookmark-*` names
 // off the filename, plus `success` and `error` — see the next paragraph for why those two moved
-// when their siblings could not.
+// when their siblings could not. `ProductSearch.css` closes the slice with its twelve
+// `product-search*` / `search-*` names — and NOT `active`, per the same paragraph.
 //
-// `active` and `danger` are NOT here and must not be moved. Both are written by a retired file
-// AND by a surviving stylesheet with a surviving carrier (`PriceHistoryChart.css`,
-// `ConfirmDialog.css`), and test 2 below requires every name that is both defined in CSS and
-// written in JSX to be in BESPOKE. Moving either turns test 2 red, not test 1. `success` and
-// `error` sat in the same sentence until `AddToBookmark.css` retired: that file's
-// `.bookmark-dropdown-status.success` / `.error` compounds were their LAST declarations anywhere,
-// so both rules died with it and both names moved here in that commit, exactly per the rule test
-// 3 enforces.
+// `active` and `danger` are NOT here and must not be moved. Both are still defined by a surviving
+// stylesheet with a surviving carrier (`PriceHistoryChart.css`, `ConfirmDialog.css`): a name
+// leaves BESPOKE when its LAST rule dies, and theirs live on. `success` and `error` sat in the
+// same sentence until `AddToBookmark.css` retired — that file's `.bookmark-dropdown-status.success`
+// / `.error` compounds were their last declarations anywhere, so both rules died with it and both
+// names moved here in that commit, exactly per the rule test 3 enforces. `active` outlived
+// `ProductSearch.css` the other way: `.search-dropdown-item.active` died with that file (the JSX
+// stopped writing the token in the same commit), but `.time-range-selector button.active` still
+// stands.
 const RETIRED = new Set([
   'add-by-url',
   'add-by-url-btn',
@@ -189,7 +179,9 @@ const RETIRED = new Set([
   'product-preview-link',
   'product-preview-placeholder',
   'product-price',
+  'product-search',
   'product-search-panel',
+  'product-search-row',
   'profile-action-link',
   'profile-actions',
   'profile-item',
@@ -199,6 +191,16 @@ const RETIRED = new Set([
   'remove-product-btn',
   'save-btn',
   'save-error',
+  'search-button',
+  'search-dropdown',
+  'search-dropdown-btn',
+  'search-dropdown-info',
+  'search-dropdown-item',
+  'search-dropdown-name',
+  'search-dropdown-price',
+  'search-input',
+  'search-select',
+  'search-status',
   'secondary',
   'secondary-header-btn',
   'submit-btn',
@@ -247,9 +249,10 @@ function definedClasses() {
 }
 
 // className="a b", className={`a ${x}`}, className={'a'} and className={cx('a', …)}. Interpolated
-// fragments are not resolvable statically and are not meant to be — the two runtime-built names in
-// this tree (`search-dropdown-item${active…}`, `confirm-dialog-confirm${danger…}`) have their base
-// written literally, which is the part this guard needs.
+// fragments are not resolvable statically and are not meant to be — the one runtime-built name
+// left in this tree (`confirm-dialog-confirm${danger…}`) has its base written literally, which is
+// the part this guard needs. `search-dropdown-item${active…}` was the other until slice 2b-iv,
+// when the base became static utilities and the `active` half became an inline style.
 const AT_ATTRIBUTE = /className=(?:"([^"]*)"|\{`([^`]*)`\}|\{'([^']*)'\}|\{cx\(([\s\S]*?)\)\})/g
 
 // The other half, and none of the four arms above can see it. `className={PAGE}` is a bare

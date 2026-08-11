@@ -132,9 +132,9 @@ export default function AddByUrl({ onAdded }) {
           both wrap at 320 and 390 today — but only the basis lets the input then shrink under
           250px instead of setting the page's scroll width. Px deliberately, not rem: the basis
           exists to fit a VIEWPORT, and a rem basis grows with the reader while the viewport does
-          not (ProductSearch.css:32-39 records the same reasoning on the sibling row). Unlike that
-          sibling there is no column state here to undo the basis in — this row wraps at every
-          width, no media query.
+          not (ProductSearch.jsx's input carries the same reasoning on the sibling row, inherited
+          from the stylesheet both retirements spent). Unlike that sibling there is no column
+          state here to undo the basis in — this row wraps at every width, no media query.
 
           Focus: the ring is this input's only focus indicator — index.css's :focus-visible rule
           covers a / button / [role="button"], not inputs — so the retired :focus block becomes

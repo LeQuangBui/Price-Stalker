@@ -246,3 +246,96 @@ describe('ProductSearch combobox', () => {
     expect(onSearch).toHaveBeenCalledWith({ url: 'https://gearvn.com/products/mouse' })
   })
 })
+
+// Exact class tokens, same helper as ProductDetail.test.jsx — `toContain` on the raw string would
+// let `md:flex-row` satisfy a check for `flex-row`, which is the one confusion the inversion
+// assertions below exist to catch.
+const classesOf = (el) => el.className.split(/\s+/)
+
+describe('ProductSearch markup after the CSS retirement', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.clearAllMocks()
+  })
+
+  it('carries no class owned by the retired stylesheet', async () => {
+    getProducts.mockResolvedValue({ content: twoProducts })
+    const { container } = renderSearch({ onSelect: vi.fn(), showSearchButton: true })
+    await searchFor('machine')
+    // Walk an option active so the one runtime-built token gets its chance to reappear.
+    fireEvent.keyDown(input(), { key: 'ArrowDown' })
+
+    for (const cls of [
+      'product-search', 'product-search-row', 'search-select', 'search-input', 'search-button',
+      'search-dropdown', 'search-status', 'search-dropdown-item', 'search-dropdown-info',
+      'search-dropdown-name', 'search-dropdown-price', 'search-dropdown-btn', 'active',
+    ]) {
+      expect(container.querySelector(`.${cls}`), `${cls} should be gone`).toBeNull()
+    }
+  })
+
+  // The retired 768px media block, inverted mobile-first. Both states ride the SAME md:
+  // breakpoint, and the px basis is asserted onto the ROW variant only: flex-basis is the main
+  // axis, and a bare 250px basis in the default column state is a 250px HEIGHT — the quarter-of-a-
+  // phone-screen search box that shipped once.
+  it('inverts the media block mobile-first: column by default, row from md, basis on the row only', () => {
+    renderSearch({ showSearchButton: true })
+    const row = input().parentElement
+    for (const utility of ['flex', 'flex-col', 'md:flex-row']) {
+      expect(classesOf(row), `${utility} missing`).toContain(utility)
+    }
+    expect(classesOf(row), 'the default state is the column').not.toContain('flex-row')
+
+    const field = classesOf(input())
+    expect(field).toContain('md:flex-[1_1_250px]')
+    expect(field).toContain('min-w-0')
+    expect(field, 'a bare basis in the column state is a 250px HEIGHT').not.toContain('flex-[1_1_250px]')
+  })
+
+  // Home's three-way stacking contract (Header z-50, .search-layer z-40, TabBar z-40) exists to
+  // scope exactly this value; Home.jsx, Header.jsx and TabBar.jsx all cite it by number.
+  it('keeps the scoped stacking contract: relative root, z-[1000] dropdown', async () => {
+    getProducts.mockResolvedValue({ content: [product()] })
+    renderSearch()
+    await searchFor('espresso')
+
+    const root = input().parentElement.parentElement
+    expect(classesOf(root)).toContain('relative')
+    const dropdown = screen.getByRole('listbox')
+    expect(classesOf(dropdown)).toContain('absolute')
+    expect(classesOf(dropdown)).toContain('z-[1000]')
+    // 16px here is the cards' literal 16px, not a token: rounded-2xl (1rem) says it exactly, and
+    // no var(--radius…) form could.
+    expect(classesOf(dropdown)).toContain('rounded-2xl')
+  })
+
+  // One tint mechanism for both input modes: every pointer path funnels through setActiveIndex
+  // (onMouseEnter), so the inline token mix follows aria-activedescendant whether the keyboard or
+  // the mouse moved it — where the retired file drew the same tint twice, `:hover` in CSS and
+  // `.active` from state, and the two could light two rows at once. Inline rather than an
+  // arbitrary background utility because Tailwind ships a solid pre-@supports fallback under an
+  // arbitrary color-mix — solid --primary under this row's dark text — where the CSSOM just
+  // refuses the value; the pill on the product page pinned the same decision.
+  it('tints the active option from an inline token mix, keyboard and mouse through one state', async () => {
+    getProducts.mockResolvedValue({ content: twoProducts })
+    renderSearch()
+    await searchFor('machine')
+
+    const first = screen.getByRole('option', { name: /espresso machine/i })
+    const second = screen.getByRole('option', { name: /burr grinder/i })
+    expect(first.getAttribute('style') || '').not.toMatch(/color-mix/)
+
+    fireEvent.keyDown(input(), { key: 'ArrowDown' })
+    expect(first.getAttribute('style')).toMatch(/color-mix/)
+    expect(first.className, 'an arbitrary color-mix utility ships a solid-colour fallback under it')
+      .not.toMatch(/color-mix/)
+
+    fireEvent.mouseEnter(second)
+    expect(second.getAttribute('style')).toMatch(/color-mix/)
+    expect(first.getAttribute('style') || '').not.toMatch(/color-mix/)
+  })
+})

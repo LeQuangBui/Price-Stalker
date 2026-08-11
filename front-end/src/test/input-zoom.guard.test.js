@@ -10,9 +10,11 @@ const FLOOR = 16
 // Every plan since Phase 2a has carried this as a written constraint with nothing enforcing it.
 //
 // `stylesheet selector` -> the size it still declares. Shrink-only, like the collision guard: the
-// second test fails on any entry that no longer violates, so a fix must delete its entry.
+// second test fails on any entry that no longer violates, so a fix must delete its entry. EMPTY
+// since slice 2b-iv retired the last two offenders (ProductSearch.css's 15px .search-select,
+// AddToBookmark.css's 14px .bookmark-name-input — both read text-base now). The Map stays: it is
+// the mechanism, and the next sub-16px control belongs in it with a reason, not in a rewrite.
 const ALLOWED = new Map([
-  ['ProductSearch.css .search-select', 15],   // a <select>, same file — slice 2b-iv
 ])
 
 // Arbitrary px type in JSX, which the CSS scan above cannot see at all. The house convention is
