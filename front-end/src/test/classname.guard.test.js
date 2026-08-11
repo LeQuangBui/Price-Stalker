@@ -14,34 +14,21 @@ const SRC = join(dirname(fileURLToPath(import.meta.url)), '..')
 // The check is inverted on purpose. Allowlisting UTILITIES would mean maintaining a ~392-token
 // Tailwind list that grows on most commits. BESPOKE is the other side: the vocabulary this
 // project's own CSS owns. It only shrinks — every stylesheet retirement takes a slice of it — and
-// it reaches zero when the last one goes.
+// since the chart retirement closed the last component stylesheet, every name below is owned by
+// index.css: the button system, the shared state panels, and the a11y helpers.
 const BESPOKE = new Set([
-  'active',
   'btn',
   'btn-block',
   'btn-danger',
   'btn-lg',
   'btn-primary',
   'btn-secondary',
-  'chart-axis',
-  'chart-container',
-  'chart-empty',
-  'chart-error',
-  'chart-grid',
-  'chart-header',
-  'chart-label',
-  'chart-line',
-  'chart-point',
-  'chart-skeleton',
   'empty-state',
   'page-error',
-  'price-chart',
-  'price-history-chart',
   'retry-btn',
   'skeleton',
   'skip-link',
   'sr-only',
-  'time-range-selector',
 ])
 
 // The gap BESPOKE alone leaves open, and the reason this second set exists.
@@ -74,18 +61,23 @@ const BESPOKE = new Set([
 // `AddToBookmark.css` spends seventeen more: the fifteen `add-to-bookmark*` / `bookmark-*` names
 // off the filename, plus `success` and `error` — see the next paragraph for why those two moved
 // when their siblings could not. `ProductSearch.css` closes the slice with its twelve
-// `product-search*` / `search-*` names — and NOT `active`, per the same paragraph.
+// `product-search*` / `search-*` names — and NOT `active`, per the same paragraph. Slice 2b-v
+// spends eight retiring `ConfirmDialog.css`: the seven `confirm-dialog*` names and `danger`. The
+// chart retirement closes the whole ledger with `PriceHistoryChart.css`'s fourteen: the ten
+// `chart-*` rules, `price-chart`, `price-history-chart`, `time-range-selector` — and `active`,
+// the last name of the paragraph below.
 //
-// `active` and `danger` are NOT here and must not be moved. Both are still defined by a surviving
-// stylesheet with a surviving carrier (`PriceHistoryChart.css`, `ConfirmDialog.css`): a name
-// leaves BESPOKE when its LAST rule dies, and theirs live on. `success` and `error` sat in the
-// same sentence until `AddToBookmark.css` retired — that file's `.bookmark-dropdown-status.success`
-// / `.error` compounds were their last declarations anywhere, so both rules died with it and both
-// names moved here in that commit, exactly per the rule test 3 enforces. `active` outlived
-// `ProductSearch.css` the other way: `.search-dropdown-item.active` died with that file (the JSX
-// stopped writing the token in the same commit), but `.time-range-selector button.active` still
-// stands.
+// `active`, `danger`, `success` and `error` were state modifiers shared across files, and each
+// moved here only when its LAST rule died — never before, however many of its declarers retired
+// first. `success` and `error` went with `AddToBookmark.css`, whose
+// `.bookmark-dropdown-status.success` / `.error` compounds were their last declarations anywhere;
+// `danger` went with `ConfirmDialog.css` in 2b-v the same way. `active` outlived
+// `ProductSearch.css` (`.search-dropdown-item.active` died with that file, the JSX stopped
+// writing the token in the same commit) because `.time-range-selector button.active` still stood
+// — and it fell at last with `PriceHistoryChart.css`, when the range buttons' selected state
+// became a cx() branch between two utility fills. No shared modifier remains in BESPOKE.
 const RETIRED = new Set([
+  'active',
   'add-by-url',
   'add-by-url-btn',
   'add-by-url-error',
@@ -143,6 +135,16 @@ const RETIRED = new Set([
   'bookmarks-section',
   'bookmarks-subtitle',
   'btn-spinner',
+  'chart-axis',
+  'chart-container',
+  'chart-empty',
+  'chart-error',
+  'chart-grid',
+  'chart-header',
+  'chart-label',
+  'chart-line',
+  'chart-point',
+  'chart-skeleton',
   'checkbox-row',
   'compact',
   'confirm-dialog',
@@ -170,6 +172,8 @@ const RETIRED = new Set([
   'panel-message',
   'panel-text',
   'paused',
+  'price-chart',
+  'price-history-chart',
   'product-count',
   'product-name',
   'product-panel',
@@ -213,6 +217,7 @@ const RETIRED = new Set([
   'swiper-prev',
   'swiper-slide',
   'swiper-track',
+  'time-range-selector',
   'user-profile-container',
 ])
 
@@ -221,6 +226,11 @@ const RETIRED = new Set([
 // (z-40), and Home.test.jsx asserts it stays on the element. A name with no rule BY DESIGN is the
 // one thing this guard would otherwise get wrong, so it is recorded here instead of allowlisted
 // silently.
+//
+// `chart-tick`, `chart-unit` and `chart-date` (PriceHistoryChart.jsx) are the same kind of marker.
+// They never had a rule — the paint sat on `.chart-label`, retired with the stylesheet — but they
+// are the handles PriceHistoryChart.test.jsx selects each SVG text role by, the only way to ask
+// for "the ticks" rather than "the 12px texts" when two of the three roles share a font size.
 
 function walk(dir) {
   const out = []

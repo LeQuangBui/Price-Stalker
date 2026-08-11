@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react'
 import { getPriceHistory } from '../../api/products'
 import { formatPrice } from '../../utils/formatters'
+import { cx } from '../../lib/cx'
+import EmptyState from '../primitives/EmptyState'
+import ErrorState from '../primitives/ErrorState'
 import {
   axisGutter,
   axisTicks,
@@ -12,7 +15,6 @@ import {
   TICK_FONT_SIZE,
   TICK_GAP
 } from './axisScale'
-import './PriceHistoryChart.css'
 
 const TIME_RANGES = [
   { value: '1d', label: '1 Day' },
@@ -22,6 +24,15 @@ const TIME_RANGES = [
   { value: '1y', label: '1 Year' },
   { value: 'all', label: 'All' }
 ]
+
+// One geometry for all six range buttons. `min-h-11`: "1 Year" and "All" measured 126×35.19 under
+// the retired CSS — the other four cleared 44px only by wrapping to two lines. `text-xs` at every
+// width: the retired file wrote 13px, dropping to 12 under 768, and 13 has no rem step — the
+// compact-control precedent is 12 throughout. Bare `transition`, not `transition-colors`: the
+// active state carries a box-shadow and all three of background, color and shadow animate.
+// `cursor-pointer` because preflight sets no button cursor. `flex-1 md:flex-none` is the retired
+// 768px block inverted mobile-first — both states on the same `md:` swap, like `px-3 md:px-4`.
+const RANGE_BTN = 'min-h-11 flex-1 cursor-pointer rounded-[var(--radius-sm)] px-3 py-2 text-xs font-semibold transition duration-200 md:flex-none md:px-4'
 
 export default function PriceHistoryChart({ productId, currency }) {
   const [timeRange, setTimeRange] = useState('1d')
@@ -48,17 +59,12 @@ export default function PriceHistoryChart({ productId, currency }) {
   }, [productId, timeRange, reloadKey])
 
   const renderChart = () => {
-    if (loading) return <div className="skeleton chart-skeleton" aria-hidden="true" />
+    if (loading) return <div className="skeleton h-[300px] rounded-[var(--radius)]" aria-hidden="true" />
     if (error) {
-      return (
-        <div className="chart-error">
-          <span>{error}</span>
-          <button type="button" className="retry-btn" onClick={() => setReloadKey((value) => value + 1)}>Retry</button>
-        </div>
-      )
+      return <ErrorState message={error} onRetry={() => setReloadKey((value) => value + 1)} />
     }
     if (!priceHistory || priceHistory.length === 0) {
-      return <div className="chart-empty">No price history available</div>
+      return <EmptyState title="No price history available" />
     }
 
     const prices = priceHistory.map(h => h.price)
@@ -117,9 +123,12 @@ export default function PriceHistoryChart({ productId, currency }) {
       fontSize: DATE_FONT_SIZE
     })
 
+    // `chart-tick`, `chart-unit` and `chart-date` below are deliberate no-rule markers, recorded
+    // as such in classname.guard: the tests select each text role by the thing it means rather
+    // than by font size. The paint the retired classes carried rides each element as a utility.
     return (
       <svg
-        className="price-chart"
+        className="mx-auto block h-auto w-full max-w-full"
         viewBox={`0 0 ${chartWidth} ${chartHeight}`}
         role="img"
         aria-label={description}
@@ -129,7 +138,7 @@ export default function PriceHistoryChart({ productId, currency }) {
           y1={padding.top + innerHeight}
           x2={padding.left + innerWidth}
           y2={padding.top + innerHeight}
-          className="chart-axis"
+          className="stroke-line"
           strokeWidth="1"
         />
         <line
@@ -137,7 +146,7 @@ export default function PriceHistoryChart({ productId, currency }) {
           y1={padding.top}
           x2={padding.left}
           y2={padding.top + innerHeight}
-          className="chart-axis"
+          className="stroke-line"
           strokeWidth="1"
         />
 
@@ -147,7 +156,7 @@ export default function PriceHistoryChart({ productId, currency }) {
             y={padding.top - 13}
             textAnchor="end"
             fontSize={CAPTION_FONT_SIZE}
-            className="chart-label chart-unit"
+            className="chart-unit fill-ink-soft"
           >
             {unit}
           </text>
@@ -162,7 +171,7 @@ export default function PriceHistoryChart({ productId, currency }) {
                 x2={padding.left + innerWidth}
                 y1={y}
                 y2={y}
-                className="chart-grid"
+                className="stroke-line-soft"
                 strokeWidth="1"
               />
               <text
@@ -170,7 +179,7 @@ export default function PriceHistoryChart({ productId, currency }) {
                 y={y + 4}
                 textAnchor="end"
                 fontSize={TICK_FONT_SIZE}
-                className="chart-label chart-tick"
+                className="chart-tick fill-ink-soft"
               >
                 {label}
               </text>
@@ -181,17 +190,20 @@ export default function PriceHistoryChart({ productId, currency }) {
         <path
           d={pathData}
           fill="none"
-          className="chart-line"
+          className="stroke-oxblood"
           strokeWidth="2"
         />
 
+        {/* `r` is an SVG2 presentation property, so the grow-on-hover is CSS: Tailwind has no `r`
+            utility, hence both halves in arbitrary form — `[transition:r_.2s]` and `hover:[r:6]`,
+            the retired rule verbatim. */}
         {points.map((p, i) => (
           <circle
             key={i}
             cx={p.x}
             cy={p.y}
             r="4"
-            className="chart-point"
+            className="cursor-pointer fill-oxblood [transition:r_.2s] hover:[r:6]"
           >
             <title>{`${formatPrice(p.price, currency)} - ${new Date(p.recordedAt).toLocaleString()}`}</title>
           </circle>
@@ -207,7 +219,7 @@ export default function PriceHistoryChart({ productId, currency }) {
             y={padding.top + innerHeight + 20}
             textAnchor="middle"
             fontSize={DATE_FONT_SIZE}
-            className="chart-label chart-date"
+            className="chart-date fill-ink-soft"
           >
             {dates[i]}
           </text>
@@ -217,25 +229,29 @@ export default function PriceHistoryChart({ productId, currency }) {
   }
 
   return (
-    <div className="price-history-chart">
-      <div className="chart-header">
-        <h3>Price History</h3>
-        <div className="time-range-selector">
+    <div className="rounded-[var(--radius-lg)] border border-line bg-paper p-5 shadow-[var(--shadow-sm)] md:p-8">
+      <div className="mb-7 flex flex-col flex-wrap items-start gap-4 md:flex-row md:items-center md:justify-between">
+        <h3 className="m-0 text-2xl font-bold text-ink">Price History</h3>
+        <div className="flex w-full flex-wrap justify-between gap-2 rounded-[var(--radius-sm)] bg-ground p-1 md:w-auto md:justify-normal">
           {TIME_RANGES.map(range => (
             <button
               key={range.value}
               onClick={() => setTimeRange(range.value)}
-              className={timeRange === range.value ? 'active' : ''}
+              className={cx(
+                RANGE_BTN,
+                timeRange === range.value
+                  ? 'bg-oxblood text-white shadow-[var(--shadow-sm)]'
+                  : 'bg-transparent text-ink-soft hover:bg-tertiary hover:text-ink'
+              )}
             >
               {range.label}
             </button>
           ))}
         </div>
       </div>
-      <div className="chart-container">
+      <div className="w-full overflow-x-auto py-4">
         {renderChart()}
       </div>
     </div>
   )
 }
-

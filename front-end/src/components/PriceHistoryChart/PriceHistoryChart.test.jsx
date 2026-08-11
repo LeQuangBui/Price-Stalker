@@ -63,14 +63,14 @@ async function renderChart(history, currency = 'VND') {
   getPriceHistory.mockResolvedValue(history)
   const props = currency === NO_CURRENCY ? {} : { currency }
   const view = render(<PriceHistoryChart productId="p1" {...props} />)
-  await waitFor(() => expect(view.container.querySelector('svg.price-chart')).not.toBeNull())
+  await waitFor(() => expect(view.container.querySelector('svg[role="img"]')).not.toBeNull())
   return view
 }
 
-// The three text roles carry their own class, so a test asks for the thing it means rather than
-// for a font size — the ticks, the unit caption and the dates share `.chart-label` and two of the
-// three share a size.
-const nodes = (container, role) => [...container.querySelectorAll(`text.chart-label.${role}`)]
+// The three text roles carry their own marker class — no-rule handles, recorded as such in
+// classname.guard — so a test asks for the thing it means rather than for a font size: the ticks,
+// the unit caption and the dates are all `text`, and two of the three share a size.
+const nodes = (container, role) => [...container.querySelectorAll(`text.${role}`)]
 const textsOf = (list) => list.map((node) => node.textContent)
 const attr = (node, name) => Number(node.getAttribute(name))
 
@@ -190,10 +190,17 @@ describe('PriceHistoryChart y-axis', () => {
 })
 
 describe('PriceHistoryChart plot', () => {
+  // Structural selectors, not class handles: every horizontal `line` is a gridline plus the
+  // x-axis, and the axis shares the lowest gridline's y (the ratio-0 tick), so the sorted ends —
+  // the only entries these tests read — are unchanged by including it. Every `circle` is a data
+  // point.
   const gridlines = (container) =>
-    [...container.querySelectorAll('line.chart-grid')].map((node) => attr(node, 'y1')).sort((a, b) => a - b)
+    [...container.querySelectorAll('line')]
+      .filter((node) => attr(node, 'y1') === attr(node, 'y2'))
+      .map((node) => attr(node, 'y1'))
+      .sort((a, b) => a - b)
   const pointYs = (container) =>
-    [...container.querySelectorAll('circle.chart-point')].map((node) => attr(node, 'cy')).sort((a, b) => a - b)
+    [...container.querySelectorAll('circle')].map((node) => attr(node, 'cy')).sort((a, b) => a - b)
 
   it('draws a reading that lands on a gridline value on that gridline', async () => {
     // 10M to 50M snaps to itself, so the lowest and highest readings sit exactly on the outer
