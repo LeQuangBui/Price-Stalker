@@ -17,13 +17,6 @@ const SRC = join(dirname(fileURLToPath(import.meta.url)), '..')
 // it reaches zero when the last one goes.
 const BESPOKE = new Set([
   'active',
-  'add-by-url',
-  'add-by-url-btn',
-  'add-by-url-error',
-  'add-by-url-input',
-  'add-by-url-status',
-  'add-by-url-status-pill',
-  'add-by-url-status-url',
   'add-to-bookmark',
   'add-to-bookmark-btn',
   'bookmark-create-btn',
@@ -45,7 +38,6 @@ const BESPOKE = new Set([
   'btn-lg',
   'btn-primary',
   'btn-secondary',
-  'btn-spinner',
   'chart-axis',
   'chart-container',
   'chart-empty',
@@ -108,12 +100,14 @@ const BESPOKE = new Set([
 //
 // Names below are the 46 that 2b-ii spent retiring `Bookmarks.css` and `UserProfile.css`, plus
 // `empty-state-cta` — an `index.css` rule rather than a stylesheet retirement, moved here when its
-// last consumer went to `btn btn-primary`. RETIRED is not only for whole-file conversions. The
-// remaining 36 are slice 2b-iii's: twelve `alert-card*` / `alert-checkbox` / `alert-field` /
+// last consumer went to `btn btn-primary`. RETIRED is not only for whole-file conversions.
+// Slice 2b-iii's 36: twelve `alert-card*` / `alert-checkbox` / `alert-field` /
 // `alert-product-*` / `alerts-*` names spent retiring `Alerts.css`, and 24 more — the `swiper*`
 // family, the `panel-*` family, `product-panel*`, `alert-actions`, `alert-form`, `alert-status`,
 // `checkbox-row`, `compact`, `secondary`, `paused` and `error-message` — spent retiring
-// `ProductDetail.css`.
+// `ProductDetail.css`. Slice 2b-iv opens with the eight `AddByUrl.css` names: the seven
+// `add-by-url*`, easy to count off the filename, and `btn-spinner` — coined by the same file
+// despite the generic name, so its rule dies with it and it moves here in the same commit.
 //
 // `active`, `danger`, `success` and `error` are NOT here and must not be moved. All four are
 // written by these two retired files AND by a surviving stylesheet with a surviving carrier
@@ -121,6 +115,13 @@ const BESPOKE = new Set([
 // test 2 below requires every name that is both defined in CSS and written in JSX to be in
 // BESPOKE. Moving any of them turns test 2 red, not test 1.
 const RETIRED = new Set([
+  'add-by-url',
+  'add-by-url-btn',
+  'add-by-url-error',
+  'add-by-url-input',
+  'add-by-url-status',
+  'add-by-url-status-pill',
+  'add-by-url-status-url',
   'alert-action-button',
   'alert-actions',
   'alert-card',
@@ -155,6 +156,7 @@ const RETIRED = new Set([
   'bookmarks-list',
   'bookmarks-section',
   'bookmarks-subtitle',
+  'btn-spinner',
   'checkbox-row',
   'compact',
   'create-bookmark-btn',
