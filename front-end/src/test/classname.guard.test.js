@@ -33,14 +33,6 @@ const BESPOKE = new Set([
   'chart-line',
   'chart-point',
   'chart-skeleton',
-  'confirm-dialog',
-  'confirm-dialog-actions',
-  'confirm-dialog-body',
-  'confirm-dialog-cancel',
-  'confirm-dialog-confirm',
-  'confirm-dialog-message',
-  'confirm-dialog-title',
-  'danger',
   'empty-state',
   'page-error',
   'price-chart',
@@ -153,8 +145,16 @@ const RETIRED = new Set([
   'btn-spinner',
   'checkbox-row',
   'compact',
+  'confirm-dialog',
+  'confirm-dialog-actions',
+  'confirm-dialog-body',
+  'confirm-dialog-cancel',
+  'confirm-dialog-confirm',
+  'confirm-dialog-message',
+  'confirm-dialog-title',
   'create-bookmark-btn',
   'create-bookmark-form',
+  'danger',
   'delete-btn',
   'editor-actions',
   'empty-state-cta',
@@ -249,10 +249,10 @@ function definedClasses() {
 }
 
 // className="a b", className={`a ${x}`}, className={'a'} and className={cx('a', …)}. Interpolated
-// fragments are not resolvable statically and are not meant to be — the one runtime-built name
-// left in this tree (`confirm-dialog-confirm${danger…}`) has its base written literally, which is
-// the part this guard needs. `search-dropdown-item${active…}` was the other until slice 2b-iv,
-// when the base became static utilities and the `active` half became an inline style.
+// fragments are not resolvable statically and are not meant to be. No runtime-built bespoke name
+// remains in this tree: `search-dropdown-item${active…}` went static in slice 2b-iv, and
+// `confirm-dialog-confirm${danger…}` in 2b-v, when the confirm dialog's variant became a cx()
+// branch between two utility fills.
 const AT_ATTRIBUTE = /className=(?:"([^"]*)"|\{`([^`]*)`\}|\{'([^']*)'\}|\{cx\(([\s\S]*?)\)\})/g
 
 // The other half, and none of the four arms above can see it. `className={PAGE}` is a bare
