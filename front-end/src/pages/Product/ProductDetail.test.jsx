@@ -289,3 +289,207 @@ describe('ProductDetail page', () => {
     expect(screen.getByRole('checkbox')).toBeChecked()
   })
 })
+
+// Exact class tokens — `toContain` on the raw string would let `min-w-full` satisfy a check for
+// `w-full`, and `rounded-2xl` a check for `rounded-xl`.
+const classesOf = (el) => el.className.split(/\s+/)
+
+describe('ProductDetail markup after the CSS retirement', () => {
+  beforeEach(() => {
+    getProduct.mockResolvedValue(product({ images: threeImages }))
+    findAlertForProduct.mockResolvedValue({ id: 'al1', thresholdPrice: 990000, active: true })
+  })
+
+  it('carries no class owned by the retired stylesheet', async () => {
+    const { container } = renderPage({ isSignedIn: true })
+    await screen.findByRole('heading', { name: /espresso machine/i })
+
+    for (const cls of [
+      // the twenty-four live names this commit spends
+      'swiper', 'swiper-track', 'swiper-slide', 'swiper-btn', 'swiper-prev', 'swiper-next',
+      'swiper-dots', 'swiper-dot', 'product-panel', 'product-panel-header', 'compact',
+      'alert-status', 'paused', 'alert-form', 'panel-label', 'panel-hint', 'panel-input',
+      'checkbox-row', 'alert-actions', 'panel-button', 'secondary', 'panel-message',
+      'error-message', 'panel-text',
+      // the thirteen that were already dead in the CSS and never had a carrier
+      'product-detail-container', 'back-link', 'product-detail', 'product-images', 'product-sku',
+      'price-flash', 'price-amount', 'price-struck', 'price-original', 'product-meta', 'meta-item',
+      'meta-label', 'view-product-btn',
+    ]) {
+      expect(container.querySelector(`.${cls}`), `${cls} should be gone`).toBeNull()
+    }
+  })
+
+  // Q1. The frame's four utilities were all written by the author and all four were losing to an
+  // unlayered rule: `rounded-2xl` computed to 8px and `bg-paper` to var(--bg-tertiary). The
+  // decision was to keep the pixels, so the utilities change to say what the page has always
+  // drawn. This is the one assertion in the file that pins an appearance rather than a behaviour.
+  //
+  // The radius is asserted as the TOKEN, and `rounded-lg` is asserted absent, because `rounded-lg`
+  // is the plausible-looking wrong answer: index.css's unlayered :root sets `--radius-lg: 12px`,
+  // shadowing Tailwind's own `.5rem`, so `rounded-lg` is 12px at every root and there is no named
+  // step that means 8px.
+  it('keeps the gallery frame at 8px on the tertiary backdrop', async () => {
+    const { container } = renderPage()
+    await screen.findByRole('button', { name: /next image/i })
+    const frame = track(container).parentElement
+    const classes = classesOf(frame)
+    for (const utility of [
+      'relative', 'aspect-square', 'overflow-hidden', 'rounded-[var(--radius)]', 'bg-tertiary',
+    ]) {
+      expect(classes, `${utility} missing`).toContain(utility)
+    }
+    expect(classes, 'rounded-lg is 12px, not 8px').not.toContain('rounded-lg')
+    expect(classes).not.toContain('rounded-2xl')
+    expect(classes).not.toContain('bg-paper')
+  })
+
+  // The paging is an inline transform and this declaration is the only thing that animates it.
+  // `transition-colors` would leave the gallery jumping between slides with nothing to say so.
+  it('keeps the transform transition that is the gallery\'s only animation', async () => {
+    const { container } = renderPage()
+    await screen.findByRole('button', { name: /next image/i })
+    const classes = classesOf(track(container))
+    expect(classes).toContain('transition-transform')
+    expect(classes).toContain('duration-[400ms]')
+    // The easing is not optional and nothing else would catch its absence. `.transition-transform`
+    // sets `transition-timing-function: var(--tw-ease, var(--default-transition-timing-function))`
+    // and the default is cubic-bezier(.4,0,.2,1) — verified in a compile this session — so dropping
+    // `ease-[ease]` silently swaps the curve the gallery has always used for a different one, with
+    // the same duration and the same property. Nothing on screen says so.
+    // Asserted as "the only easing token is this one" rather than by naming the wrong curve.
+    // Naming one would be weaker — it catches a single substitution out of the dozen easings
+    // Tailwind ships — and it would also emit that easing as a live rule into the bundle for
+    // nothing, because Tailwind scans this file as plain text and does not care that the token
+    // sits inside an assertion that it is absent. Checked in a build: it did exactly that.
+    expect(classes.filter((c) => c.startsWith('ease-')), 'exactly one easing, the `ease` keyword')
+      .toEqual(['ease-[ease]'])
+    expect(classes, 'ease-[ease] missing — the curve silently becomes cubic-bezier(.4,0,.2,1)')
+      .toContain('ease-[ease]')
+    expect(classes).not.toContain('transition-colors')
+    // The track is taken out of flow so its height never has to resolve against the frame's
+    // aspect-ratio. Drop `inset-0` and `h-full` resolves against auto and the frame collapses.
+    expect(classes).toContain('absolute')
+    expect(classes).toContain('inset-0')
+  })
+
+  it('keeps each slide a full frame wide and each image covering it', async () => {
+    const { container } = renderPage()
+    const img = await screen.findByRole('img', { name: /espresso machine 1/i })
+    expect(classesOf(img.parentElement)).toContain('min-w-full')
+    for (const utility of ['h-full', 'w-full', 'object-cover']) {
+      expect(classesOf(img), `${utility} missing`).toContain(utility)
+    }
+    expect(container).toBeTruthy()
+  })
+
+  // Tailwind v4's preflight sets no button cursor — verified in the built bundle, which contains
+  // no framework-level cursor rule at all — and neither of these adopts `.btn`. This project has
+  // already lost `cursor: pointer` in a conversion.
+  it('gives the gallery controls the 44px floor, the scrim and an explicit pointer', async () => {
+    renderPage()
+    const arrow = await screen.findByRole('button', { name: /next image/i })
+    for (const utility of ['size-11', 'cursor-pointer', 'bg-scrim']) {
+      expect(classesOf(arrow), `${utility} missing`).toContain(utility)
+    }
+
+    const dot = screen.getByRole('button', { name: 'Go to image 2' })
+    expect(classesOf(dot)).toContain('size-11')
+    expect(classesOf(dot)).toContain('cursor-pointer')
+    // The painted core is a real child element rather than a pseudo-element, so the 44px hit box
+    // and the 10px circle are independent and adjacent boxes no longer overlap.
+    expect(classesOf(dot.firstChild)).toContain('size-2.5')
+  })
+
+  // C14, and it is the one thing in this file that jsdom can check about a defect that only exists
+  // in a laid-out browser. `inset-x-0 bottom-0` makes the rail a full-bleed transparent band at
+  // least 44px deep, later in DOM order than both arrows and at the same z-index: auto, so at a
+  // raised root with a wrapped rail it takes every tap meant for an arrow. The rail has no handler
+  // of its own — every onClick is on a dot — so these two utilities cost nothing.
+  //
+  // Task 9's elementFromPoint sweep is what actually proves it. This pins the mechanism so a later
+  // edit cannot quietly remove it and still pass the suite.
+  it('lets taps through the dot rail to the arrows underneath', async () => {
+    renderPage()
+    const dot = await screen.findByRole('button', { name: 'Go to image 2' })
+    const rail = dot.parentElement
+    expect(classesOf(rail), 'the rail is a full-bleed band over both arrows without this')
+      .toContain('pointer-events-none')
+    expect(classesOf(dot), 'a rail with pointer-events-none makes its own dots untappable too')
+      .toContain('pointer-events-auto')
+  })
+
+  it('marks the current dot on the core, not the hit box', async () => {
+    renderPage()
+    await screen.findByRole('button', { name: 'Go to image 1' })
+    expect(classesOf(screen.getByRole('button', { name: 'Go to image 1' }).firstChild))
+      .toContain('bg-oxblood')
+    expect(classesOf(screen.getByRole('button', { name: 'Go to image 2' }).firstChild))
+      .not.toContain('bg-oxblood')
+  })
+
+  // The input declared 15px and the guard's allowlist entry for it leaves in this commit. Field's
+  // input is where the replacement size lives, and its focus: variants are the only focus state
+  // this control has — index.css:252-257 covers a, button and [role="button"], not input.
+  it('keeps the threshold input over the iOS floor and gives it a focus ring', async () => {
+    renderPage({ isSignedIn: true })
+    const input = await screen.findByLabelText(/threshold price/i)
+    expect(classesOf(input)).toContain('text-base')
+    for (const utility of ['focus:border-oxblood', 'focus:ring-2', 'focus:ring-oxblood/20']) {
+      expect(classesOf(input), `${utility} missing — the focus ring left with the class`).toContain(utility)
+    }
+    expect(input.id).toBe('threshold-price')
+  })
+
+  // Q3. Field renders its hint AFTER the input; "Current price" is the context a reader needs in
+  // order to choose a threshold, so it stays before the control as its own element rather than
+  // moving into the hint slot.
+  it('keeps the current price before the control a reader is about to fill in', async () => {
+    renderPage({ isSignedIn: true })
+    const input = await screen.findByLabelText(/threshold price/i)
+    const hint = screen.getByText(/current price:/i)
+    expect(hint.compareDocumentPosition(input) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(classesOf(hint)).toContain('text-sm')
+  })
+
+  it('puts the pause toggle on the shared checkbox primitive', async () => {
+    renderPage({ isSignedIn: true })
+    const box = await screen.findByRole('checkbox')
+    expect(classesOf(box.closest('label'))).toContain('min-h-11')
+  })
+
+  it('puts both alert controls on the button primitive', async () => {
+    renderPage({ isSignedIn: true })
+    const submit = await screen.findByRole('button', { name: /update alert/i })
+    expect(classesOf(submit)).toContain('btn')
+    const remove = screen.getByRole('button', { name: /delete alert/i })
+    expect(classesOf(remove)).toContain('btn')
+    expect(classesOf(remove)).toContain('btn-danger')
+  })
+
+  // A bare <h2> is 16px — preflight sets heading font-size to inherit — so the size is mandatory.
+  // The margin is not: the alert panel's heading is a flex item beside the status pill, and a
+  // bottom margin there both mis-centres it (flex centres the margin box) and stacks with the
+  // header's own, giving 32px of gap where the other two panels have 16.
+  it('sizes every panel heading and only gives a margin to the standalone ones', async () => {
+    renderPage({ isSignedIn: true })
+    const alertTitle = await screen.findByRole('heading', { name: /price alert/i })
+    expect(classesOf(alertTitle)).toContain('text-xl')
+    expect(classesOf(alertTitle)).not.toContain('mb-4')
+
+    const notes = screen.getByRole('heading', { name: /tracking notes/i })
+    expect(classesOf(notes)).toContain('text-xl')
+    expect(classesOf(notes)).toContain('mb-4')
+  })
+
+  // Adopting Field changes the control's box as well as its type, and both changes are intended.
+  // Pinned so a reviewer reading the screenshots has something to check them against rather than
+  // reporting them as conversion errors: 6px corners become 12px, and 12/14 padding becomes 12/16.
+  it('accepts Field\'s own box on the threshold control', async () => {
+    renderPage({ isSignedIn: true })
+    const input = await screen.findByLabelText(/threshold price/i)
+    for (const utility of ['rounded-xl', 'px-4', 'py-3']) {
+      expect(classesOf(input), `${utility} — Field's own box`).toContain(utility)
+    }
+  })
+})

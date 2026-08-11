@@ -26,9 +26,6 @@ const BESPOKE = new Set([
   'add-by-url-status-url',
   'add-to-bookmark',
   'add-to-bookmark-btn',
-  'alert-actions',
-  'alert-form',
-  'alert-status',
   'bookmark-create-btn',
   'bookmark-create-form',
   'bookmark-dropdown',
@@ -59,8 +56,6 @@ const BESPOKE = new Set([
   'chart-line',
   'chart-point',
   'chart-skeleton',
-  'checkbox-row',
-  'compact',
   'confirm-dialog',
   'confirm-dialog-actions',
   'confirm-dialog-body',
@@ -71,19 +66,9 @@ const BESPOKE = new Set([
   'danger',
   'empty-state',
   'error',
-  'error-message',
   'page-error',
-  'panel-button',
-  'panel-hint',
-  'panel-input',
-  'panel-label',
-  'panel-message',
-  'panel-text',
-  'paused',
   'price-chart',
   'price-history-chart',
-  'product-panel',
-  'product-panel-header',
   'product-search',
   'product-search-row',
   'retry-btn',
@@ -97,19 +82,10 @@ const BESPOKE = new Set([
   'search-input',
   'search-select',
   'search-status',
-  'secondary',
   'skeleton',
   'skip-link',
   'sr-only',
   'success',
-  'swiper',
-  'swiper-btn',
-  'swiper-dot',
-  'swiper-dots',
-  'swiper-next',
-  'swiper-prev',
-  'swiper-slide',
-  'swiper-track',
   'time-range-selector',
 ])
 
@@ -133,11 +109,20 @@ const BESPOKE = new Set([
 // Names below are the 46 that 2b-ii spent retiring `Bookmarks.css` and `UserProfile.css`, plus
 // `empty-state-cta` — an `index.css` rule rather than a stylesheet retirement, moved here when its
 // last consumer went to `btn btn-primary`. RETIRED is not only for whole-file conversions. The
-// twelve `alert-*` / `alerts-*` names at the head of the list are slice 2b-iii's, spent retiring
-// `Alerts.css`; `alert-actions`, `alert-form` and `alert-status` are NOT among them — those three
-// are `ProductDetail.css`'s and stay in BESPOKE until that file goes.
+// remaining 36 are slice 2b-iii's: twelve `alert-card*` / `alert-checkbox` / `alert-field` /
+// `alert-product-*` / `alerts-*` names spent retiring `Alerts.css`, and 24 more — the `swiper*`
+// family, the `panel-*` family, `product-panel*`, `alert-actions`, `alert-form`, `alert-status`,
+// `checkbox-row`, `compact`, `secondary`, `paused` and `error-message` — spent retiring
+// `ProductDetail.css`.
+//
+// `active`, `danger`, `success` and `error` are NOT here and must not be moved. All four are
+// written by these two retired files AND by a surviving stylesheet with a surviving carrier
+// (`PriceHistoryChart.css` / `ProductSearch.css`, `ConfirmDialog.css`, `AddToBookmark.css`), and
+// test 2 below requires every name that is both defined in CSS and written in JSX to be in
+// BESPOKE. Moving any of them turns test 2 red, not test 1.
 const RETIRED = new Set([
   'alert-action-button',
+  'alert-actions',
   'alert-card',
   'alert-card-actions',
   'alert-card-controls',
@@ -145,8 +130,10 @@ const RETIRED = new Set([
   'alert-card-skeleton',
   'alert-checkbox',
   'alert-field',
+  'alert-form',
   'alert-product-link',
   'alert-product-meta',
+  'alert-status',
   'alerts-list',
   'alerts-state',
   'bookmark-actions',
@@ -168,16 +155,28 @@ const RETIRED = new Set([
   'bookmarks-list',
   'bookmarks-section',
   'bookmarks-subtitle',
+  'checkbox-row',
+  'compact',
   'create-bookmark-btn',
   'create-bookmark-form',
   'delete-btn',
   'editor-actions',
   'empty-state-cta',
+  'error-message',
   'expand-btn',
   'no-bookmarks',
   'or-divider',
+  'panel-button',
+  'panel-hint',
+  'panel-input',
+  'panel-label',
+  'panel-message',
+  'panel-text',
+  'paused',
   'product-count',
   'product-name',
+  'product-panel',
+  'product-panel-header',
   'product-preview',
   'product-preview-info',
   'product-preview-link',
@@ -193,8 +192,17 @@ const RETIRED = new Set([
   'remove-product-btn',
   'save-btn',
   'save-error',
+  'secondary',
   'secondary-header-btn',
   'submit-btn',
+  'swiper',
+  'swiper-btn',
+  'swiper-dot',
+  'swiper-dots',
+  'swiper-next',
+  'swiper-prev',
+  'swiper-slide',
+  'swiper-track',
   'user-profile-container',
 ])
 
@@ -319,7 +327,7 @@ describe('bespoke className guard', () => {
   // and never needs raising to stay green — raise it only to tighten, after a legitimate addition
   // that test 2 has already forced you to justify.
   it('a retired name moves to RETIRED — deleting it outright shrinks the vocabulary', () => {
-    const VOCABULARY = 154 // BESPOKE 95 + RETIRED 59, recorded 2026-08-11 mid-slice 2b-iii
+    const VOCABULARY = 154 // BESPOKE 71 + RETIRED 83, recorded 2026-08-11 at the end of slice 2b-iii
     expect(
       BESPOKE.size + RETIRED.size,
       `BESPOKE + RETIRED is smaller than the vocabulary this project has coined. A name was\n` +

@@ -14,7 +14,6 @@ const FLOOR = 16
 const ALLOWED = new Map([
   ['ProductSearch.css .search-select', 15],   // a <select>, same file — slice 2b-iv
   ['AddToBookmark.css .bookmark-name-input', 14],
-  ['ProductDetail.css .panel-input', 15],
 ])
 
 // Arbitrary px type in JSX, which the CSS scan above cannot see at all. The house convention is
@@ -51,8 +50,8 @@ const JSX_PX_TYPE = /\btext-\[(\d+)px\]/g
 //    wrapper given `text-sm` instead would have stayed invisible to test 3 as well, since 0.875rem
 //    is not `text-[Npx]`. Same trap Field.jsx had in 2b-i. Not solvable one rule at a time.
 // 2. CONTROL matches on the NAME. It does catch a bare element selector (`input`, `.alert-field
-//    input`, `input[type="text"]`) and a control-shaped class (`.search-input`, `.panel-input`,
-//    `.search-select`) — checked against all three forms. What it cannot catch is a form control
+//    input`, `input[type="text"]`) and a control-shaped class (`.search-input`, `.search-select`,
+//    `.bookmark-name-input`) — checked against all three forms. What it cannot catch is a form control
 //    behind a class whose name says nothing: `<input class="query-box">` at 13px is invisible,
 //    because the selector `.query-box` contains no `input` substring for the regex to find. The
 //    third test below is the counterweight — it closes the JSX side by token, not by name, and its
