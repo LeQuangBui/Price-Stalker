@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { render } from '@testing-library/react'
-import PriceDisplay, { CARD_PRICE_SIZE } from './PriceDisplay'
+import PriceDisplay, { CARD_PRICE_SIZE, HERO_PRICE_SIZE } from './PriceDisplay'
 
 // The wrapper's first child is always the tracked value; the struck `was` price, when present,
 // is the second.
@@ -15,15 +15,19 @@ const NBSP = '\u00a0'
 // `text-2xl`, which would hide a missing base step.
 const classesOf = (el) => el.className.split(/\s+/)
 
-// Resolve the size ladder the way the cascade does — every step is a min-width query, they are
+// Tailwind's own breakpoints, in rem. `@theme inline` overrides none of them, checked against
+// index.css:83-121, so these are the framework values and not a local convention.
+const NAMED = { sm: 40, md: 48, lg: 64, xl: 80 }
+
+// Resolve a size ladder the way the cascade does — every step is a min-width query, they are
 // emitted in ascending order, so the last one that matches wins. Testing the ladder's meaning at
 // a width beats testing its spelling: the widths are the decision, the class names are notation.
-function sizeAtRem(rem) {
+function sizeAtRem(rem, ladder = CARD_PRICE_SIZE) {
   let winner = null
-  for (const step of CARD_PRICE_SIZE.split(' ')) {
+  for (const step of ladder.split(' ')) {
     const [prefix, cls] = step.includes(':') ? step.split(':') : [null, step]
     const from = prefix === null ? 0
-      : prefix === 'sm' ? 40
+      : prefix in NAMED ? NAMED[prefix]
       : Number(/^min-\[([\d.]+)rem\]$/.exec(prefix)?.[1])
     if (!Number.isFinite(from)) throw new Error(`unreadable step "${step}" — rem breakpoints only`)
     if (rem >= from) winner = cls
@@ -129,7 +133,7 @@ describe('PriceDisplay', () => {
   })
 
   it('leaves the other sizes on a single step', () => {
-    for (const [size, expected] of [['md', 'text-4xl'], ['lg', 'text-display-sm'], ['xl', 'text-display']]) {
+    for (const [size, expected] of [['md', 'text-4xl'], ['lg', 'text-display-sm']]) {
       const { container, unmount } = render(<PriceDisplay value={12900000} size={size} />)
       expect(classesOf(parts(container).value), `size="${size}"`).toContain(expected)
       unmount()
@@ -207,5 +211,51 @@ describe('PriceDisplay', () => {
   it('keeps a caller className', () => {
     const { container } = render(<PriceDisplay value={12900000} className="mt-2" />)
     expect(classesOf(parts(container).wrapper)).toContain('mt-2')
+  })
+})
+
+// The detail page's hero price. `text-display` alone is clamp(2.25rem, 6vw, 4.5rem), which is a
+// viewport-driven size in a column that stops tracking the viewport at `lg:` — so it wrapped at
+// BOTH ends: two lines of 36px in a 240px column at 320px, and the ₫ alone on line two from about
+// 1180px up, where the column has frozen at 468px and 6vw has not.
+describe('PriceDisplay hero ladder', () => {
+  it('applies the ladder to the hero price', () => {
+    const { container } = render(<PriceDisplay value={12900000} size="xl" />)
+    const classes = classesOf(parts(container).value)
+    for (const step of HERO_PRICE_SIZE.split(' ')) expect(classes).toContain(step)
+  })
+
+  // 246.03px of 9-digit price in a 240px column, measured at recon. The clamp cannot go below
+  // 2.25rem, so the only way down is a step.
+  it('steps below the clamp floor on the narrowest phones', () => {
+    expect(sizeAtRem(320 / 16, HERO_PRICE_SIZE)).toBe('text-3xl')
+  })
+
+  it('is back on the clamp across the whole middle of the range', () => {
+    for (const rem of [21.5, 24, 30, 40, 63.9]) {
+      expect(sizeAtRem(rem, HERO_PRICE_SIZE), `${rem}rem`).toBe('text-display')
+    }
+  })
+
+  // The column freezes in rem at `lg:`, where the page goes two-column, so the type has to stop
+  // reading the viewport at the same width. 3.75rem of 9-digit price is ~410px in a 468px column.
+  it('freezes at the breakpoint where the column does', () => {
+    expect(sizeAtRem(64, HERO_PRICE_SIZE)).toBe('text-6xl')
+    expect(sizeAtRem(80, HERO_PRICE_SIZE)).toBe('text-6xl')
+    expect(sizeAtRem(120, HERO_PRICE_SIZE)).toBe('text-6xl')
+  })
+
+  // Monotonic: a wider viewport never gets a size that needs more room than it has gained. The
+  // three steps are 1.875 / 2.25-to-4.5 / 3.75 rem, so the only place this could break is the
+  // clamp's own ceiling, which is why the top step is flat and below it.
+  it('never grows faster than the column it sits in', () => {
+    const need = { 'text-3xl': 12.81, 'text-6xl': 25.63 } // 6.834 x the rem size
+    expect(need['text-3xl']).toBeLessThan(21.5 - 5)
+    expect(need['text-6xl']).toBeLessThan(29.25) // the 468px column, in rem
+  })
+
+  it('breaks on rem, so every step tracks the reader\'s own font size', () => {
+    expect(() => sizeAtRem(20, HERO_PRICE_SIZE)).not.toThrow()
+    expect(HERO_PRICE_SIZE).not.toMatch(/min-\[\d+px\]/)
   })
 })
