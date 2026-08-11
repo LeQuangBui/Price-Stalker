@@ -315,10 +315,12 @@ export default function Bookmarks() {
           onSubmit={handleCreateBookmark}
           className="mb-7 flex flex-col gap-3 rounded-2xl border border-line bg-surface p-5 shadow-[var(--shadow-sm)] md:flex-row"
         >
-          {/* No `bookmark-name-input` class. AddToBookmark.css owns that name, survives this slice
-              and already wins on this element — 14px, which is why the input force-zooms today
-              despite Bookmarks.css declaring 15. Keeping the name as a styling hook would hand the
-              input to a stylesheet this page never imports, with every guard green.
+          {/* No `bookmark-name-input` class. AddToBookmark.css owned that name and, while it
+              lived, won on this element — 14px, which is why the input used to force-zoom despite
+              Bookmarks.css declaring 15. Keeping the name as a styling hook would have handed the
+              input to a stylesheet this page never imports, with every guard green; that file
+              retired later in 2b-iv, which is exactly why the hook had to go rather than lean on
+              it.
 
               The focus utilities are the other half of that class. AddToBookmark.css's
               `.bookmark-name-input:focus` was drawing this field's ring, and index.css's

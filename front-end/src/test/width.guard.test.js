@@ -12,11 +12,12 @@ const LIMIT = 320
 //   The live instance was the retired Bookmarks.css's `repeat(auto-fill, minmax(380px, 1fr))` grid,
 //   replaced in slice 2b-ii by `grid-cols-1 md:grid-cols-2 xl:grid-cols-3`. Nothing in the tree
 //   uses `minmax()` today; the hole is still open for the next one.
-// - Sub-LIMIT values that combine to overflow. `AddByUrl.css:11`'s `min-width: 250px` is the one
-//   still standing: under the floor individually, so deliberately unflagged, even though it wraps
-//   in the same row as `.search-input` inside an expanded bookmark card. `.search-input` carried
-//   the same 250px until slice 2b-ii and now uses `flex: 1 1 250px; min-width: 0`, which keeps the
-//   wrap and drops the floor. Slice 2b-iv gives AddByUrl the same treatment.
+// - Sub-LIMIT values that combine to overflow. The live instance was `AddByUrl.css`'s
+//   `min-width: 250px`: under the floor individually, so deliberately unflagged, even though it
+//   wrapped in the same row as `.search-input` inside an expanded bookmark card. Slice 2b-iv
+//   retired it to `flex-[1_1_250px] min-w-0`, the treatment `.search-input` has carried since
+//   2b-ii — the basis keeps the wrap and drops the floor — and a basis is invisible to both
+//   patterns below anyway, per the first blind spot above. The hole stays open for the next pair.
 
 // Only `width` and `min-width` can force a viewport to overflow. The lookbehind requires that
 // nothing directly before "width" is a word character or a hyphen — i.e. "width" must sit at a

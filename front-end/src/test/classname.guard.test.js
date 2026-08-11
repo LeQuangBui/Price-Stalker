@@ -17,35 +17,12 @@ const SRC = join(dirname(fileURLToPath(import.meta.url)), '..')
 // it reaches zero when the last one goes.
 const BESPOKE = new Set([
   'active',
-  'add-by-url',
-  'add-by-url-btn',
-  'add-by-url-error',
-  'add-by-url-input',
-  'add-by-url-status',
-  'add-by-url-status-pill',
-  'add-by-url-status-url',
-  'add-to-bookmark',
-  'add-to-bookmark-btn',
-  'bookmark-create-btn',
-  'bookmark-create-form',
-  'bookmark-dropdown',
-  'bookmark-dropdown-label',
-  'bookmark-dropdown-status',
-  'bookmark-dropdown-title',
-  'bookmark-existing-action',
-  'bookmark-existing-count',
-  'bookmark-existing-list',
-  'bookmark-existing-meta',
-  'bookmark-existing-name',
-  'bookmark-existing-row',
-  'bookmark-name-input',
   'btn',
   'btn-block',
   'btn-danger',
   'btn-lg',
   'btn-primary',
   'btn-secondary',
-  'btn-spinner',
   'chart-axis',
   'chart-container',
   'chart-empty',
@@ -65,27 +42,13 @@ const BESPOKE = new Set([
   'confirm-dialog-title',
   'danger',
   'empty-state',
-  'error',
   'page-error',
   'price-chart',
   'price-history-chart',
-  'product-search',
-  'product-search-row',
   'retry-btn',
-  'search-button',
-  'search-dropdown',
-  'search-dropdown-btn',
-  'search-dropdown-info',
-  'search-dropdown-item',
-  'search-dropdown-name',
-  'search-dropdown-price',
-  'search-input',
-  'search-select',
-  'search-status',
   'skeleton',
   'skip-link',
   'sr-only',
-  'success',
   'time-range-selector',
 ])
 
@@ -108,19 +71,38 @@ const BESPOKE = new Set([
 //
 // Names below are the 46 that 2b-ii spent retiring `Bookmarks.css` and `UserProfile.css`, plus
 // `empty-state-cta` — an `index.css` rule rather than a stylesheet retirement, moved here when its
-// last consumer went to `btn btn-primary`. RETIRED is not only for whole-file conversions. The
-// remaining 36 are slice 2b-iii's: twelve `alert-card*` / `alert-checkbox` / `alert-field` /
+// last consumer went to `btn btn-primary`. RETIRED is not only for whole-file conversions.
+// Slice 2b-iii's 36: twelve `alert-card*` / `alert-checkbox` / `alert-field` /
 // `alert-product-*` / `alerts-*` names spent retiring `Alerts.css`, and 24 more — the `swiper*`
 // family, the `panel-*` family, `product-panel*`, `alert-actions`, `alert-form`, `alert-status`,
 // `checkbox-row`, `compact`, `secondary`, `paused` and `error-message` — spent retiring
-// `ProductDetail.css`.
+// `ProductDetail.css`. Slice 2b-iv opens with the eight `AddByUrl.css` names: the seven
+// `add-by-url*`, easy to count off the filename, and `btn-spinner` — coined by the same file
+// despite the generic name, so its rule dies with it and it moves here in the same commit.
+// `AddToBookmark.css` spends seventeen more: the fifteen `add-to-bookmark*` / `bookmark-*` names
+// off the filename, plus `success` and `error` — see the next paragraph for why those two moved
+// when their siblings could not. `ProductSearch.css` closes the slice with its twelve
+// `product-search*` / `search-*` names — and NOT `active`, per the same paragraph.
 //
-// `active`, `danger`, `success` and `error` are NOT here and must not be moved. All four are
-// written by these two retired files AND by a surviving stylesheet with a surviving carrier
-// (`PriceHistoryChart.css` / `ProductSearch.css`, `ConfirmDialog.css`, `AddToBookmark.css`), and
-// test 2 below requires every name that is both defined in CSS and written in JSX to be in
-// BESPOKE. Moving any of them turns test 2 red, not test 1.
+// `active` and `danger` are NOT here and must not be moved. Both are still defined by a surviving
+// stylesheet with a surviving carrier (`PriceHistoryChart.css`, `ConfirmDialog.css`): a name
+// leaves BESPOKE when its LAST rule dies, and theirs live on. `success` and `error` sat in the
+// same sentence until `AddToBookmark.css` retired — that file's `.bookmark-dropdown-status.success`
+// / `.error` compounds were their last declarations anywhere, so both rules died with it and both
+// names moved here in that commit, exactly per the rule test 3 enforces. `active` outlived
+// `ProductSearch.css` the other way: `.search-dropdown-item.active` died with that file (the JSX
+// stopped writing the token in the same commit), but `.time-range-selector button.active` still
+// stands.
 const RETIRED = new Set([
+  'add-by-url',
+  'add-by-url-btn',
+  'add-by-url-error',
+  'add-by-url-input',
+  'add-by-url-status',
+  'add-by-url-status-pill',
+  'add-by-url-status-url',
+  'add-to-bookmark',
+  'add-to-bookmark-btn',
   'alert-action-button',
   'alert-actions',
   'alert-card',
@@ -139,14 +121,27 @@ const RETIRED = new Set([
   'bookmark-actions',
   'bookmark-card',
   'bookmark-card-skeleton',
+  'bookmark-create-btn',
+  'bookmark-create-form',
   'bookmark-date',
   'bookmark-dirty',
+  'bookmark-dropdown',
+  'bookmark-dropdown-label',
+  'bookmark-dropdown-status',
+  'bookmark-dropdown-title',
   'bookmark-editor',
   'bookmark-empty',
+  'bookmark-existing-action',
+  'bookmark-existing-count',
+  'bookmark-existing-list',
+  'bookmark-existing-meta',
+  'bookmark-existing-name',
+  'bookmark-existing-row',
   'bookmark-header',
   'bookmark-info',
   'bookmark-item',
   'bookmark-name',
+  'bookmark-name-input',
   'bookmark-products',
   'bookmarks-container',
   'bookmarks-grid',
@@ -155,6 +150,7 @@ const RETIRED = new Set([
   'bookmarks-list',
   'bookmarks-section',
   'bookmarks-subtitle',
+  'btn-spinner',
   'checkbox-row',
   'compact',
   'create-bookmark-btn',
@@ -162,6 +158,7 @@ const RETIRED = new Set([
   'delete-btn',
   'editor-actions',
   'empty-state-cta',
+  'error',
   'error-message',
   'expand-btn',
   'no-bookmarks',
@@ -182,7 +179,9 @@ const RETIRED = new Set([
   'product-preview-link',
   'product-preview-placeholder',
   'product-price',
+  'product-search',
   'product-search-panel',
+  'product-search-row',
   'profile-action-link',
   'profile-actions',
   'profile-item',
@@ -192,9 +191,20 @@ const RETIRED = new Set([
   'remove-product-btn',
   'save-btn',
   'save-error',
+  'search-button',
+  'search-dropdown',
+  'search-dropdown-btn',
+  'search-dropdown-info',
+  'search-dropdown-item',
+  'search-dropdown-name',
+  'search-dropdown-price',
+  'search-input',
+  'search-select',
+  'search-status',
   'secondary',
   'secondary-header-btn',
   'submit-btn',
+  'success',
   'swiper',
   'swiper-btn',
   'swiper-dot',
@@ -239,9 +249,10 @@ function definedClasses() {
 }
 
 // className="a b", className={`a ${x}`}, className={'a'} and className={cx('a', …)}. Interpolated
-// fragments are not resolvable statically and are not meant to be — the two runtime-built names in
-// this tree (`search-dropdown-item${active…}`, `confirm-dialog-confirm${danger…}`) have their base
-// written literally, which is the part this guard needs.
+// fragments are not resolvable statically and are not meant to be — the one runtime-built name
+// left in this tree (`confirm-dialog-confirm${danger…}`) has its base written literally, which is
+// the part this guard needs. `search-dropdown-item${active…}` was the other until slice 2b-iv,
+// when the base became static utilities and the `active` half became an inline style.
 const AT_ATTRIBUTE = /className=(?:"([^"]*)"|\{`([^`]*)`\}|\{'([^']*)'\}|\{cx\(([\s\S]*?)\)\})/g
 
 // The other half, and none of the four arms above can see it. `className={PAGE}` is a bare

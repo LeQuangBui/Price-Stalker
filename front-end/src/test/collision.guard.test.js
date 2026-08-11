@@ -12,14 +12,14 @@ const SRC = join(dirname(fileURLToPath(import.meta.url)), '..')
 // bare name) is what makes this a ratchet: adding the class to a THIRD file, or re-adding it to
 // a file it was removed from, is a new violation even though the name is listed. This list may
 // only ever shrink. Do not add to it, or widen an entry, to make a build pass.
-// One entry left. `active` is a compound state modifier: both owners only ever write it as a
-// compound of their own block (`.time-range-selector button.active`, `.search-dropdown-item.active`),
-// so the declarations never meet on one element. Verified: no live collision. Recorded as
-// permitted, not as debt. `success` and `danger` left this list with ProductDetail.css in slice
-// 2b-iii and `error` with Alerts.css; each fell to a single owner, and a listed non-collision fails
-// the stale-entry test below, so they were deleted rather than narrowed.
+// EMPTY since slice 2b-iv. `active` was the last entry — a compound state modifier both owners
+// only ever wrote against their own block (`.time-range-selector button.active`,
+// `.search-dropdown-item.active`), never a live collision — and it fell to one owner
+// (PriceHistoryChart.css) when ProductSearch.css retired, so the entry was deleted the way
+// `success` and `danger` were with ProductDetail.css in 2b-iii and `error` with Alerts.css: a
+// listed non-collision fails the stale-entry test below. The Map stays: it is the mechanism, and
+// the next shared name belongs in it with its exact owner set, not in a rewrite.
 const ALLOWED = new Map([
-  ['active', ['PriceHistoryChart.css', 'ProductSearch.css']],
 ])
 
 function walk(dir) {
