@@ -50,10 +50,30 @@ describe('shared control primitives', () => {
     expect(block('.retry-btn')).toMatch(/min-height:\s*44px/)
   })
 
-  it('every semantic colour token is bridged to a Tailwind utility', () => {
-    for (const token of ['--color-success', '--color-success-deep']) {
+  // Hard-coded names, not a scan: an unbridged token is invisible to a test that only knows the
+  // ones already written down. `--primary-light`, `--accent-soft`, `--danger-dark`, `--warning` and
+  // `--text-on-primary` are all still unbridged and this test does not know it. `--scrim` is here
+  // because it was minted in slice 2b-iii for a single consumer, and a token with one consumer is
+  // the kind that gets half-deleted: the :root value survives, the bridge goes, and the background
+  // utility that reads it stops matching anything with no error anywhere.
+  //
+  // That utility is deliberately NOT named in full anywhere in this file. Tailwind v4 scans source
+  // files as plain text and does not know what a comment is, so writing the class name here is
+  // enough on its own to emit the rule into the bundle — verified by building with and without it.
+  // The slice that consumes the token proves it compiled by grepping the built stylesheet for the
+  // emitted rule, and that grep would have passed on the strength of this comment whether or not
+  // the page ever used the class. Leave the name out so the check stays a real one.
+  it('every semantic colour token this file knows about is bridged to a Tailwind utility', () => {
+    for (const token of ['--color-success', '--color-success-deep', '--color-scrim']) {
       expect(css).toContain(token)
     }
+  })
+
+  it('the scrim is defined in both themes, not only in :root', () => {
+    const root = css.slice(css.indexOf(':root {'), css.indexOf('.dark {'))
+    const dark = css.slice(css.indexOf('.dark {'), css.indexOf('@theme inline'))
+    expect(root).toMatch(/--scrim:/)
+    expect(dark).toMatch(/--scrim:/)
   })
 })
 
