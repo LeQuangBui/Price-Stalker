@@ -419,6 +419,27 @@ describe('ProductDetail markup after the CSS retirement', () => {
       .toContain('pointer-events-auto')
   })
 
+  // The other half of C14, and the half `pointer-events-none` does not cover. The rail's band is
+  // transparent to input; its DOTS are not, and a wrapped rail's first line lies straight across
+  // both arrows. Measured at 305px/root 24 with three images: the frame is 187.73px, the rail's
+  // first line runs y 211-277, both arrows sit at y 217-283, and `elementFromPoint` at each
+  // arrow's own centre returned `Go to image 1` and `Go to image 2`. Positioned siblings at
+  // `z-index: auto` in one stacking context paint in tree order, so the fix is to write the
+  // arrows AFTER the rail and let them take the pixels back. Nothing about either element's box
+  // changes, which is exactly why this needs pinning: reordering these three nodes re-breaks it
+  // with every measurement still correct and every other test in this file still green.
+  it('paints the arrows after the rail so a wrapped dot cannot take their taps', async () => {
+    renderPage()
+    const next = await screen.findByRole('button', { name: /next image/i })
+    const rail = screen.getByRole('button', { name: 'Go to image 2' }).parentElement
+    for (const arrow of [screen.getByRole('button', { name: /previous image/i }), next]) {
+      expect(
+        rail.compareDocumentPosition(arrow) & Node.DOCUMENT_POSITION_FOLLOWING,
+        `${arrow.getAttribute('aria-label')} must come after the dot rail in tree order`,
+      ).toBeTruthy()
+    }
+  })
+
   it('marks the current dot on the core, not the hit box', async () => {
     renderPage()
     await screen.findByRole('button', { name: 'Go to image 1' })

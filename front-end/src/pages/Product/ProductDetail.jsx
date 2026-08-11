@@ -55,15 +55,35 @@ const SWIPER_BTN = `absolute top-1/2 grid size-11 -translate-y-1/2 cursor-pointe
 // painted core's centre 22px off the bottom edge where it used to sit at 17px — the one unavoidable
 // 5px of drift in this conversion.
 //
-// `pointer-events-none` on the rail and `pointer-events-auto` on each dot is C14, and it is the
-// price of that wrap. The old rail's box was its content — ~82px wide, 10px tall, centred — and
-// could not reach the arrows. This one is the full width of the frame and at least 44px deep, sits
-// after both arrows in DOM order at the same z-index: auto, and therefore takes every tap they
-// share: on an aspect-square frame of height h with an n-line rail they overlap whenever
-// h < 88n + 44, which at a 24px root and a 320px viewport (185px frame, 66px dots, two lines with
-// three images) covers both arrows entirely. The rail has no handler of its own, so nothing is
-// lost. Do NOT fix this by constraining the rail's width — that is the centring the wrap replaced —
-// and do NOT fix it with a z-index; this project has already shipped one that made a nav untappable.
+// `pointer-events-none` on the rail and `pointer-events-auto` on each dot is the price of that
+// wrap. The old rail's box was its content — ~82px wide, 10px tall, centred — and could not reach
+// the arrows. This one is the full width of the frame and at least 44px deep, so on an
+// aspect-square frame of height h with an n-line rail the band reaches the arrows' centre line
+// whenever h < 88n + 44. The rail has no handler of its own, so making the band transparent to
+// input costs nothing.
+//
+// That fixes the BAND. It does not fix the DOTS, and the two are separate problems — measured, not
+// reasoned about. With the band transparent, `elementFromPoint` at each arrow's own centre still
+// came back as a dot in three cells of a 24-cell sweep: three images at 305px/root 24, and five at
+// 305px/roots 20 and 24. A wrapped rail's first line is a row of opaque 44-to-66px hit boxes lying
+// exactly across the arrows, and `pointer-events-auto` is what makes them opaque. At 305px/root 24
+// the frame is 187.73px, the rail's first line runs y 211-277, and both arrows sit at y 217-283
+// with their centres at 250 — inside dots 1 and 2.
+//
+// On a frame that small the geometry has no solution: two 66px arrows and a 66px-deep rail line do
+// not both fit in 188px, and horizontal padding big enough to clear the arrows (3.5rem a side, 168
+// of 188px at root 24) leaves less than one dot of interior and spills them back over the arrows.
+// So the shared pixels are given to the arrows, by DOM ORDER: the rail is rendered BEFORE both
+// arrows, and positioned siblings at `z-index: auto` in one stacking context paint in tree order,
+// so the arrows now win every pixel they share instead of losing every one. The arrows are the
+// affordance worth protecting — each reaches every slide, where a dot reaches one — and a dot that
+// loses part of its box to an arrow is still reachable through them.
+//
+// The cost is tab order: the dots now precede the arrows. That is the trade, and it is the small
+// half of it.
+//
+// Do NOT fix this by constraining the rail's width — that is the centring the wrap replaced — and
+// do NOT fix it with a z-index; this project has already shipped one that made a nav untappable.
 const SWIPER_DOTS =
   'pointer-events-none absolute inset-x-0 bottom-0 flex flex-wrap items-center justify-center'
 const SWIPER_DOT =
@@ -347,8 +367,13 @@ export default function ProductDetail({ isSignedIn }) {
               </div>
               {hasMultiple && (
                 <>
-                  <button type="button" className={cx(SWIPER_BTN, 'left-3')} onClick={prevSlide} aria-label="Previous image">&lt;</button>
-                  <button type="button" className={cx(SWIPER_BTN, 'right-3')} onClick={nextSlide} aria-label="Next image">&gt;</button>
+                  {/* The rail comes FIRST on purpose. Positioned siblings at `z-index: auto` in
+                      one stacking context paint in tree order, so whatever is written last owns
+                      the pixels they share. When the rail wraps it lies across the arrows, and a
+                      wrapped dot measured as the hit at both arrows' own centres at 305px — so
+                      the arrows are written after it and take those pixels back. Moving these two
+                      buttons above the rail again re-breaks it, silently, with every box still
+                      measuring 44px. See the note on SWIPER_DOTS. */}
                   <div className={SWIPER_DOTS}>
                     {images.map((_, index) => (
                       <button
@@ -373,6 +398,8 @@ export default function ProductDetail({ isSignedIn }) {
                       </button>
                     ))}
                   </div>
+                  <button type="button" className={cx(SWIPER_BTN, 'left-3')} onClick={prevSlide} aria-label="Previous image">&lt;</button>
+                  <button type="button" className={cx(SWIPER_BTN, 'right-3')} onClick={nextSlide} aria-label="Next image">&gt;</button>
                 </>
               )}
             </div>
