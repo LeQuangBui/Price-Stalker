@@ -280,24 +280,42 @@ describe('Alerts page markup after the CSS retirement', () => {
     expect(row.className).not.toMatch(/min-\[\d+px\]/)
   })
 
-  // C10. Both halves are required and neither implies the other: `flex-wrap` on the row is what
-  // permits a second line, and a non-zero flex-basis on the field is what ever produces one. The
-  // 180px min-width and the 192px UA `size` default that used to do that job both leave with the
-  // stylesheet, and `flex-1` would replace them with a hypothetical size of 0 — an item that can
-  // never overflow a line, so the toggle would be squeezed beside the field forever instead of
-  // dropping under it. Neither the row nor the field is individually over width.guard's 320px
-  // floor, and `basis-[11rem]` is rem, so nothing in the suite would say a word.
-  it('keeps the controls row wrapping, with a field that can both break and shrink', async () => {
+  // C10. The threshold is the one number this page exists to show, and what keeps it readable is a
+  // MINIMUM, not a basis. `.alert-field input`'s `min-width: 180px` did the job before the
+  // retirement — measured on that build, 192px wide with 166px of interior and all nine digits at
+  // 320/360/390/430/768 — and deleting it left the field to shrink to whatever the name column did
+  // not want: 43px of interior against 87.26px of value at 320px, four digits of nine.
+  //
+  // The basis cannot be the fix, and that is the part worth pinning. A shrinkable flex item's
+  // max-content contribution is clamped to its own content's max-content, and this field's content
+  // is a label over a `w-full` input contributing no width — so the basis never reaches the row's
+  // distribution at all. Measured at 11, 14, 17 and 20rem, the interior is identical to the pixel
+  // in all 27 cells swept. `flex-1` is worse again: a hypothetical size of 0 can never overflow a
+  // line, so the toggle would be squeezed beside the field forever instead of dropping under it.
+  //
+  // rem, not px, because the value is rem-sized. The old 180px floor survived a raised root only
+  // because the input's font-size was a frozen 15px too; `text-base` scales and a px floor does
+  // not. Neither the row nor the field is individually over width.guard's 320px floor, and the
+  // guard's patterns only match px, so nothing else in the suite would say a word.
+  it('gives the threshold field a rem-sized floor, not just a basis', async () => {
     renderPage()
     const input = await screen.findByRole('spinbutton')
     const field = input.closest('div')
     const controls = field.parentElement
     expect(classesOf(controls)).toContain('flex-wrap')
-    for (const utility of ['basis-[11rem]', 'grow', 'min-w-0']) {
+    for (const utility of ['basis-[11rem]', 'grow']) {
       expect(classesOf(field), `${utility} missing — the toggle will stop wrapping`).toContain(utility)
     }
     expect(classesOf(field), 'flex-1 zeroes the hypothetical size and kills the wrap')
       .not.toContain('flex-1')
+    expect(classesOf(field), 'min-w-0 is exactly what let the value get truncated')
+      .not.toContain('min-w-0')
+
+    const floor = classesOf(field).find((c) => /^min-w-\[[\d.]+rem\]$/.test(c))
+    expect(floor, `no rem min-width on the field: ${field.className}`).toBeTruthy()
+    // Sized from the widest formatted threshold plus the input's own padding and borders; 7.579rem
+    // is what root 16 needs and the roots above it need less, so anything under 7.75 truncates.
+    expect(Number(/[\d.]+/.exec(floor)[0])).toBeGreaterThanOrEqual(7.75)
   })
 
   // C13. The row is a row from ~420px after this conversion, not from 768px, so a marketplace title

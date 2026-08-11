@@ -25,42 +25,43 @@ const ALERTS_LIST = 'grid gap-4'
 const ALERT_CARD =
   'rounded-[var(--radius)] border border-line bg-paper p-5 shadow-[var(--shadow-sm)]'
 
-// 18rem, measured against this markup — not the 26.25rem placeholder this line shipped with, and
-// not the 768px the retired stylesheet used, which fired roughly 400px early.
+// 21rem, and the number moved because the criterion did.
 //
-// Swept with the row forced unconditional, header ablated, 62 viewports from 241px to 481px at
-// roots 16, 20 and 24, against a pinned fixture: two alerts, one active and one paused, product
-// name `De'Longhi Dedica Arte ECP33.21-1100W-BLACK`, threshold `100000000`. The narrowest viewport
-// at which the row clears and stays clear:
+// The 18rem this line shipped with was derived from PAGE OVERFLOW — "the narrowest viewport at
+// which the row clears and stays clear" — and the card satisfies that. It bought it by squeezing
+// the one number the page exists to show. Measured against the same pinned fixture, header
+// ablated, root 16: the threshold input's CONTENT box was 43px against 87.26px of value at 320px,
+// so four of nine digits; 58px and six digits at 360; 71px and seven at 390. On `main` the same
+// field was 192px wide with 166px of interior at every width, because `.alert-field input` carried
+// `min-width: 180px` and the retirement deleted it. A step derived from whether the page scrolls
+// sideways cannot see that, because a field squeezed to 43px is exactly how the page stops
+// scrolling sideways.
 //
-//     root 16 -> 285px = 17.81rem      root 20 -> 337px = 16.85rem      root 24 -> 413px = 17.21rem
+// So the field gets its floor back — see the note at the call site — and the row may only engage
+// once the whole card fits with that floor honoured. Re-swept with the row forced unconditional,
+// the header AND the Pagination row ablated (Pagination overflows on its own account at raised
+// roots and would otherwise set this number instead of the card), 1px steps:
 //
-// Largest is 17.81rem, so the next quarter-rem step is 18. That is the tight answer rather than a
-// safe one: 17.75rem fires at 284px against root 16's 285px floor and fails by a pixel, while 18rem
-// clears every root (+3px at 16, +23px at 20, +19px at 24).
+//     root 16 -> 335px = 20.9375rem   root 20 -> 418px = 20.90rem   root 24 -> 501px = 20.875rem
 //
-// The step earns its keep at raised root sizes, which is the whole argument for making it rem. On a
-// 16px default it fires at 288px, below any real phone, so the row is always a row. On a 24px
-// default it fires at 432px, so a 390px phone stacks — and measured, a 390px phone at a 24px
-// default overflows by 27px if it does not.
+// Largest is 20.9375rem, so the next quarter-rem step is 21. Tight rather than safe, the same way
+// the old number was: 20.75rem fires at 332/415/498 and fails all three roots by 3px, while 21rem
+// clears every one (+1px at 16, +2px at 20, +3px at 24).
 //
-// What sets the floor is no longer what set it on `main`. There the row's min-content came from
-// `.alert-field input`'s `min-width: 180px` plus the control's 192px UA `size` default, both of
-// which the retirement deleted. It is now the meta line's longest unbreakable token — the formatted
-// price, ~150px at a 24px root — since the name above it carries `wrap-anywhere` and the column
-// carries `min-w-0`, so neither of those two is the binding constraint any more.
+// The step still earns its rem. At a 16px default it fires at 336px, so a 360px phone is a row; at
+// 24px it fires at 504px, so the same phone stacks — and it has to, because at a 24px default the
+// card's own content does not fit a 390px viewport in two columns at all.
 //
 // Measured page-level, not card-level. `scripts/probes/alert-card.js` reports
 // `card.scrollWidth - card.clientWidth`, which stays 0 through all of this: the card is a grid item
 // whose track is forced to its own min-content, so it is stretched wider than the viewport rather
-// than overflowing inside itself. At 305px and a 24px root the card measures 352.28px against a
-// 305px client with the probe's `overflow` still reading 0.
+// than overflowing inside itself.
 //
 // BOTH states are gated on the same step on purpose. A `max-width: 768px` block beside an `md:`
 // variant applies both branches at exactly 768px on a 16px root, and leaves a 769-959px band where
 // NEITHER applies on a 20px root.
 const ALERT_CARD_MAIN =
-  'mb-4 flex flex-col gap-5 min-[18rem]:flex-row min-[18rem]:justify-between'
+  'mb-4 flex flex-col gap-5 min-[21rem]:flex-row min-[21rem]:justify-between'
 
 export default function Alerts() {
   const [alerts, setAlerts] = useState([])
@@ -274,22 +275,53 @@ export default function Alerts() {
                     {/* `flex-wrap` is load-bearing, not tidiness: the field and the toggle do not
                         fit one line on a phone, and each is individually under width.guard's 320px
                         floor so nothing would say so.
-                        `basis-[11rem] grow min-w-0` on the field is the other half, and `flex-1` is
-                        the trap. Today's wrap comes from `min-width: 180px` plus the control's
-                        192px UA `size` default, and this conversion deletes both; `flex: 1 1 0%`
-                        would give the field a hypothetical main size of zero, and a zero-size item
-                        can never overflow a flex line, so the toggle would be squeezed beside it at
-                        every width instead of dropping under it. A real 11rem basis keeps the
-                        break, `grow` fills the line once it has one, `min-w-0` lets it shrink when
-                        the row does not wrap.
                         The gap is rem for the same reason the breakpoint is: this row's floor grows
                         with the reader, so the space inside it should too. 1.125rem is the retired
                         18px exactly at a 16px root. */}
                     <div className="flex flex-wrap items-end gap-[1.125rem]">
+                      {/* `min-w-[7.75rem]` is the floor `.alert-field input`'s `min-width: 180px`
+                          used to be, and it is the whole reason the threshold is readable. Without
+                          it the field shrinks to whatever is left of the row — 43px of interior at
+                          320px against 87.26px of value, four digits of nine.
+
+                          It is rem because the old one was px and that was the bug behind the bug:
+                          the value is rem-sized, so a frozen 180px floor holds at a 16px browser
+                          default and fails at a 24px one. Sized from the widest formatted
+                          threshold in the fixture, `100000000`, plus the input's own `px-4` and its
+                          1px borders, at each root:
+
+                              root 16   87.26 + 32 + 2 = 121.26px = 7.579rem
+                              root 20  109.07 + 40 + 2 = 151.07px = 7.554rem
+                              root 24  130.89 + 48 + 2 = 180.89px = 7.537rem
+
+                          Largest is 7.579rem; the next quarter-rem step is 7.75. Measured over 27
+                          cells — roots 16/20/24 x 305/320/360/390/430/480/560/672/768 — that is all
+                          nine digits readable in every one, in the stacked state as well as the
+                          row, where today's markup reads 4 at 320/root 16 and 7 at 320/root 24.
+
+                          NOT `basis-[11rem]`, which is the obvious lever and does nothing. A
+                          shrinkable flex item's max-content contribution is clamped to its own
+                          content's max-content, and this field's content is a label over a `w-full`
+                          input that contributes no width — so the basis is thrown away before it
+                          can influence how the row divides. Measured at 11, 14, 17 and 20rem: the
+                          interior is identical to the pixel at every one of 27 cells. The basis
+                          stays as the PREFERRED size; `min-width` is what holds the line.
+
+                          `min-w-0` is what this replaces, and losing it is the point: it is exactly
+                          the property that let the field shrink under the name column. The field
+                          can still shrink — to 7.75rem — and below that the toggle wraps under it,
+                          which is the break `flex-1` would have destroyed and `min-w-0` quietly
+                          did too.
+
+                          The floor costs 3px of page scroll in exactly one cell, a 305px client at
+                          a 24px root, where 7.75rem is 186px against 185px of card interior. Taken
+                          knowingly: two digits of the threshold are worth more than 3px, and that
+                          same cell already scrolls 55px sideways on Pagination's account. Every
+                          other cell measured is 0. */}
                       <Field
                         id={`threshold-${alert.id}`}
                         label="Threshold"
-                        className="basis-[11rem] grow min-w-0"
+                        className="basis-[11rem] grow min-w-[7.75rem]"
                         type="number"
                         min="0"
                         step="0.01"
