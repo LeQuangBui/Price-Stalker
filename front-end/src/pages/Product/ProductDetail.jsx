@@ -389,6 +389,15 @@ export default function ProductDetail({ isSignedIn }) {
                       className={SWIPER_DOT}
                       onClick={() => setSlide(index)}
                       aria-label={`Go to image ${index + 1}`}
+                      /* The only non-visual signal of which slide is showing. Without it the
+                         painted core is the entire state and a screen reader reads five
+                         identical "Go to image N" buttons. Not a regression — the retired
+                         `.swiper-dot.active` was equally visual-only — but the naming and the
+                         hit boxes were fixed around it and this is what was left.
+                         `true`/undefined rather than `true`/`false`: `aria-current="false"` is a
+                         real value, and announcing "not current" on four of five dots is worse
+                         than saying nothing about them. */
+                      aria-current={slide === index ? 'true' : undefined}
                     >
                       {/* A real element, not a pseudo-element: that is what lets the 44px hit
                           box and the 10px circle be sized independently, and it is what

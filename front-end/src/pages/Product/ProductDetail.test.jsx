@@ -434,13 +434,23 @@ describe('ProductDetail markup after the CSS retirement', () => {
     expect(classesOf(rail)).toContain('flex-wrap')
   })
 
-  it('marks the current dot on the core, not the hit box', async () => {
+  it('marks the current dot on the core and in the accessibility tree', async () => {
     renderPage()
     await screen.findByRole('button', { name: 'Go to image 1' })
     expect(classesOf(screen.getByRole('button', { name: 'Go to image 1' }).firstChild))
       .toContain('bg-oxblood')
     expect(classesOf(screen.getByRole('button', { name: 'Go to image 2' }).firstChild))
       .not.toContain('bg-oxblood')
+
+    // `bg-oxblood` on the core used to be the whole signal, so every dot read as an identical
+    // "Go to image N" button. Absent rather than `false` on the others: `aria-current="false"`
+    // is a valid value and some readers announce it.
+    expect(screen.getByRole('button', { name: 'Go to image 1' })).toHaveAttribute('aria-current', 'true')
+    expect(screen.getByRole('button', { name: 'Go to image 2' })).not.toHaveAttribute('aria-current')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Go to image 2' }))
+    expect(screen.getByRole('button', { name: 'Go to image 2' })).toHaveAttribute('aria-current', 'true')
+    expect(screen.getByRole('button', { name: 'Go to image 1' })).not.toHaveAttribute('aria-current')
   })
 
   // The input declared 15px and the guard's allowlist entry for it leaves in this commit. Field's
