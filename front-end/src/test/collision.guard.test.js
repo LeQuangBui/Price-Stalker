@@ -15,12 +15,11 @@ const SRC = join(dirname(fileURLToPath(import.meta.url)), '..')
 // Compound state-modifier classes, and nothing else. Each is only ever written as a
 // descendant/compound of an owning block (`.foo.success`, `.bar .active`), so the declarations
 // never meet on one element. Verified: no live collision. Recorded as permitted, not as debt.
-// `bookmark-name-input` left this list with Bookmarks.css — AddToBookmark.css is its only owner
-// now, and a listed non-collision fails the stale-entry test below.
+// `error` left this list with Alerts.css in slice 2b-iii — AddToBookmark.css is its only owner now,
+// and a listed non-collision fails the stale-entry test below.
 const ALLOWED = new Map([
-  ['error', ['AddToBookmark.css', 'Alerts.css']], // both resolve to var(--danger)
   ['success', ['AddToBookmark.css', 'ProductDetail.css']],
-  ['danger', ['Alerts.css', 'ConfirmDialog.css', 'ProductDetail.css']],
+  ['danger', ['ConfirmDialog.css', 'ProductDetail.css']],
   ['active', ['PriceHistoryChart.css', 'ProductDetail.css', 'ProductSearch.css']],
 ])
 

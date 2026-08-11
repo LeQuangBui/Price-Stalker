@@ -44,9 +44,12 @@ const JSX_PX_TYPE = /\btext-\[(\d+)px\]/g
 // TWO blind spots, both recorded rather than papered over.
 //
 // 1. DECLARED sizes only. A control that INHERITS a sub-16px size is invisible: `index.css`'s
-//    `font: inherit` reset hands the ancestor's size straight to the control, and `Alerts.css:80`'s
-//    `.alert-field` is 14px around an `.alert-field input` that declares no size of its own. Same
-//    trap Field.jsx had in 2b-i. Not solvable one rule at a time.
+//    `font: inherit` reset hands the ancestor's size straight to the control. The instance this
+//    note used to cite — `Alerts.css:80`'s 14px `.alert-field` wrapping an `.alert-field input`
+//    that declared no size of its own — was retired with that file in slice 2b-iii, and the fix
+//    was not a rule but a primitive: `Field`'s input carries an explicit `text-base`. Note that a
+//    wrapper given `text-sm` instead would have stayed invisible to test 3 as well, since 0.875rem
+//    is not `text-[Npx]`. Same trap Field.jsx had in 2b-i. Not solvable one rule at a time.
 // 2. CONTROL matches on the NAME. It does catch a bare element selector (`input`, `.alert-field
 //    input`, `input[type="text"]`) and a control-shaped class (`.search-input`, `.panel-input`,
 //    `.search-select`) — checked against all three forms. What it cannot catch is a form control

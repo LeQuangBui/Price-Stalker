@@ -170,3 +170,142 @@ describe('Alerts page', () => {
     await waitFor(() => expect(getAlerts).toHaveBeenLastCalledWith({ page: 1, size: 20 }))
   })
 })
+
+// Exact class tokens. `toContain` on the raw string would let `min-[26.25rem]:flex-row` satisfy a
+// check for `flex-row`, which is the one confusion these assertions exist to catch.
+const classesOf = (el) => el.className.split(/\s+/)
+
+describe('Alerts page markup after the CSS retirement', () => {
+  beforeEach(() => {
+    getAlerts.mockResolvedValue({ content: [alert()], totalPages: 1 })
+  })
+
+  it('carries no class owned by the retired stylesheet', async () => {
+    const { container } = renderPage()
+    await screen.findByRole('link', { name: /espresso machine/i })
+
+    for (const cls of [
+      // the twelve live names this commit spends
+      'alerts-list', 'alert-card', 'alert-card-main', 'alert-card-controls', 'alert-card-actions',
+      'alert-card-skeleton', 'alert-action-button', 'alert-checkbox', 'alert-field',
+      'alert-product-link', 'alert-product-meta', 'alerts-state',
+      // the four that were already dead in the CSS and never had a carrier
+      'alerts-page', 'alerts-header', 'alerts-subtitle', 'alerts-home-link',
+    ]) {
+      expect(container.querySelector(`.${cls}`), `${cls} should be gone`).toBeNull()
+    }
+  })
+
+  // The 511px-off-screen Retry. `.page-error` carries `overflow-wrap: anywhere`, which is the only
+  // value that feeds break opportunities into intrinsic sizing, and `role="alert"`, which the
+  // hand-rolled box never had.
+  it('draws the error box with the shared primitive, announced and breakable', async () => {
+    getAlerts.mockRejectedValue(new Error('Failed to load https://x.test/pdp/get_pc?item_id=1&bundle_deal_id=0'))
+    const { container } = renderPage()
+    const box = await screen.findByRole('alert')
+    expect(classesOf(box)).toContain('page-error')
+    expect(within(box).getByRole('button', { name: /retry/i })).toBeVisible()
+    expect(container.querySelector('.alerts-state')).toBeNull()
+  })
+
+  // Wait for the empty BRANCH before querying `status`, not for the role itself. The page's own
+  // loading announcement (`<p className="sr-only" role="status">`) is the first thing that paints,
+  // so `findByRole('status')` resolves against it on tick zero and never sees the panel — measured:
+  // one `status` at first paint carrying `sr-only`, one after the fetch resolves carrying
+  // `empty-state`. The two never coexist, because `loading` is false by the time the panel renders,
+  // so once the heading is on screen `getByRole('status')` is unambiguous.
+  it('draws the empty state with the shared primitive, announced', async () => {
+    getAlerts.mockResolvedValue({ content: [], totalPages: 0 })
+    renderPage()
+    await screen.findByRole('heading', { name: /no price alerts yet/i })
+    const panel = screen.getByRole('status')
+    expect(classesOf(panel)).toContain('empty-state')
+    expect(within(panel).getByRole('heading', { name: /no price alerts yet/i })).toBeVisible()
+  })
+
+  // .btn is the only thing in the tree that carries min-height: 44px, and it is also what gives
+  // Save and Delete the same border box — they differ by 2px today because only the danger variant
+  // has a border.
+  it('puts both card controls on the button primitive', async () => {
+    renderPage()
+    await screen.findByRole('link', { name: /espresso machine/i })
+    for (const name of [/^save$/i, /^delete$/i]) {
+      expect(classesOf(screen.getByRole('button', { name })), `${name} is not on .btn`).toContain('btn')
+    }
+    expect(classesOf(screen.getByRole('button', { name: /^delete$/i }))).toContain('btn-danger')
+  })
+
+  // The threshold control inherited 14px from its wrapping label through index.css's
+  // `font: inherit` reset, with no rule naming the control — invisible to input-zoom.guard both
+  // before and after. Field's input is the only thing that puts an explicit size on it. The focus
+  // ring is the other half: index.css's :focus-visible rule does not cover a bare input, so without
+  // these three utilities the field has no visible focus state at all.
+  it('keeps the threshold input over the iOS floor and gives it a focus ring', async () => {
+    renderPage()
+    const input = await screen.findByRole('spinbutton')
+    expect(classesOf(input)).toContain('text-base')
+    for (const utility of ['focus:border-oxblood', 'focus:ring-2', 'focus:ring-oxblood/20']) {
+      expect(classesOf(input), `${utility} missing — the focus ring left with the class`).toContain(utility)
+    }
+    expect(input.id).toBe('threshold-a1')
+    expect(input.labels[0]).toHaveTextContent(/threshold/i)
+  })
+
+  it('keeps the 44px floor on the Active toggle', async () => {
+    renderPage()
+    const box = await screen.findByRole('checkbox')
+    expect(classesOf(box.closest('label'))).toContain('min-h-11')
+  })
+
+  // The stack fired at 768px, roughly 400px early. What replaces it is a rem step, and this test
+  // asserts the SHAPE — a rem-gated pair, never `md:`, never px — not the number, because Task 7
+  // measures the number and may legitimately find that no breakpoint is needed at all. If it does,
+  // delete this test in that commit rather than weakening it.
+  it('stacks the card on a rem step rather than md:', async () => {
+    const { container } = renderPage()
+    await screen.findByRole('link', { name: /espresso machine/i })
+    // The card's first child div is the row; querying by class would defeat the point.
+    const row = container.querySelector('section > div')
+    const classes = classesOf(row)
+    expect(classes).toContain('flex-col')
+    expect(classes.some((c) => /^min-\[[\d.]+rem\]:flex-row$/.test(c)), row.className).toBe(true)
+    expect(classes).not.toContain('md:flex-row')
+    expect(row.className).not.toMatch(/min-\[\d+px\]/)
+  })
+
+  // C10. Both halves are required and neither implies the other: `flex-wrap` on the row is what
+  // permits a second line, and a non-zero flex-basis on the field is what ever produces one. The
+  // 180px min-width and the 192px UA `size` default that used to do that job both leave with the
+  // stylesheet, and `flex-1` would replace them with a hypothetical size of 0 — an item that can
+  // never overflow a line, so the toggle would be squeezed beside the field forever instead of
+  // dropping under it. Neither the row nor the field is individually over width.guard's 320px
+  // floor, and `basis-[11rem]` is rem, so nothing in the suite would say a word.
+  it('keeps the controls row wrapping, with a field that can both break and shrink', async () => {
+    renderPage()
+    const input = await screen.findByRole('spinbutton')
+    const field = input.closest('div')
+    const controls = field.parentElement
+    expect(classesOf(controls)).toContain('flex-wrap')
+    for (const utility of ['basis-[11rem]', 'grow', 'min-w-0']) {
+      expect(classesOf(field), `${utility} missing — the toggle will stop wrapping`).toContain(utility)
+    }
+    expect(classesOf(field), 'flex-1 zeroes the hypothetical size and kills the wrap')
+      .not.toContain('flex-1')
+  })
+
+  // C13. The row is a row from ~420px after this conversion, not from 768px, so a marketplace title
+  // carrying one long model string is now what sets the card's floor. `min-w-0` on the column is
+  // what lets it be narrower than that string; `wrap-anywhere` is what gives the string a break
+  // opportunity that intrinsic sizing can actually see. `break-words` is defined not to.
+  it('lets a long product name break rather than setting the card floor', async () => {
+    getAlerts.mockResolvedValue({
+      content: [alert({ product: { ...product(), name: 'De Longhi ECP33.21-1100W-BLACK' } })],
+      totalPages: 1,
+    })
+    const { container } = renderPage()
+    const link = await screen.findByRole('link', { name: /ecp33/i })
+    expect(classesOf(link)).toContain('wrap-anywhere')
+    expect(classesOf(link)).not.toContain('break-words')
+    expect(classesOf(container.querySelector('section > div > div'))).toContain('min-w-0')
+  })
+})

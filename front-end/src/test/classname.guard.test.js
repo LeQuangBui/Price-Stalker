@@ -26,21 +26,9 @@ const BESPOKE = new Set([
   'add-by-url-status-url',
   'add-to-bookmark',
   'add-to-bookmark-btn',
-  'alert-action-button',
   'alert-actions',
-  'alert-card',
-  'alert-card-actions',
-  'alert-card-controls',
-  'alert-card-main',
-  'alert-card-skeleton',
-  'alert-checkbox',
-  'alert-field',
   'alert-form',
-  'alert-product-link',
-  'alert-product-meta',
   'alert-status',
-  'alerts-list',
-  'alerts-state',
   'bookmark-create-btn',
   'bookmark-create-form',
   'bookmark-dropdown',
@@ -144,8 +132,23 @@ const BESPOKE = new Set([
 //
 // Names below are the 46 that 2b-ii spent retiring `Bookmarks.css` and `UserProfile.css`, plus
 // `empty-state-cta` — an `index.css` rule rather than a stylesheet retirement, moved here when its
-// last consumer went to `btn btn-primary`. RETIRED is not only for whole-file conversions.
+// last consumer went to `btn btn-primary`. RETIRED is not only for whole-file conversions. The
+// twelve `alert-*` / `alerts-*` names at the head of the list are slice 2b-iii's, spent retiring
+// `Alerts.css`; `alert-actions`, `alert-form` and `alert-status` are NOT among them — those three
+// are `ProductDetail.css`'s and stay in BESPOKE until that file goes.
 const RETIRED = new Set([
+  'alert-action-button',
+  'alert-card',
+  'alert-card-actions',
+  'alert-card-controls',
+  'alert-card-main',
+  'alert-card-skeleton',
+  'alert-checkbox',
+  'alert-field',
+  'alert-product-link',
+  'alert-product-meta',
+  'alerts-list',
+  'alerts-state',
   'bookmark-actions',
   'bookmark-card',
   'bookmark-card-skeleton',
@@ -316,7 +319,7 @@ describe('bespoke className guard', () => {
   // and never needs raising to stay green — raise it only to tighten, after a legitimate addition
   // that test 2 has already forced you to justify.
   it('a retired name moves to RETIRED — deleting it outright shrinks the vocabulary', () => {
-    const VOCABULARY = 154 // BESPOKE 108 + RETIRED 46, recorded 2026-08-10 at the end of slice 2b-ii
+    const VOCABULARY = 154 // BESPOKE 95 + RETIRED 59, recorded 2026-08-11 mid-slice 2b-iii
     expect(
       BESPOKE.size + RETIRED.size,
       `BESPOKE + RETIRED is smaller than the vocabulary this project has coined. A name was\n` +
