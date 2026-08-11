@@ -203,6 +203,24 @@ describe('ProductDetail page', () => {
     expect(screen.getByRole('checkbox')).not.toBeChecked()
   })
 
+  // The tint is an inline style rather than an arbitrary background utility, and that is not a
+  // preference. Tailwind emits a SOLID pre-@supports fallback for an arbitrary color-mix — out of the
+  // built bundle, `background-color:var(--success)` ahead of
+  // `@supports (color:color-mix(in lab,red,red))` — so where color-mix is unsupported the pill is
+  // solid forest green under `--success-dark` text at 1.43:1. The CSSOM refuses a value it cannot
+  // parse instead of substituting one, which is the degradation the retired declaration had for
+  // free, and DropBadge.jsx:6-10 already does it this way. Setting a contrasting text colour and
+  // keeping the utility is not an alternative: no single colour reads both on a 14% tint and on
+  // solid `--success`.
+  it('tints the status pill from an inline token mix, not an arbitrary color-mix utility', async () => {
+    findAlertForProduct.mockResolvedValue({ id: 'al1', thresholdPrice: 990000, active: true })
+    renderPage({ isSignedIn: true })
+    const pill = await screen.findByText('Active')
+    expect(pill.getAttribute('style')).toMatch(/color-mix/)
+    expect(pill.className, 'an arbitrary color-mix utility ships a solid-colour fallback under it')
+      .not.toMatch(/color-mix/)
+  })
+
   it('deletes the alert only after the confirmation dialog is accepted', async () => {
     findAlertForProduct.mockResolvedValue({ id: 'al1', thresholdPrice: 990000, active: true })
     deleteAlert.mockResolvedValue({})

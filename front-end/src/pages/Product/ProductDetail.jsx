@@ -112,12 +112,42 @@ const PANEL_TITLE = 'text-xl'
 // is written in rem for the same reason the type is: at a 24px browser default the label is 18px,
 // and a frozen px box around growing text is the clipping bug this phase exists to remove.
 const ALERT_STATUS = 'inline-flex min-h-7.5 items-center rounded-full px-3 text-xs font-bold'
-// Tailwind's slash-opacity emits color-mix(in OKLAB, ...), which is not what these were, so the
-// two tints keep the srgb mix verbatim. Underscores for the spaces — precedent at Pagination.jsx:9.
-const ALERT_STATUS_ACTIVE =
-  'bg-[color-mix(in_srgb,var(--success)_14%,transparent)] text-success-deep'
-const ALERT_STATUS_PAUSED =
-  'bg-[color-mix(in_srgb,var(--text-secondary)_14%,transparent)] text-ink-soft'
+
+// The tints are an inline `style` rather than an arbitrary background utility wrapping the mix,
+// and the reason is what Tailwind emits around one. Verified in the built bundle:
+//
+// (The utility spelling is deliberately not written out anywhere in this file. Tailwind scans the
+// source as plain text, so a bracketed class name inside a comment compiles to a real rule — and
+// this one would compile to a rule with an unparseable value. Same trap as the note on SWIPER_BTN.)
+//
+//     .bg-\[color-mix\(in_srgb\,var\(--success\)_14\%\,transparent\)\]{background-color:var(--success)}
+//     @supports (color:color-mix(in lab,red,red)){ … the real mix … }
+//
+// A SOLID-COLOUR fallback before the @supports gate. So where color-mix is unsupported the pill is
+// not an unfilled pill — it is solid `--success` under `--success-dark` text, forest green on
+// forest green at 1.43:1. The declaration this conversion replaced degraded correctly for free: an
+// unsupported color-mix in hand-written CSS is invalid at computed-value time and the property
+// simply drops.
+//
+// An inline style gets that behaviour back, because the CSSOM refuses a value it cannot parse
+// rather than substituting one, and DropBadge.jsx:6-10 already solves exactly this the same way.
+// Keeping the utilities and setting a contrasting text colour instead cannot work: one colour would
+// have to read both on a 14% tint (near-white, wants dark text) and on solid `--success` (wants
+// light text), and no colour does both. Degraded, this is text with no fill on the panel —
+// `--success-dark` measures 8.78:1 light and 4.56:1 dark against the surface it lands on.
+//
+// Tailwind's own slash-opacity is not an option either: it emits color-mix in OKLAB, which is not
+// what these were, and it emits the same pre-@supports fallback.
+const ALERT_STATUS_STYLE = {
+  active: {
+    color: 'var(--success-dark)',
+    background: 'color-mix(in srgb, var(--success) 14%, transparent)',
+  },
+  paused: {
+    color: 'var(--text-secondary)',
+    background: 'color-mix(in srgb, var(--text-secondary) 14%, transparent)',
+  },
+}
 
 function hostOf(url) {
   try {
@@ -471,7 +501,10 @@ export default function ProductDetail({ isSignedIn }) {
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                   <h2 className={PANEL_TITLE}>Price alert</h2>
                   {currentAlert && (
-                    <span className={cx(ALERT_STATUS, currentAlert.active ? ALERT_STATUS_ACTIVE : ALERT_STATUS_PAUSED)}>
+                    <span
+                      className={ALERT_STATUS}
+                      style={ALERT_STATUS_STYLE[currentAlert.active ? 'active' : 'paused']}
+                    >
                       {currentAlert.active ? 'Active' : 'Paused'}
                     </span>
                   )}
