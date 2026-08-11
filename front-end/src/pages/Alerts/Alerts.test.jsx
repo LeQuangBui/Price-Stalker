@@ -171,8 +171,15 @@ describe('Alerts page', () => {
   })
 })
 
-// Exact class tokens. `toContain` on the raw string would let `min-[26.25rem]:flex-row` satisfy a
-// check for `flex-row`, which is the one confusion these assertions exist to catch.
+// Exact class tokens. `toContain` on the raw string would let a responsive `…:flex-row` variant
+// satisfy a check for bare `flex-row`, which is the one confusion these assertions exist to catch.
+//
+// The variant is described rather than spelled out, and that is not fussiness. Tailwind v4 scans
+// source files as plain TEXT and does not parse them, so it cannot tell a class name in a comment
+// from one on an element: writing the literal here put a real, dead
+// `@media (min-width:26.25rem){.min-\[26\.25rem\]\:flex-row{flex-direction:row}}` into the
+// production bundle with no carrier anywhere in the tree. Worse, it would make any later
+// `grep min-width:26.25rem` on the build pass whether or not the page still used the step.
 const classesOf = (el) => el.className.split(/\s+/)
 
 describe('Alerts page markup after the CSS retirement', () => {

@@ -25,27 +25,42 @@ const ALERTS_LIST = 'grid gap-4'
 const ALERT_CARD =
   'rounded-[var(--radius)] border border-line bg-paper p-5 shadow-[var(--shadow-sm)]'
 
-// PLACEHOLDER — 26.25rem is NOT a measured number and must not be carried forward as one. Task 7
-// sweeps this row and replaces it, and "no breakpoint at all" is one of the outcomes it may return.
+// 18rem, measured against this markup — not the 26.25rem placeholder this line shipped with, and
+// not the 768px the retired stylesheet used, which fired roughly 400px early.
 //
-// The retired stylesheet stacked this row below 768px, roughly 400px too early. The recon figure
-// that showed it — a 360px floor on `.alert-card-main` as a row — was measured on `main`, where the
-// floor is set by `.alert-field input`'s `min-width: 180px` and the control's 192px UA `size`
-// default. This conversion deletes both. What is left setting the floor is the product name plus
-// the toggle, and with `min-w-0` and `wrap-anywhere` on the left column that is likely far below
-// 26.25rem. The recon figure was also internally inconsistent: 122px of shell, page and card box
-// sits outside this row at 320px, so a 360px row cannot produce a 360px page floor.
+// Swept with the row forced unconditional, header ablated, 62 viewports from 241px to 481px at
+// roots 16, 20 and 24, against a pinned fixture: two alerts, one active and one paused, product
+// name `De'Longhi Dedica Arte ECP33.21-1100W-BLACK`, threshold `100000000`. The narrowest viewport
+// at which the row clears and stays clear:
 //
-// Rem, not px, and not `md:`, whatever the number turns out to be. The floor is set by this row's
-// own type and padding, both of which grow with the reader's browser font size, so the viewport
-// width at which it clears has to grow with them; that is what a rem breakpoint is. Precedent:
-// PriceDisplay's min-[22.5rem] and min-[17rem].
+//     root 16 -> 285px = 17.81rem      root 20 -> 337px = 16.85rem      root 24 -> 413px = 17.21rem
+//
+// Largest is 17.81rem, so the next quarter-rem step is 18. That is the tight answer rather than a
+// safe one: 17.75rem fires at 284px against root 16's 285px floor and fails by a pixel, while 18rem
+// clears every root (+3px at 16, +23px at 20, +19px at 24).
+//
+// The step earns its keep at raised root sizes, which is the whole argument for making it rem. On a
+// 16px default it fires at 288px, below any real phone, so the row is always a row. On a 24px
+// default it fires at 432px, so a 390px phone stacks — and measured, a 390px phone at a 24px
+// default overflows by 27px if it does not.
+//
+// What sets the floor is no longer what set it on `main`. There the row's min-content came from
+// `.alert-field input`'s `min-width: 180px` plus the control's 192px UA `size` default, both of
+// which the retirement deleted. It is now the meta line's longest unbreakable token — the formatted
+// price, ~150px at a 24px root — since the name above it carries `wrap-anywhere` and the column
+// carries `min-w-0`, so neither of those two is the binding constraint any more.
+//
+// Measured page-level, not card-level. `scripts/probes/alert-card.js` reports
+// `card.scrollWidth - card.clientWidth`, which stays 0 through all of this: the card is a grid item
+// whose track is forced to its own min-content, so it is stretched wider than the viewport rather
+// than overflowing inside itself. At 305px and a 24px root the card measures 352.28px against a
+// 305px client with the probe's `overflow` still reading 0.
 //
 // BOTH states are gated on the same step on purpose. A `max-width: 768px` block beside an `md:`
 // variant applies both branches at exactly 768px on a 16px root, and leaves a 769-959px band where
 // NEITHER applies on a 20px root.
 const ALERT_CARD_MAIN =
-  'mb-4 flex flex-col gap-5 min-[26.25rem]:flex-row min-[26.25rem]:justify-between'
+  'mb-4 flex flex-col gap-5 min-[18rem]:flex-row min-[18rem]:justify-between'
 
 export default function Alerts() {
   const [alerts, setAlerts] = useState([])
