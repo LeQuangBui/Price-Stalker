@@ -13,7 +13,6 @@ const FLOOR = 16
 // second test fails on any entry that no longer violates, so a fix must delete its entry.
 const ALLOWED = new Map([
   ['ProductSearch.css .search-select', 15],   // a <select>, same file — slice 2b-iv
-  ['AddToBookmark.css .bookmark-name-input', 14],
 ])
 
 // Arbitrary px type in JSX, which the CSS scan above cannot see at all. The house convention is

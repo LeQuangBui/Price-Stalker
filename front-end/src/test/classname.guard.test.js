@@ -17,21 +17,6 @@ const SRC = join(dirname(fileURLToPath(import.meta.url)), '..')
 // it reaches zero when the last one goes.
 const BESPOKE = new Set([
   'active',
-  'add-to-bookmark',
-  'add-to-bookmark-btn',
-  'bookmark-create-btn',
-  'bookmark-create-form',
-  'bookmark-dropdown',
-  'bookmark-dropdown-label',
-  'bookmark-dropdown-status',
-  'bookmark-dropdown-title',
-  'bookmark-existing-action',
-  'bookmark-existing-count',
-  'bookmark-existing-list',
-  'bookmark-existing-meta',
-  'bookmark-existing-name',
-  'bookmark-existing-row',
-  'bookmark-name-input',
   'btn',
   'btn-block',
   'btn-danger',
@@ -57,7 +42,6 @@ const BESPOKE = new Set([
   'confirm-dialog-title',
   'danger',
   'empty-state',
-  'error',
   'page-error',
   'price-chart',
   'price-history-chart',
@@ -77,7 +61,6 @@ const BESPOKE = new Set([
   'skeleton',
   'skip-link',
   'sr-only',
-  'success',
   'time-range-selector',
 ])
 
@@ -108,12 +91,18 @@ const BESPOKE = new Set([
 // `ProductDetail.css`. Slice 2b-iv opens with the eight `AddByUrl.css` names: the seven
 // `add-by-url*`, easy to count off the filename, and `btn-spinner` — coined by the same file
 // despite the generic name, so its rule dies with it and it moves here in the same commit.
+// `AddToBookmark.css` spends seventeen more: the fifteen `add-to-bookmark*` / `bookmark-*` names
+// off the filename, plus `success` and `error` — see the next paragraph for why those two moved
+// when their siblings could not.
 //
-// `active`, `danger`, `success` and `error` are NOT here and must not be moved. All four are
-// written by these two retired files AND by a surviving stylesheet with a surviving carrier
-// (`PriceHistoryChart.css` / `ProductSearch.css`, `ConfirmDialog.css`, `AddToBookmark.css`), and
-// test 2 below requires every name that is both defined in CSS and written in JSX to be in
-// BESPOKE. Moving any of them turns test 2 red, not test 1.
+// `active` and `danger` are NOT here and must not be moved. Both are written by a retired file
+// AND by a surviving stylesheet with a surviving carrier (`PriceHistoryChart.css`,
+// `ConfirmDialog.css`), and test 2 below requires every name that is both defined in CSS and
+// written in JSX to be in BESPOKE. Moving either turns test 2 red, not test 1. `success` and
+// `error` sat in the same sentence until `AddToBookmark.css` retired: that file's
+// `.bookmark-dropdown-status.success` / `.error` compounds were their LAST declarations anywhere,
+// so both rules died with it and both names moved here in that commit, exactly per the rule test
+// 3 enforces.
 const RETIRED = new Set([
   'add-by-url',
   'add-by-url-btn',
@@ -122,6 +111,8 @@ const RETIRED = new Set([
   'add-by-url-status',
   'add-by-url-status-pill',
   'add-by-url-status-url',
+  'add-to-bookmark',
+  'add-to-bookmark-btn',
   'alert-action-button',
   'alert-actions',
   'alert-card',
@@ -140,14 +131,27 @@ const RETIRED = new Set([
   'bookmark-actions',
   'bookmark-card',
   'bookmark-card-skeleton',
+  'bookmark-create-btn',
+  'bookmark-create-form',
   'bookmark-date',
   'bookmark-dirty',
+  'bookmark-dropdown',
+  'bookmark-dropdown-label',
+  'bookmark-dropdown-status',
+  'bookmark-dropdown-title',
   'bookmark-editor',
   'bookmark-empty',
+  'bookmark-existing-action',
+  'bookmark-existing-count',
+  'bookmark-existing-list',
+  'bookmark-existing-meta',
+  'bookmark-existing-name',
+  'bookmark-existing-row',
   'bookmark-header',
   'bookmark-info',
   'bookmark-item',
   'bookmark-name',
+  'bookmark-name-input',
   'bookmark-products',
   'bookmarks-container',
   'bookmarks-grid',
@@ -164,6 +168,7 @@ const RETIRED = new Set([
   'delete-btn',
   'editor-actions',
   'empty-state-cta',
+  'error',
   'error-message',
   'expand-btn',
   'no-bookmarks',
@@ -197,6 +202,7 @@ const RETIRED = new Set([
   'secondary',
   'secondary-header-btn',
   'submit-btn',
+  'success',
   'swiper',
   'swiper-btn',
   'swiper-dot',

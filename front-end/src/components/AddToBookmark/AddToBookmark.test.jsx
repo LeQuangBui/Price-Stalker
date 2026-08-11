@@ -163,3 +163,80 @@ describe('AddToBookmark dropdown', () => {
     expect(screen.queryByText('Choose a bookmark')).toBeNull()
   })
 })
+
+// Exact class tokens, same helper as ProductDetail.test.jsx — `toContain` on the raw string would
+// let `text-danger` satisfy a check for `danger`.
+const classesOf = (el) => el.className.split(/\s+/)
+
+describe('AddToBookmark markup after the CSS retirement', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    getBookmarks.mockResolvedValue({ content: [bookmark()] })
+  })
+
+  it('carries no class owned by the retired stylesheet', async () => {
+    updateBookmark.mockRejectedValue(new Error('Failed to update bookmark'))
+    const { container } = render(<AddToBookmark productId="p1" />)
+    await openDropdown()
+    // The error branch too — it holds the compound `error` token this check most needs to see gone.
+    await userEvent.click(screen.getByRole('button', { name: 'Add' }))
+    await screen.findByText('Failed to update bookmark')
+
+    for (const cls of [
+      'add-to-bookmark', 'add-to-bookmark-btn', 'bookmark-dropdown', 'bookmark-dropdown-title',
+      'bookmark-dropdown-label', 'bookmark-dropdown-status', 'bookmark-existing-list',
+      'bookmark-existing-row', 'bookmark-existing-meta', 'bookmark-existing-name',
+      'bookmark-existing-count', 'bookmark-existing-action', 'bookmark-create-form',
+      'bookmark-create-btn', 'bookmark-name-input', 'success', 'error',
+    ]) {
+      expect(container.querySelector(`.${cls}`), `${cls} should be gone`).toBeNull()
+    }
+  })
+
+  it('keeps the dropdown anchored to a relative root and stacked at its retired z-index', async () => {
+    const { container } = render(<AddToBookmark productId="p1" />)
+    await openDropdown()
+
+    // The three-way Header/TabBar/search-layer contract cites this component's overlay staying
+    // scoped: the root stays the containing block, the dropdown stays z-[100] — verbatim the
+    // retired z-index, not promoted, not a Tailwind step.
+    expect(classesOf(container.firstChild)).toContain('relative')
+    const dropdown = screen.getByText('Choose a bookmark').parentElement
+    expect(classesOf(dropdown)).toContain('absolute')
+    expect(classesOf(dropdown)).toContain('z-[100]')
+    expect(classesOf(dropdown), 'the radius is the token; rounded-lg reads 12px here')
+      .toContain('rounded-[var(--radius)]')
+  })
+
+  // Moved from cascade.guard.test.js, which asserted the re-homed 2b-ii declarations in the CSS
+  // text because nothing rendered this branch under test. This file renders it, so the same three
+  // box declarations are pinned here as the utilities that now carry them.
+  it('keeps the error box it re-homed in 2b-ii, on the error branch only', async () => {
+    updateBookmark.mockRejectedValue(new Error('Failed to update bookmark'))
+    render(<AddToBookmark productId="p1" />)
+    await openDropdown()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Add' }))
+    const error = await screen.findByText('Failed to update bookmark')
+    for (const utility of ['bg-paper', 'border', 'border-danger', 'rounded-[var(--radius)]', 'text-danger']) {
+      expect(classesOf(error), `${utility} missing`).toContain(utility)
+    }
+    // The neutral status carries none of the box.
+    getBookmarks.mockReturnValue(new Promise(() => {}))
+    render(<AddToBookmark productId="p2" />)
+    await userEvent.click(screen.getAllByRole('button', { name: 'Save to Bookmark' })[1])
+    const loading = screen.getByText('Loading...')
+    expect(classesOf(loading)).not.toContain('border-danger')
+    expect(classesOf(loading)).not.toContain('text-danger')
+  })
+
+  it('keeps the name field ink and ground it re-homed in 2b-ii, and the zoom-proof size', async () => {
+    render(<AddToBookmark productId="p1" />)
+    await openDropdown()
+
+    const input = screen.getByLabelText('Create a new bookmark')
+    for (const utility of ['text-ink', 'bg-paper', 'text-base']) {
+      expect(classesOf(input), `${utility} missing`).toContain(utility)
+    }
+  })
+})
