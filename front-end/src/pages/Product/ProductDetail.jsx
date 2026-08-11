@@ -519,6 +519,13 @@ export default function ProductDetail({ isSignedIn }) {
                   <p className="text-sm text-ink-soft">
                     Current price: {formatPrice(trackedPrice, product.currency)}
                   </p>
+                  {/* Same two Field deltas as the alert card's call site, from the same swap and
+                      accepted for the same reason. `.panel-input`'s `var(--radius-sm)` — a frozen
+                      6px — becomes `rounded-xl`, measured 12px at a 16px root, 15px at 20 and 18px
+                      at 24; its 3px focus spread at 18% srgb becomes `focus:ring-2` at 20% oklab.
+                      Note the ring tint carries the same pre-@supports fallback as the status
+                      pills above, but degrades the other way: solid `--primary` at 2px is a
+                      stronger focus ring, not an invisible one, so it needs no inline style. */}
                   <Field
                     id="threshold-price"
                     label="Threshold price"

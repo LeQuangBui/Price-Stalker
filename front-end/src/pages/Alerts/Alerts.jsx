@@ -318,6 +318,15 @@ export default function Alerts() {
                           knowingly: two digits of the threshold are worth more than 3px, and that
                           same cell already scrolls 55px sideways on Pagination's account. Every
                           other cell measured is 0. */}
+
+                      {/* Two deltas come with adopting the shared primitive, both accepted, both
+                          recorded because this branch's standard is to record a 5px dot shift.
+                          Radius: `var(--radius-sm)`, a frozen 6px, becomes Field's `rounded-xl` —
+                          measured 12px at a 16px root, 15px at 20 and 18px at 24, so it doubles
+                          and then scales where the retired value did neither. Focus ring: a 3px
+                          spread at 18% srgb becomes `focus:ring-2` at 20% oklab, so 1px thinner,
+                          two points stronger, and mixed in a different space. Both are Field's to
+                          own now; changing them here would fork the primitive for one caller. */}
                       <Field
                         id={`threshold-${alert.id}`}
                         label="Threshold"
