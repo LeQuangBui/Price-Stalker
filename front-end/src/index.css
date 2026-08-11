@@ -40,6 +40,12 @@
   --radius-lg: 12px;
   --text-on-primary: #ffffff;   /* text on oxblood/solid buttons (white reads on both themes) */
 
+  /* Overlay behind controls that float on a photograph — the gallery arrows. Slate at 55%, lifted
+     verbatim out of the retired ProductDetail.css so the conversion is a no-op. Deliberately the
+     same in both themes: it sits over an image, not over the page, so it has no reason to flip.
+     The .dark line below is not redundant — it is where a divergence goes when one is wanted. */
+  --scrim: rgba(15, 23, 42, 0.55);
+
   --tabbar-h: 3.5rem;
   --safe-t: env(safe-area-inset-top, 0px);
   --safe-b: env(safe-area-inset-bottom, 0px);
@@ -71,6 +77,7 @@
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
   --shadow: 0 22px 56px -34px rgba(0, 0, 0, 0.7);
   --shadow-lg: 0 28px 80px -36px rgba(0, 0, 0, 0.78);
+  --scrim: rgba(15, 23, 42, 0.55);
 }
 
 /* ── Tailwind v4 token bridge (E5 redesign) ─────────────────
@@ -96,6 +103,7 @@
   --color-line-soft: var(--border-light);
   --color-success: var(--success);
   --color-success-deep: var(--success-dark);
+  --color-scrim: var(--scrim);
 
   --font-display: var(--font-serif);
   --font-body: var(--font-sans);

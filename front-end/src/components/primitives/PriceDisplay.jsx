@@ -50,11 +50,36 @@ import { formatPrice } from '../../utils/formatters'
 export const CARD_PRICE_SIZE =
   'text-base min-[17rem]:text-2xl min-[22.5rem]:text-base sm:text-2xl'
 
+// The detail page's hero price, and the last piece of the CARD_PRICE_SIZE work that never reached
+// it. `text-display` alone is clamp(2.25rem, 6vw, 4.5rem), which wrapped at both ends of the range.
+//
+// LOW END. Below `lg:` the page is one column of (viewport − 5rem): the shell's
+// clamp(1rem,4vw,1.5rem) gutter and the page's px-6, both a side. A round 9-digit vi-VN price
+// measures 6.834x its font size, so the clamp's 2.25rem floor needs a 341px viewport at a 16px root
+// and does not get one on a 320px phone — measured at recon as 246.03px of price in a 240px column,
+// two lines of 36px. 21.5rem is the tightest of the three root sizes checked (21.3rem at 16, 21.1
+// at 20, 21.0 at 24); rounded up to a quarter-rem step it is 344px. 1.875rem needs 12.81rem of
+// column and clears 320px at every root that has any hope of fitting a price at all.
+//
+// HIGH END, and this is the real defect. `lg:` is where ProductDetail's grid goes two-column, so it
+// is exactly where the column stops tracking the viewport: max-w-5xl, px-6 and gap-10 are all rem,
+// so from there up the column is frozen at 468px on a default font and grows only with the reader.
+// `6vw` does not know that and keeps climbing to the 4.5rem ceiling — measured at recon as 469.91px
+// of text in a 468px column from 1200px up, which put the ₫ alone on a second line. A flat 3.75rem
+// from the same breakpoint is ~410px in that column, and because both sides are now rem the ratio
+// holds at every root font size. At 64rem itself the clamp would have given 61.4px against this
+// 60px, so the step down is invisible where it engages.
+//
+// Every step is rem, for the reason CARD_PRICE_SIZE spells out above: a px breakpoint does not move
+// when the reader raises the browser's default font, so the column arrives at the same viewport
+// width with less room in it and more type to fit.
+export const HERO_PRICE_SIZE = 'text-3xl min-[21.5rem]:text-display lg:text-6xl'
+
 const SIZES = {
   sm: CARD_PRICE_SIZE,
   md: 'text-4xl',
   lg: 'text-display-sm',
-  xl: 'text-display',
+  xl: HERO_PRICE_SIZE,
 }
 
 /**
@@ -76,7 +101,12 @@ export default function PriceDisplay({ value, currency, was, size = 'md', reserv
     // together are far wider than the interior, and a nowrap row would put the `was` price under
     // the card's `overflow-hidden`. The row gap only ever applies once they actually wrap.
     <span className={cx('inline-flex flex-wrap items-end gap-x-3 gap-y-1', className)}>
+      {/* A measurement handle for scripts/probes/hero-price.js and nothing else. It is an
+          attribute rather than a class because this phase is in the business of deleting class
+          names, and a probe keyed to one is a probe that breaks in the next slice. No guard reads
+          attributes and no test reads this one. */}
       <span
+        data-price-value
         className={cx(
           // `wrap-anywhere` has to be this exact value, and it is the one thing standing between a
           // reader and a wrong number. A formatted price holds no break opportunity, so its

@@ -12,16 +12,14 @@ const SRC = join(dirname(fileURLToPath(import.meta.url)), '..')
 // bare name) is what makes this a ratchet: adding the class to a THIRD file, or re-adding it to
 // a file it was removed from, is a new violation even though the name is listed. This list may
 // only ever shrink. Do not add to it, or widen an entry, to make a build pass.
-// Compound state-modifier classes, and nothing else. Each is only ever written as a
-// descendant/compound of an owning block (`.foo.success`, `.bar .active`), so the declarations
-// never meet on one element. Verified: no live collision. Recorded as permitted, not as debt.
-// `bookmark-name-input` left this list with Bookmarks.css — AddToBookmark.css is its only owner
-// now, and a listed non-collision fails the stale-entry test below.
+// One entry left. `active` is a compound state modifier: both owners only ever write it as a
+// compound of their own block (`.time-range-selector button.active`, `.search-dropdown-item.active`),
+// so the declarations never meet on one element. Verified: no live collision. Recorded as
+// permitted, not as debt. `success` and `danger` left this list with ProductDetail.css in slice
+// 2b-iii and `error` with Alerts.css; each fell to a single owner, and a listed non-collision fails
+// the stale-entry test below, so they were deleted rather than narrowed.
 const ALLOWED = new Map([
-  ['error', ['AddToBookmark.css', 'Alerts.css']], // both resolve to var(--danger)
-  ['success', ['AddToBookmark.css', 'ProductDetail.css']],
-  ['danger', ['Alerts.css', 'ConfirmDialog.css', 'ProductDetail.css']],
-  ['active', ['PriceHistoryChart.css', 'ProductDetail.css', 'ProductSearch.css']],
+  ['active', ['PriceHistoryChart.css', 'ProductSearch.css']],
 ])
 
 function walk(dir) {

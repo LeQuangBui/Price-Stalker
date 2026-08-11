@@ -13,6 +13,9 @@ import SectionHeader from '../../components/primitives/SectionHeader'
 import PriceDisplay from '../../components/primitives/PriceDisplay'
 import DropBadge from '../../components/primitives/DropBadge'
 import ErrorState from '../../components/primitives/ErrorState'
+import CheckboxRow from '../../components/primitives/CheckboxRow'
+import Field from '../../components/primitives/Field'
+import { cx } from '../../lib/cx'
 import {
   formatDate,
   formatDateTime,
@@ -21,7 +24,132 @@ import {
   hasFlashSalePrice,
   hasOriginalPrice
 } from '../../utils/formatters'
-import './ProductDetail.css'
+
+// The gallery arrows. `size-11` is the 44px floor — they measured 40x40 with no padding, live on
+// every product with two or more images. `cursor-pointer` is not decoration: verified in the built
+// bundle, Tailwind v4's preflight sets no button cursor at all, so a <button> that does not adopt
+// `.btn` gets the UA arrow. `bg-scrim` is the token minted for this one value; the literal it
+// replaces was hard-coded slate-900, identical in both themes and invisible to tokens.guard, and so
+// is every default-palette slash-opacity replacement for it — those emit hex into the generated
+// stylesheet and never into src/, and none of them flips with the theme. Note that the obvious such
+// spelling is NOT written out here even as an example: Tailwind scans this file as plain text, so a
+// class name inside a comment compiles to a real rule. Writing it would have shipped a dead
+// hard-coded black into the bundle from the comment arguing against hard-coded colour.
+//
+// ONE template literal, not two concatenated strings and not an array join. classname.guard's
+// AT_CONSTANT is /^\s*(?:export\s+)?const\s+[A-Z][A-Z0-9_]*\s*=\s*(?:'([^']*)'|`([^`]*)`)/gm — it
+// captures the FIRST literal after the `=` and nothing else, so `'a' + 'b'` hides `b` from both
+// tests and `['a','b'].join(' ')` hides everything. `bg-scrim` and `text-white` are in the half
+// that would have been invisible.
+const SWIPER_BTN = `absolute top-1/2 grid size-11 -translate-y-1/2 cursor-pointer place-items-center rounded-full border-0 bg-scrim text-xl text-white`
+
+// The dot rail. Each dot is a 44x44 hit box around a 10px painted core, with no gap, so adjacent
+// boxes are adjacent rather than overlapping. They overlapped by 12px before — 30x30 boxes on an
+// 18px pitch, both at `z-index: auto` in one stacking context, so the later dot in DOM order took
+// the whole overlap and the right 2px of the dot you were aiming at opened the NEXT slide.
+// Measured exclusive tap width was 18px for dots 1-4 and 30px for dot 5.
+//
+// STATIC, and a SIBLING BELOW the frame rather than absolutely positioned inside it. That is the
+// whole fix, and it is the third attempt at this bug. The first two both left the rail overlaying
+// the frame and then arbitrated the shared pixels — `pointer-events-none` on the band, then DOM
+// order so the arrows paint last — and each time the arbitration protected the thing it was
+// written to protect and cost something that had not been measured. Measured on the second one,
+// with a full-AREA sweep of the PAINTED CORE rather than of the 44px hit box, at five images:
+//
+//     305/root 20   dot 1: 0 of 121 px its own (BUTTON[Previous image])   dot 3: 0 of 121 (Next)
+//     305/root 24   dot 1: 0 of 196 (Previous)                            dot 3: 0 of 196 (Next)
+//     320/root 24   dot 1: 0 of 196 (Previous)                            dot 3: 0 of 196 (Next)
+//     360/root 24   dot 1: 0 of 196 (Previous)                            dot 3: 0 of 196 (Next)
+//
+// Confirmed with real trusted clicks over `Input.dispatchMouseEvent` — not `.click()`, which
+// bypasses hit testing and reports success on a control buried under another: tapping the visible
+// centre of dot 1 moved the gallery to slide 4, and dot 3 to slide 1. The hit box losing pixels was
+// the signed-off cost; the painted core losing 100% of them is what a reader actually aims at, and
+// nobody had measured it because the earlier probe swept one horizontal line through each box.
+//
+// Out of flow, the rail and the arrows shared pixels no matter who was given them, so the geometry
+// had no solution on a small frame: two 66px arrows and a 66px-deep rail line do not both fit in
+// the 188px an aspect-square frame has at 305px/root 24, and horizontal padding wide enough to
+// clear the arrows (3.5rem a side, 168 of 188px) leaves less than one dot of interior. In flow,
+// there are no shared pixels to arbitrate: the rail wraps as freely as it likes, the frame keeps
+// its full height for the arrows, and both control sets hold 44px at every root. The frame keeps
+// `relative` and `aspect-square` because the arrows still position against it.
+//
+// The colour of an inactive dot had to change with the position, and that is the one thing this
+// move costs. `--bg-primary` at 72% was picked to read over a PHOTOGRAPH; over the page it is
+// white-on-near-white and simply disappears. Contrast against `--bg-secondary`, measured in both
+// themes, against the 3:1 floor a non-text indicator has to clear:
+//
+//     --bg-primary at 72% (retired)  1.07 light  1.08 dark      --border          1.18  1.42
+//     --text-muted at 55%            2.05        2.56           --bg-tertiary     1.09  1.25
+//     --text-muted solid             4.35        5.50   <- `bg-ink-mute`
+//
+// So it is the solid token: every faint spelling of "an inactive dot" fails, including the two
+// border/surface tokens that look like the obvious choice. `bg-oxblood` stays for the current dot
+// and clears the floor on its own, at 10.11 light and 4.05 dark.
+//
+// Do NOT put this back inside the frame. `pointer-events`, DOM order, a constrained width and a
+// z-index are all arbitration, the last of which has already shipped once here and made a nav
+// untappable. There is nothing to arbitrate while the two live in different boxes.
+const SWIPER_DOTS = 'flex flex-wrap items-center justify-center'
+const SWIPER_DOT = 'grid size-11 cursor-pointer place-items-center border-0 bg-transparent p-0'
+
+const PANEL = 'rounded-2xl border border-line bg-surface p-6 shadow-[var(--shadow-sm)]'
+const PANEL_COMPACT = 'rounded-2xl border border-line bg-surface px-6 py-5 shadow-[var(--shadow-sm)]'
+
+// 20px, down from the retired 22px, which is not a rem step. An explicit size is MANDATORY here,
+// not cosmetic: Tailwind's preflight sets heading font-size to inherit and index.css:159-167
+// overrides only family, weight, tracking and leading, so a bare <h2> is 16px.
+//
+// No bottom margin. The retired rule's `margin: 0 0 16px 0` applied to all three headings, and on
+// the alert panel that heading is a flex item beside the status pill: flex centres the MARGIN box,
+// so the text sat about 8px above the pill's centre line, and the margin stacked with the header's
+// own to give 32px of gap where the other two panels have 16. The two standalone headings add
+// `mb-4` at their call sites.
+const PANEL_TITLE = 'text-xl'
+
+// The status pill. 13px is not a rem step and this is a compact badge, so `text-xs`. The 30px box
+// is written in rem for the same reason the type is: at a 24px browser default the label is 18px,
+// and a frozen px box around growing text is the clipping bug this phase exists to remove.
+const ALERT_STATUS = 'inline-flex min-h-7.5 items-center rounded-full px-3 text-xs font-bold'
+
+// The tints are an inline `style` rather than an arbitrary background utility wrapping the mix,
+// and the reason is what Tailwind emits around one. Verified in the built bundle:
+//
+//     .bg-\[color-mix\(in_srgb\,var\(--success\)_14\%\,transparent\)\]{background-color:var(--success)}
+//     @supports (color:color-mix(in lab,red,red)){ … the real mix … }
+//
+// Quoted in its ESCAPED form on purpose, which the scanner does not read as a candidate — checked
+// against the built stylesheet. The unescaped utility is not written anywhere in this file, in the
+// comment arguing against it least of all: Tailwind scans the source as plain text, and the first
+// draft of this paragraph compiled a rule with an unparseable value straight into the bundle. Same
+// trap as the note on SWIPER_BTN, second occurrence.
+//
+// A SOLID-COLOUR fallback before the @supports gate. So where color-mix is unsupported the pill is
+// not an unfilled pill — it is solid `--success` under `--success-dark` text, forest green on
+// forest green at 1.43:1. The declaration this conversion replaced degraded correctly for free: an
+// unsupported color-mix in hand-written CSS is invalid at computed-value time and the property
+// simply drops.
+//
+// An inline style gets that behaviour back, because the CSSOM refuses a value it cannot parse
+// rather than substituting one, and DropBadge.jsx:6-10 already solves exactly this the same way.
+// Keeping the utilities and setting a contrasting text colour instead cannot work: one colour would
+// have to read both on a 14% tint (near-white, wants dark text) and on solid `--success` (wants
+// light text), and no colour does both. Degraded, this is text with no fill on the panel —
+// `--success-dark` measures 8.78:1 light and 4.56:1 dark against the surface it lands on.
+//
+// Tailwind's own slash-opacity is not an option either: it emits color-mix in OKLAB, which is not
+// what these were, and it emits the same pre-@supports fallback.
+const ALERT_STATUS_STYLE = {
+  active: {
+    color: 'var(--success-dark)',
+    background: 'color-mix(in srgb, var(--success) 14%, transparent)',
+  },
+  paused: {
+    color: 'var(--text-secondary)',
+    background: 'color-mix(in srgb, var(--text-secondary) 14%, transparent)',
+  },
+}
 
 function hostOf(url) {
   try {
@@ -244,34 +372,80 @@ export default function ProductDetail({ isSignedIn }) {
       </AppLink>
 
       <div className="mt-6 grid gap-10 lg:grid-cols-2">
-        {/* Images (existing swiper, restyled frame) */}
+        {/* The image gallery. `relative aspect-square` on the frame with `absolute inset-0` on the
+            track: the arrows and the rail position against the frame, and the frame's height comes
+            from its aspect ratio, so taking the track out of flow means its height never has to
+            resolve a percentage against an aspect-ratio box.
+            The radius is written as the token rather than as a named step. The retired rule
+            declared `border-radius: var(--radius)` — 8px — and `background: var(--bg-tertiary)`,
+            and both beat the utilities written on this element, which have therefore never
+            rendered. The plausible-looking replacement resolves to `var(--radius-lg)`, which
+            index.css's UNLAYERED :root sets to 12px, so it would have grown the radius by half in
+            the conversion that exists to keep it. No named step maps to plain `--radius`. */}
         <div>
           {hasImages ? (
-            <div className="swiper overflow-hidden rounded-2xl border border-line bg-paper">
-              <div className="swiper-track" style={{ transform: `translateX(-${slide * 100}%)` }}>
-                {images.map((image, index) => (
-                  <div key={index} className="swiper-slide">
-                    <img src={image} alt={`${product.name} ${index + 1}`} loading="lazy" />
-                  </div>
-                ))}
-              </div>
-              {hasMultiple && (
-                <>
-                  <button className="swiper-btn swiper-prev" onClick={prevSlide} aria-label="Previous image">&lt;</button>
-                  <button className="swiper-btn swiper-next" onClick={nextSlide} aria-label="Next image">&gt;</button>
-                  <div className="swiper-dots">
-                    {images.map((_, index) => (
-                      <button
-                        key={index}
-                        className={`swiper-dot${slide === index ? ' active' : ''}`}
-                        onClick={() => setSlide(index)}
-                        aria-label={`Go to image ${index + 1}`}
+            <>
+              <div className="relative aspect-square overflow-hidden rounded-[var(--radius)] border border-line bg-tertiary">
+                <div
+                  className="absolute inset-0 flex transition-transform duration-[400ms] ease-[ease]"
+                  style={{ transform: `translateX(-${slide * 100}%)` }}
+                >
+                  {images.map((image, index) => (
+                    /* `min-w-full` is what makes the flex track one slide per viewport. Without it
+                       every image collapses to intrinsic width on a single row. */
+                    <div key={index} className="min-w-full">
+                      <img
+                        src={image}
+                        alt={`${product.name} ${index + 1}`}
+                        loading="lazy"
+                        className="h-full w-full object-cover"
                       />
-                    ))}
-                  </div>
-                </>
+                    </div>
+                  ))}
+                </div>
+                {hasMultiple && (
+                  <>
+                    <button type="button" className={cx(SWIPER_BTN, 'left-3')} onClick={prevSlide} aria-label="Previous image">&lt;</button>
+                    <button type="button" className={cx(SWIPER_BTN, 'right-3')} onClick={nextSlide} aria-label="Next image">&gt;</button>
+                  </>
+                )}
+              </div>
+              {/* OUTSIDE the frame, and after it, so it is in flow. The arrows keep the frame to
+                  themselves and the rail gets a row of its own to wrap into. See SWIPER_DOTS. */}
+              {hasMultiple && (
+                <div className={SWIPER_DOTS}>
+                  {images.map((_, index) => (
+                    <button
+                      key={index}
+                      type="button"
+                      className={SWIPER_DOT}
+                      onClick={() => setSlide(index)}
+                      aria-label={`Go to image ${index + 1}`}
+                      /* The only non-visual signal of which slide is showing. Without it the
+                         painted core is the entire state and a screen reader reads five
+                         identical "Go to image N" buttons. Not a regression — the retired
+                         `.swiper-dot.active` was equally visual-only — but the naming and the
+                         hit boxes were fixed around it and this is what was left.
+                         `true`/undefined rather than `true`/`false`: `aria-current="false"` is a
+                         real value, and announcing "not current" on four of five dots is worse
+                         than saying nothing about them. */
+                      aria-current={slide === index ? 'true' : undefined}
+                    >
+                      {/* A real element, not a pseudo-element: that is what lets the 44px hit
+                          box and the 10px circle be sized independently, and it is what
+                          replaces the `::after { inset: -10px }` hit expander whose 30x30 boxes
+                          overlapped their neighbours by 12px. */}
+                      <span
+                        className={cx(
+                          'block size-2.5 rounded-full',
+                          slide === index ? 'bg-oxblood' : 'bg-ink-mute',
+                        )}
+                      />
+                    </button>
+                  ))}
+                </div>
               )}
-            </div>
+            </>
           ) : (
             <div className="grid aspect-square place-items-center rounded-2xl border border-dashed border-line bg-surface font-display italic text-ink-mute">
               No image available
@@ -318,49 +492,72 @@ export default function ProductDetail({ isSignedIn }) {
             <div className="mt-6">
               <AddToBookmark productId={product.id} />
 
-              <section className="product-panel mt-5">
-                <div className="product-panel-header">
-                  <h2>Price alert</h2>
+              {/* A wrapping row at every width, where the retired media block stacked the title
+                  and the pill below 768px. Both children are short fixed strings, so `flex-wrap`
+                  is safe here for the reason it was not safe on `.page-error`. The `mb-4` lives
+                  on this row rather than on the heading: the heading is a flex item beside the
+                  pill and flex centres the MARGIN box, so a margin there sat the text about 8px
+                  above the pill's centre line and stacked with this row's own to give 32px of gap
+                  where the other two panels have 16. */}
+              <section className={cx(PANEL, 'mt-5')}>
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                  <h2 className={PANEL_TITLE}>Price alert</h2>
                   {currentAlert && (
-                    <span className={`alert-status ${currentAlert.active ? 'active' : 'paused'}`}>
+                    <span
+                      className={ALERT_STATUS}
+                      style={ALERT_STATUS_STYLE[currentAlert.active ? 'active' : 'paused']}
+                    >
                       {currentAlert.active ? 'Active' : 'Paused'}
                     </span>
                   )}
                 </div>
 
-                <form className="alert-form" onSubmit={handleAlertSubmit}>
-                  <label className="panel-label" htmlFor="threshold-price">Threshold price</label>
-                  <p className="panel-hint">Current price: {formatPrice(trackedPrice, product.currency)}</p>
-                  <input
+                <form className="flex flex-col gap-3.5" onSubmit={handleAlertSubmit}>
+                  {/* Before the input on purpose. Field renders its `hint` slot AFTER the control,
+                      and this line is the context a reader needs in order to choose a threshold,
+                      so it is a standalone paragraph above the field rather than a hint. It moves
+                      from between the label and the input to above the label; still before the
+                      control, which is the property that mattered. */}
+                  <p className="text-sm text-ink-soft">
+                    Current price: {formatPrice(trackedPrice, product.currency)}
+                  </p>
+                  {/* Same two Field deltas as the alert card's call site, from the same swap and
+                      accepted for the same reason. `.panel-input`'s `var(--radius-sm)` — a frozen
+                      6px — becomes `rounded-xl`, measured 12px at a 16px root, 15px at 20 and 18px
+                      at 24; its 3px focus spread at 18% srgb becomes `focus:ring-2` at 20% oklab.
+                      Note the ring tint carries the same pre-@supports fallback as the status
+                      pills above, but degrades the other way: solid `--primary` at 2px is a
+                      stronger focus ring, not an invisible one, so it needs no inline style. */}
+                  <Field
                     id="threshold-price"
+                    label="Threshold price"
                     type="number"
                     min="0"
                     step="0.01"
                     value={alertThreshold}
                     onChange={(event) => setAlertThreshold(event.target.value)}
-                    className="panel-input"
                     placeholder="Enter target price"
                   />
 
                   {currentAlert && (
-                    <label className="checkbox-row">
-                      <input
-                        type="checkbox"
-                        checked={alertActive}
-                        onChange={(event) => setAlertActive(event.target.checked)}
-                      />
+                    <CheckboxRow
+                      checked={alertActive}
+                      onChange={(event) => setAlertActive(event.target.checked)}
+                    >
                       Alert is active
-                    </label>
+                    </CheckboxRow>
                   )}
 
-                  <div className="alert-actions">
-                    <button type="submit" className="panel-button" disabled={alertLoading}>
+                  {/* A wrapping row at every width, where the retired media block stacked these
+                      below 768px. Both labels are fixed short strings. */}
+                  <div className="flex flex-wrap gap-3">
+                    <button type="submit" className="btn btn-primary" disabled={alertLoading}>
                       {alertLoading ? 'Saving...' : currentAlert ? 'Update alert' : 'Create alert'}
                     </button>
                     {currentAlert && (
                       <button
                         type="button"
-                        className="panel-button secondary danger"
+                        className="btn btn-danger"
                         onClick={handleDeleteAlert}
                         disabled={alertLoading}
                       >
@@ -370,14 +567,18 @@ export default function ProductDetail({ isSignedIn }) {
                   </div>
                 </form>
 
-                {alertMessage && <p className="panel-message success">{alertMessage}</p>}
-                {alertError && <p className="panel-message error-message">{alertError}</p>}
+                {/* No role on the success line: the same outcome already fires a toast, and
+                    ToastProvider's host is `role="status" aria-live="polite"`, so announcing it
+                    twice is worse than not at all. The error line has no toast behind it and is
+                    the reader's only signal, so it gets `role="alert"`. */}
+                {alertMessage && <p className="mt-3.5 text-success-deep">{alertMessage}</p>}
+                {alertError && <p className="mt-3.5 text-danger" role="alert">{alertError}</p>}
               </section>
             </div>
           ) : (
-            <section className="product-panel mt-6">
-              <h2>Price alert</h2>
-              <p className="panel-text">Sign in to bookmark this product or create a price alert.</p>
+            <section className={cx(PANEL, 'mt-6')}>
+              <h2 className={cx(PANEL_TITLE, 'mb-4')}>Price alert</h2>
+              <p className="text-ink-soft">Sign in to bookmark this product or create a price alert.</p>
             </section>
           )}
         </div>
@@ -389,9 +590,9 @@ export default function ProductDetail({ isSignedIn }) {
         <PriceHistoryChart productId={product.id} currency={product.currency} />
       </div>
 
-      <section className="product-panel compact mt-10">
-        <h2>Tracking notes</h2>
-        <p className="panel-text">
+      <section className={cx(PANEL_COMPACT, 'mt-10')}>
+        <h2 className={cx(PANEL_TITLE, 'mb-4')}>Tracking notes</h2>
+        <p className="text-ink-soft">
           Product created {formatDateTime(product.createdAt)} and last updated {formatDateTime(product.updatedAt)}.
         </p>
       </section>
