@@ -162,7 +162,7 @@ export default function AddByUrl({ onAdded }) {
       <button
         type="submit"
         aria-label="Add product by URL"
-        className="flex min-h-11 min-w-[72px] cursor-pointer items-center justify-center rounded-[var(--radius-sm)] bg-oxblood px-6 py-3 text-[0.9375rem] font-semibold text-white transition-[background-color] duration-200 enabled:hover:bg-oxblood-deep disabled:cursor-not-allowed disabled:bg-tertiary disabled:text-ink-mute"
+        className="flex min-h-11 min-w-[72px] cursor-pointer items-center justify-center whitespace-nowrap rounded-[var(--radius-sm)] bg-oxblood px-6 py-3 text-[0.9375rem] font-semibold text-white transition-[background-color] duration-200 enabled:hover:bg-oxblood-deep disabled:cursor-not-allowed disabled:bg-tertiary disabled:text-ink-mute"
         disabled={loading || !url.trim()}
       >
         {/* The retired keyframes ran 0.7s where `animate-spin` runs 1s — accepted and recorded.

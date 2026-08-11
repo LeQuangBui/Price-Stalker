@@ -141,7 +141,11 @@ export default function ProductSearch({
           row arrives at md. Both states ride the SAME md: breakpoint — one token each side of one
           swap — so there is no width where neither applies when a raised root font moves the
           rem-measured breakpoint. */}
-      <div className="flex flex-col flex-wrap gap-3 md:flex-row">
+      {/* Wrap only in the row state. A wrapped COLUMN is multi-line, and `align-items: stretch`
+          then sizes every item to the line's intrinsic width — the input's UA-intrinsic ~221px —
+          instead of the container. The retired CSS survived this only because its media block
+          pinned all three controls to `width: 100%`; single-line is the honest fix. */}
+      <div className="flex flex-col gap-3 md:flex-row md:flex-wrap">
         {showSearchButton && (
           /* text-base where the retired rule read 15px: a real <select> under 16px force-zooms
              iOS Safari on focus — allowlisted since the input-zoom guard was written, fixed here,
