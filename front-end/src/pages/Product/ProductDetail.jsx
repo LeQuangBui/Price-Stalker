@@ -116,12 +116,14 @@ const ALERT_STATUS = 'inline-flex min-h-7.5 items-center rounded-full px-3 text-
 // The tints are an inline `style` rather than an arbitrary background utility wrapping the mix,
 // and the reason is what Tailwind emits around one. Verified in the built bundle:
 //
-// (The utility spelling is deliberately not written out anywhere in this file. Tailwind scans the
-// source as plain text, so a bracketed class name inside a comment compiles to a real rule — and
-// this one would compile to a rule with an unparseable value. Same trap as the note on SWIPER_BTN.)
-//
 //     .bg-\[color-mix\(in_srgb\,var\(--success\)_14\%\,transparent\)\]{background-color:var(--success)}
 //     @supports (color:color-mix(in lab,red,red)){ … the real mix … }
+//
+// Quoted in its ESCAPED form on purpose, which the scanner does not read as a candidate — checked
+// against the built stylesheet. The unescaped utility is not written anywhere in this file, in the
+// comment arguing against it least of all: Tailwind scans the source as plain text, and the first
+// draft of this paragraph compiled a rule with an unparseable value straight into the bundle. Same
+// trap as the note on SWIPER_BTN, second occurrence.
 //
 // A SOLID-COLOUR fallback before the @supports gate. So where color-mix is unsupported the pill is
 // not an unfilled pill — it is solid `--success` under `--success-dark` text, forest green on
