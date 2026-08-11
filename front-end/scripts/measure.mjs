@@ -44,6 +44,12 @@ const settleMs = Number(arg('settle', '350'))
 // Header.jsx's action cluster pins the page's scroll width to a viewport-independent floor and
 // drowns any page-level measurement under it. Pass `--ablate header` to take it out first.
 const ablate = arg('ablate', '')
+// A file of JS run in every document BEFORE any page script, via
+// Page.addScriptToEvaluateOnNewDocument. It exists because the routes worth sweeping are not all
+// public: /alerts and /bookmarks sit behind RequireAuth, which reads a token out of localStorage
+// and redirects to /login before anything measurable renders. Seeding has to happen before the app
+// boots, so neither --ablate (post-load) nor the probe itself (post-load) can do it.
+const seed = arg('seed', '')
 
 // --lang sets the UI language; Emulation.setLocaleOverride below is what Intl in the page reads,
 // and an unpinned locale renders a vi-VN price four characters wider. Deliberately NOT
@@ -98,6 +104,21 @@ const once = (method, ms = 20000) => new Promise((resolve, reject) => {
 await send('Page.enable')
 await send('Runtime.enable')
 await send('Emulation.setLocaleOverride', { locale })
+if (seed) {
+  await send('Page.addScriptToEvaluateOnNewDocument', { source: readFileSync(seed, 'utf8') })
+}
+
+// Warm-up navigation, discarded. Page.setFontSizes does not take on the FIRST document a fresh
+// target commits: asking for root 24 and reading the first cell back gives 16px, and every later
+// cell is correct. That silently corrupts exactly one cell per run — the one at the head of the
+// first root in --roots — which is invisible in a sweep whose first root happens to be 16, and is
+// a wrong threshold in a sweep whose first root is not. Every cell records `rootFontSize` below so
+// the failure is legible rather than inferred.
+{
+  const loaded = once('Page.loadEventFired')
+  await send('Page.navigate', { url })
+  await loaded
+}
 
 const cells = []
 for (const root of roots) {
@@ -125,6 +146,9 @@ for (const root of roots) {
         var probe = (${probeSrc});
         return {
           scrollbar: window.innerWidth - document.documentElement.clientWidth,
+          // The root size actually in force, not the one requested. See the warm-up note above:
+          // a cell whose rootFontSize does not match its root was measured at the wrong size.
+          rootFontSize: getComputedStyle(document.documentElement).fontSize,
           docScrollWidth: document.documentElement.scrollWidth,
           docClientWidth: document.documentElement.clientWidth,
           probe: typeof probe === 'function' ? probe() : probe
