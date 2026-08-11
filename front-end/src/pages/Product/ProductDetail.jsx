@@ -49,45 +49,50 @@ const SWIPER_BTN = `absolute top-1/2 grid size-11 -translate-y-1/2 cursor-pointe
 // the whole overlap and the right 2px of the dot you were aiming at opened the NEXT slide.
 // Measured exclusive tap width was 18px for dots 1-4 and 30px for dot 5.
 //
-// `inset-x-0` + `justify-center` rather than a half-offset box pulled back by a negative translate,
-// because a translated box cannot wrap and this one has to: five 44px dots come to 220px against a
-// 225px gallery column at 320px, and fewer than that at a raised browser font. `bottom-0` puts the
-// painted core's centre 22px off the bottom edge where it used to sit at 17px — the one unavoidable
-// 5px of drift in this conversion.
+// STATIC, and a SIBLING BELOW the frame rather than absolutely positioned inside it. That is the
+// whole fix, and it is the third attempt at this bug. The first two both left the rail overlaying
+// the frame and then arbitrated the shared pixels — `pointer-events-none` on the band, then DOM
+// order so the arrows paint last — and each time the arbitration protected the thing it was
+// written to protect and cost something that had not been measured. Measured on the second one,
+// with a full-AREA sweep of the PAINTED CORE rather than of the 44px hit box, at five images:
 //
-// `pointer-events-none` on the rail and `pointer-events-auto` on each dot is the price of that
-// wrap. The old rail's box was its content — ~82px wide, 10px tall, centred — and could not reach
-// the arrows. This one is the full width of the frame and at least 44px deep, so on an
-// aspect-square frame of height h with an n-line rail the band reaches the arrows' centre line
-// whenever h < 88n + 44. The rail has no handler of its own, so making the band transparent to
-// input costs nothing.
+//     305/root 20   dot 1: 0 of 121 px its own (BUTTON[Previous image])   dot 3: 0 of 121 (Next)
+//     305/root 24   dot 1: 0 of 196 (Previous)                            dot 3: 0 of 196 (Next)
+//     320/root 24   dot 1: 0 of 196 (Previous)                            dot 3: 0 of 196 (Next)
+//     360/root 24   dot 1: 0 of 196 (Previous)                            dot 3: 0 of 196 (Next)
 //
-// That fixes the BAND. It does not fix the DOTS, and the two are separate problems — measured, not
-// reasoned about. With the band transparent, `elementFromPoint` at each arrow's own centre still
-// came back as a dot in three cells of a 24-cell sweep: three images at 305px/root 24, and five at
-// 305px/roots 20 and 24. A wrapped rail's first line is a row of opaque 44-to-66px hit boxes lying
-// exactly across the arrows, and `pointer-events-auto` is what makes them opaque. At 305px/root 24
-// the frame is 187.73px, the rail's first line runs y 211-277, and both arrows sit at y 217-283
-// with their centres at 250 — inside dots 1 and 2.
+// Confirmed with real trusted clicks over `Input.dispatchMouseEvent` — not `.click()`, which
+// bypasses hit testing and reports success on a control buried under another: tapping the visible
+// centre of dot 1 moved the gallery to slide 4, and dot 3 to slide 1. The hit box losing pixels was
+// the signed-off cost; the painted core losing 100% of them is what a reader actually aims at, and
+// nobody had measured it because the earlier probe swept one horizontal line through each box.
 //
-// On a frame that small the geometry has no solution: two 66px arrows and a 66px-deep rail line do
-// not both fit in 188px, and horizontal padding big enough to clear the arrows (3.5rem a side, 168
-// of 188px at root 24) leaves less than one dot of interior and spills them back over the arrows.
-// So the shared pixels are given to the arrows, by DOM ORDER: the rail is rendered BEFORE both
-// arrows, and positioned siblings at `z-index: auto` in one stacking context paint in tree order,
-// so the arrows now win every pixel they share instead of losing every one. The arrows are the
-// affordance worth protecting — each reaches every slide, where a dot reaches one — and a dot that
-// loses part of its box to an arrow is still reachable through them.
+// Out of flow, the rail and the arrows shared pixels no matter who was given them, so the geometry
+// had no solution on a small frame: two 66px arrows and a 66px-deep rail line do not both fit in
+// the 188px an aspect-square frame has at 305px/root 24, and horizontal padding wide enough to
+// clear the arrows (3.5rem a side, 168 of 188px) leaves less than one dot of interior. In flow,
+// there are no shared pixels to arbitrate: the rail wraps as freely as it likes, the frame keeps
+// its full height for the arrows, and both control sets hold 44px at every root. The frame keeps
+// `relative` and `aspect-square` because the arrows still position against it.
 //
-// The cost is tab order: the dots now precede the arrows. That is the trade, and it is the small
-// half of it.
+// The colour of an inactive dot had to change with the position, and that is the one thing this
+// move costs. `--bg-primary` at 72% was picked to read over a PHOTOGRAPH; over the page it is
+// white-on-near-white and simply disappears. Contrast against `--bg-secondary`, measured in both
+// themes, against the 3:1 floor a non-text indicator has to clear:
 //
-// Do NOT fix this by constraining the rail's width — that is the centring the wrap replaced — and
-// do NOT fix it with a z-index; this project has already shipped one that made a nav untappable.
-const SWIPER_DOTS =
-  'pointer-events-none absolute inset-x-0 bottom-0 flex flex-wrap items-center justify-center'
-const SWIPER_DOT =
-  'pointer-events-auto grid size-11 cursor-pointer place-items-center border-0 bg-transparent p-0'
+//     --bg-primary at 72% (retired)  1.07 light  1.08 dark      --border          1.18  1.42
+//     --text-muted at 55%            2.05        2.56           --bg-tertiary     1.09  1.25
+//     --text-muted solid             4.35        5.50   <- `bg-ink-mute`
+//
+// So it is the solid token: every faint spelling of "an inactive dot" fails, including the two
+// border/surface tokens that look like the obvious choice. `bg-oxblood` stays for the current dot
+// and clears the floor on its own, at 10.11 light and 4.05 dark.
+//
+// Do NOT put this back inside the frame. `pointer-events`, DOM order, a constrained width and a
+// z-index are all arbitration, the last of which has already shipped once here and made a nav
+// untappable. There is nothing to arbitrate while the two live in different boxes.
+const SWIPER_DOTS = 'flex flex-wrap items-center justify-center'
+const SWIPER_DOT = 'grid size-11 cursor-pointer place-items-center border-0 bg-transparent p-0'
 
 const PANEL = 'rounded-2xl border border-line bg-surface p-6 shadow-[var(--shadow-sm)]'
 const PANEL_COMPACT = 'rounded-2xl border border-line bg-surface px-6 py-5 shadow-[var(--shadow-sm)]'
@@ -347,62 +352,59 @@ export default function ProductDetail({ isSignedIn }) {
             the conversion that exists to keep it. No named step maps to plain `--radius`. */}
         <div>
           {hasImages ? (
-            <div className="relative aspect-square overflow-hidden rounded-[var(--radius)] border border-line bg-tertiary">
-              <div
-                className="absolute inset-0 flex transition-transform duration-[400ms] ease-[ease]"
-                style={{ transform: `translateX(-${slide * 100}%)` }}
-              >
-                {images.map((image, index) => (
-                  /* `min-w-full` is what makes the flex track one slide per viewport. Without it
-                     every image collapses to intrinsic width on a single row. */
-                  <div key={index} className="min-w-full">
-                    <img
-                      src={image}
-                      alt={`${product.name} ${index + 1}`}
-                      loading="lazy"
-                      className="h-full w-full object-cover"
-                    />
-                  </div>
-                ))}
+            <>
+              <div className="relative aspect-square overflow-hidden rounded-[var(--radius)] border border-line bg-tertiary">
+                <div
+                  className="absolute inset-0 flex transition-transform duration-[400ms] ease-[ease]"
+                  style={{ transform: `translateX(-${slide * 100}%)` }}
+                >
+                  {images.map((image, index) => (
+                    /* `min-w-full` is what makes the flex track one slide per viewport. Without it
+                       every image collapses to intrinsic width on a single row. */
+                    <div key={index} className="min-w-full">
+                      <img
+                        src={image}
+                        alt={`${product.name} ${index + 1}`}
+                        loading="lazy"
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                  ))}
+                </div>
+                {hasMultiple && (
+                  <>
+                    <button type="button" className={cx(SWIPER_BTN, 'left-3')} onClick={prevSlide} aria-label="Previous image">&lt;</button>
+                    <button type="button" className={cx(SWIPER_BTN, 'right-3')} onClick={nextSlide} aria-label="Next image">&gt;</button>
+                  </>
+                )}
               </div>
+              {/* OUTSIDE the frame, and after it, so it is in flow. The arrows keep the frame to
+                  themselves and the rail gets a row of its own to wrap into. See SWIPER_DOTS. */}
               {hasMultiple && (
-                <>
-                  {/* The rail comes FIRST on purpose. Positioned siblings at `z-index: auto` in
-                      one stacking context paint in tree order, so whatever is written last owns
-                      the pixels they share. When the rail wraps it lies across the arrows, and a
-                      wrapped dot measured as the hit at both arrows' own centres at 305px — so
-                      the arrows are written after it and take those pixels back. Moving these two
-                      buttons above the rail again re-breaks it, silently, with every box still
-                      measuring 44px. See the note on SWIPER_DOTS. */}
-                  <div className={SWIPER_DOTS}>
-                    {images.map((_, index) => (
-                      <button
-                        key={index}
-                        type="button"
-                        className={SWIPER_DOT}
-                        onClick={() => setSlide(index)}
-                        aria-label={`Go to image ${index + 1}`}
-                      >
-                        {/* A real element, not a pseudo-element: that is what lets the 44px hit
-                            box and the 10px circle be sized independently, and it is what
-                            replaces the `::after { inset: -10px }` hit expander whose 30x30 boxes
-                            overlapped their neighbours by 12px. */}
-                        <span
-                          className={cx(
-                            'block size-2.5 rounded-full',
-                            slide === index
-                              ? 'bg-oxblood'
-                              : 'bg-[color-mix(in_srgb,var(--bg-primary)_72%,transparent)]',
-                          )}
-                        />
-                      </button>
-                    ))}
-                  </div>
-                  <button type="button" className={cx(SWIPER_BTN, 'left-3')} onClick={prevSlide} aria-label="Previous image">&lt;</button>
-                  <button type="button" className={cx(SWIPER_BTN, 'right-3')} onClick={nextSlide} aria-label="Next image">&gt;</button>
-                </>
+                <div className={SWIPER_DOTS}>
+                  {images.map((_, index) => (
+                    <button
+                      key={index}
+                      type="button"
+                      className={SWIPER_DOT}
+                      onClick={() => setSlide(index)}
+                      aria-label={`Go to image ${index + 1}`}
+                    >
+                      {/* A real element, not a pseudo-element: that is what lets the 44px hit
+                          box and the 10px circle be sized independently, and it is what
+                          replaces the `::after { inset: -10px }` hit expander whose 30x30 boxes
+                          overlapped their neighbours by 12px. */}
+                      <span
+                        className={cx(
+                          'block size-2.5 rounded-full',
+                          slide === index ? 'bg-oxblood' : 'bg-ink-mute',
+                        )}
+                      />
+                    </button>
+                  ))}
+                </div>
               )}
-            </div>
+            </>
           ) : (
             <div className="grid aspect-square place-items-center rounded-2xl border border-dashed border-line bg-surface font-display italic text-ink-mute">
               No image available

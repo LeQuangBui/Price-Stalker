@@ -402,42 +402,36 @@ describe('ProductDetail markup after the CSS retirement', () => {
   })
 
   // C14, and it is the one thing in this file that jsdom can check about a defect that only exists
-  // in a laid-out browser. `inset-x-0 bottom-0` makes the rail a full-bleed transparent band at
-  // least 44px deep, later in DOM order than both arrows and at the same z-index: auto, so at a
-  // raised root with a wrapped rail it takes every tap meant for an arrow. The rail has no handler
-  // of its own — every onClick is on a dot — so these two utilities cost nothing.
+  // in a laid-out browser. Two earlier attempts left the rail overlaying the frame and arbitrated
+  // the pixels it shares with the arrows — `pointer-events-none` on the band, then DOM order — and
+  // each protected one control by taking the other's. Measured on the second, with a full-area
+  // sweep of the painted CORE rather than of the 44px hit box, at five images: dot 1 owned 0 of
+  // 196px of its own core at 320px/root 24 with `BUTTON[Previous image]` holding all of it, and a
+  // trusted click at that core moved the gallery to slide 4.
   //
-  // Task 9's elementFromPoint sweep is what actually proves it. This pins the mechanism so a later
-  // edit cannot quietly remove it and still pass the suite.
-  it('lets taps through the dot rail to the arrows underneath', async () => {
-    renderPage()
-    const dot = await screen.findByRole('button', { name: 'Go to image 2' })
-    const rail = dot.parentElement
-    expect(classesOf(rail), 'the rail is a full-bleed band over both arrows without this')
-      .toContain('pointer-events-none')
-    expect(classesOf(dot), 'a rail with pointer-events-none makes its own dots untappable too')
-      .toContain('pointer-events-auto')
-  })
-
-  // The other half of C14, and the half `pointer-events-none` does not cover. The rail's band is
-  // transparent to input; its DOTS are not, and a wrapped rail's first line lies straight across
-  // both arrows. Measured at 305px/root 24 with three images: the frame is 187.73px, the rail's
-  // first line runs y 211-277, both arrows sit at y 217-283, and `elementFromPoint` at each
-  // arrow's own centre returned `Go to image 1` and `Go to image 2`. Positioned siblings at
-  // `z-index: auto` in one stacking context paint in tree order, so the fix is to write the
-  // arrows AFTER the rail and let them take the pixels back. Nothing about either element's box
-  // changes, which is exactly why this needs pinning: reordering these three nodes re-breaks it
-  // with every measurement still correct and every other test in this file still green.
-  it('paints the arrows after the rail so a wrapped dot cannot take their taps', async () => {
+  // Being out of the frame is the fix, so being out of the frame is what this pins. Every other
+  // spelling — a pointer-events pair, tree order, a constrained rail width, a z-index — is
+  // arbitration of shared pixels, and re-introduces the bug with every box still measuring 44px.
+  it('keeps the dot rail out of the frame the arrows position against', async () => {
     renderPage()
     const next = await screen.findByRole('button', { name: /next image/i })
+    const frame = next.parentElement
     const rail = screen.getByRole('button', { name: 'Go to image 2' }).parentElement
-    for (const arrow of [screen.getByRole('button', { name: /previous image/i }), next]) {
-      expect(
-        rail.compareDocumentPosition(arrow) & Node.DOCUMENT_POSITION_FOLLOWING,
-        `${arrow.getAttribute('aria-label')} must come after the dot rail in tree order`,
-      ).toBeTruthy()
+
+    expect(classesOf(frame), 'the arrows still position against the frame').toContain('relative')
+    expect(frame.contains(rail), 'a rail inside the frame shares pixels with the arrows').toBe(false)
+    expect(
+      frame.compareDocumentPosition(rail) & Node.DOCUMENT_POSITION_FOLLOWING,
+      'the rail reads and paints after the frame',
+    ).toBeTruthy()
+
+    // In flow, and with nothing to arbitrate. `absolute` is what put it back over the arrows;
+    // the pointer-events pair and a z-index are what were used to referee that.
+    for (const utility of ['absolute', 'pointer-events-none', 'z-10']) {
+      expect(classesOf(rail), `${utility} means the rail is overlaying something again`)
+        .not.toContain(utility)
     }
+    expect(classesOf(rail)).toContain('flex-wrap')
   })
 
   it('marks the current dot on the core, not the hit box', async () => {
