@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { getPriceHistory } from '../../api/products'
 import { formatPrice } from '../../utils/formatters'
 import { cx } from '../../lib/cx'
@@ -8,6 +8,7 @@ import {
   axisGutter,
   axisTicks,
   currencySymbol,
+  datedIndices,
   dateLabels,
   dateLabelX,
   CAPTION_FONT_SIZE,
@@ -40,6 +41,31 @@ export default function PriceHistoryChart({ productId, currency }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [reloadKey, setReloadKey] = useState(0)
+  // The viewBox width. 800 until the container has been measured, so the first paint and any
+  // environment with no layout engine get the geometry this chart has always had; once the
+  // ResizeObserver reports, user units become CSS pixels and 12px text renders at 12px on every
+  // device — a fixed 800 scaled to a 320px phone painted the same text at ~4.5px.
+  const [width, setWidth] = useState(800)
+  const containerRef = useRef(null)
+
+  useEffect(() => {
+    const node = containerRef.current
+    if (!node) return undefined
+
+    // Whole units only: a phone mid-rotation reports fractional widths, and re-laying the axis
+    // out over sub-pixel churn buys nothing. Zero means "not laid out yet" — keep what we have.
+    const measure = (measured) => {
+      const next = Math.round(measured)
+      if (next > 0) setWidth(next)
+    }
+
+    measure(node.getBoundingClientRect().width)
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) measure(entry.contentRect.width)
+    })
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [])
 
   useEffect(() => {
     const fetchPriceHistory = async () => {
@@ -80,8 +106,10 @@ export default function PriceHistoryChart({ productId, currency }) {
     const priceRange = high - low
     const unit = currencySymbol(currency)
 
+    // Height holds 300 CSS px at every width — a portrait phone gives the plot more relative
+    // room, which is the right trade for a price line. Width is whatever the container measured.
     const chartHeight = 300
-    const chartWidth = 800
+    const chartWidth = width
     // The unit caption shares the ticks' right edge, so it is sized with them.
     const gutter = axisGutter([...ticks.map(tick => tick.label), unit])
     // Top padding leaves room for the unit caption to clear the highest tick.
@@ -109,14 +137,14 @@ export default function PriceHistoryChart({ productId, currency }) {
       `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`
     ).join(' ')
 
-    // Roughly ten dates along the bottom, and their wording decided by the span those ten cover
-    // and by the room the plot has for them — a three-day history viewed on "All" wrote "thg 1 26"
+    // How many readings get a date comes from the room the plot really has — ten at full width,
+    // three or four in what a 320px phone leaves — and their wording is decided by the span those
+    // readings cover and by that same room: a three-day history viewed on "All" wrote "thg 1 26"
     // under every one of them when the range button chose the format, and a wording long enough to
     // tell them apart then ran them into each other. The gridlines the labels belong to go in with
     // them, because the two at the ends get clamped away from their own x and no longer have an
     // equal share of the plot to sit in.
-    const dated = points.filter((point, i) =>
-      priceHistory.length <= 10 || i % Math.ceil(priceHistory.length / 10) === 0)
+    const dated = datedIndices(priceHistory.length, innerWidth).map((i) => points[i])
     const dates = dateLabels(dated.map((point) => point.recordedAt), undefined, {
       xs: dated.map((point) => point.x),
       viewWidth: chartWidth,
@@ -251,7 +279,10 @@ export default function PriceHistoryChart({ productId, currency }) {
           ))}
         </div>
       </div>
-      <div className="w-full overflow-x-auto py-4">
+      {/* The measured element. It exists in every state — skeleton, error, empty, chart — so the
+          width is already known by the time the data lands. overflow-x-auto stays as a safety
+          valve, but with the viewBox at the measured width nothing should ever scroll. */}
+      <div ref={containerRef} className="w-full overflow-x-auto py-4">
         {renderChart()}
       </div>
     </div>

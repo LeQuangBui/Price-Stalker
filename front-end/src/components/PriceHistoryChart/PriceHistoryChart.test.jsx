@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import PriceHistoryChart from './PriceHistoryChart'
 import widths from './widths.fixture.json'
@@ -87,6 +87,37 @@ function span(node, fontSize) {
 
 beforeEach(() => {
   getPriceHistory.mockReset()
+})
+
+// jsdom performs no layout — getBoundingClientRect answers 0 — so the measurement effect never
+// fires on its own and every other describe in this file exercises the 800-unit default. The
+// resize path is driven by hand through the recorded observer stub in setup.js.
+describe('PriceHistoryChart layout', () => {
+  const viewBox = (container) => container.querySelector('svg[role="img"]').getAttribute('viewBox')
+
+  it('lays out at 800 units until the container is measured', async () => {
+    const { container } = await renderChart(series(12900000, 45000000))
+    expect(viewBox(container)).toBe('0 0 800 300')
+  })
+
+  it('adopts the measured width, whole units only, and dates fewer points in it', async () => {
+    const { container } = await renderChart(series(12900000, 45000000, 20))
+    expect(nodes(container, 'chart-date')).toHaveLength(10)
+
+    // 320.4 is what a real phone reports mid-rotation; the viewBox takes the integer. The chart's
+    // own observer is the only one this render registers.
+    act(() => {
+      for (const observer of globalThis.ResizeObserver.instances) {
+        observer.callback([{ contentRect: { width: 320.4 } }], observer)
+      }
+    })
+
+    expect(viewBox(container)).toBe('0 0 320 300')
+    // Twenty readings kept ten dates at 800 units; the 244-unit plot a 320 phone leaves after
+    // the VND gutter holds four. datedIndices owns the arithmetic; this pins that the component
+    // actually feeds it the measured width.
+    expect(nodes(container, 'chart-date')).toHaveLength(4)
+  })
 })
 
 describe('PriceHistoryChart y-axis', () => {

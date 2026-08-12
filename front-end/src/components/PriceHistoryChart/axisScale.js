@@ -279,6 +279,49 @@ export function axisTicks(min, max, locale) {
 
 const DAY_MS = 24 * 60 * 60 * 1000
 
+// How many readings get a date is decided by the plot width, in the same units the labels are
+// drawn in. Both constants are measurements at DATE_FONT_SIZE (11px), taken with
+// estimateLabelWidth over the seven suite locales:
+//
+//   83 — the widest label the coarsest rungs write, "thg 10 26" (vi-VN, 72.49), plus TICK_GAP.
+//        A label every 83 units is the density at which the wordiest format still lays out, so
+//        it is the spacing worth aiming for — a plot that can only fit shorter wordings under it
+//        is already spending readability to keep its count.
+//   58 — the widest label the day+hour rung writes, "30日 23時" (ja-JP, 57.42), rounded up. A
+//        2-3 day span cannot be told apart with less than day+hour, so gaps under 58 units have
+//        NO format that lays out and the ladder is left choosing an overlap. That gap must never
+//        be produced.
+const DATE_LABEL_SPACING = 83
+const MIN_DATE_GAP = 58
+const MIN_DATE_LABELS = 3
+const MAX_DATE_LABELS = 10
+
+/**
+ * Which readings get a date, given the room the plot really has.
+ *
+ * The target is the label count whose spacing lands nearest DATE_LABEL_SPACING — k labels cost
+ * k-1 gaps, hence the +1 — so 800 units keep the ten dates the chart has always drawn and a 320px
+ * phone gets three or four it can actually read, instead of ten at a quarter scale. The stride is
+ * then the classic every-nth, floored so the gap it produces never falls under MIN_DATE_GAP: the
+ * stride rounding up (ceil) squeezes the dated readings toward the start of the plot, and at the
+ * tightest widths that squeeze alone pushed the gap 1-3 units past what any format could lay out.
+ */
+export function datedIndices(count, plotWidth) {
+  const room = Math.max(1, plotWidth)
+  const target = Math.min(MAX_DATE_LABELS,
+    Math.max(MIN_DATE_LABELS, Math.round(room / DATE_LABEL_SPACING) + 1))
+
+  const indices = []
+  if (count <= target) {
+    for (let i = 0; i < count; i += 1) indices.push(i)
+    return indices
+  }
+
+  const stride = Math.max(Math.ceil(count / target), Math.ceil((MIN_DATE_GAP * (count - 1)) / room))
+  for (let i = 0; i < count; i += stride) indices.push(i)
+  return indices
+}
+
 // Coarsest first: the least detail that still tells two gridlines apart is the most readable one.
 // A clock time with no date is only offered when the whole series fits inside a day, because
 // outside one it says nothing about which day the reading belongs to.
