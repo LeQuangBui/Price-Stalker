@@ -117,7 +117,7 @@ const GUTTERS = [44, Math.round((44 + WIDEST_GUTTER) / 2), WIDEST_GUTTER]
 // The same axes, laid out the way the component lays them out: the readings datedIndices picks
 // for the room, and the labels chosen knowing where they will land. This is the path that ships —
 // dateLabels without a layout only answers the distinctness question.
-function eachDateLayout(visit) {
+function eachDateLayoutLive(visit) {
   for (const viewWidth of VIEW_WIDTHS) {
     for (const gutter of GUTTERS) {
       // The same floor the component applies: a gutter wider than the view must not send the
@@ -135,6 +135,17 @@ function eachDateLayout(visit) {
     }
   }
 }
+
+// The layout sweep, run ONCE and cached. Four call sites used to each re-run it, which held under
+// vitest's 5s budget at three view widths and blew it on CI's slower runner the day the real page
+// widths joined the matrix — three tests timing out at 7-11s while green locally. Every consumer
+// iterates this array instead; the assertions are unchanged.
+const DATE_LAYOUTS = (() => {
+  const out = []
+  eachDateLayoutLive((chart) => out.push(chart))
+  return out
+})()
+const eachDateLayout = (visit) => { for (const chart of DATE_LAYOUTS) visit(chart) }
 
 // Every string the axes put on screen, mapped to where it came from. Built once: the layout-aware
 // sweep is the expensive one and two tests read it.
