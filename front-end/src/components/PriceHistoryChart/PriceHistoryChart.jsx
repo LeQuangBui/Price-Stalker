@@ -16,6 +16,7 @@ import {
   TICK_FONT_SIZE,
   TICK_GAP
 } from './axisScale'
+import { scrubIndex, tooltipBox, tooltipPlacement, TOOLTIP_PAD_X } from './scrub'
 
 const TIME_RANGES = [
   { value: '1d', label: '1 Day' },
@@ -47,6 +48,9 @@ export default function PriceHistoryChart({ productId, currency }) {
   // device — a fixed 800 scaled to a 320px phone painted the same text at ~4.5px.
   const [width, setWidth] = useState(800)
   const containerRef = useRef(null)
+  // The index of the reading under the pointer, or null. Held as an index rather than a point so
+  // a re-render from a resize keeps the scrub on the same reading.
+  const [scrub, setScrub] = useState(null)
 
   useEffect(() => {
     const node = containerRef.current
@@ -71,6 +75,8 @@ export default function PriceHistoryChart({ productId, currency }) {
     const fetchPriceHistory = async () => {
       setLoading(true)
       setError('')
+      // A scrub index is only meaningful against the series it was read from.
+      setScrub(null)
       try {
         const data = await getPriceHistory(productId, timeRange)
         setPriceHistory(data)
@@ -151,12 +157,43 @@ export default function PriceHistoryChart({ productId, currency }) {
       fontSize: DATE_FONT_SIZE
     })
 
+    // The scrub. One transparent surface over the plot answers mouse and finger alike through
+    // pointer events; the nearest reading by x gets the crosshair, the grown point and the
+    // tooltip. clientX crosses into user units through the SVG's own on-screen box — with the
+    // viewBox at the measured width the ratio is ~1, but the chart can be mid-resize.
+    const active = scrub === null ? null : Math.min(scrub, points.length - 1)
+    const scrubTo = (event) => {
+      const rect = event.currentTarget.ownerSVGElement.getBoundingClientRect()
+      if (!rect.width) return
+      const x = ((event.clientX - rect.left) / rect.width) * chartWidth
+      setScrub(scrubIndex(x, padding.left, innerWidth, points.length))
+    }
+    const clearScrub = () => setScrub(null)
+
+    // Sized against the same width oracle as every label, placed by the flip-and-clamp that
+    // keeps every digit inside the viewBox. The instant line is the wording the per-point
+    // <title> used to carry.
+    let tooltip = null
+    if (active !== null) {
+      const point = points[active]
+      const priceLabel = formatPrice(point.price, currency)
+      const dateLabel = new Date(point.recordedAt).toLocaleString()
+      const box = tooltipBox(priceLabel, dateLabel)
+      const { left, top } = tooltipPlacement(point.x, point.y, box, chartWidth, chartHeight)
+      tooltip = { priceLabel, dateLabel, box, left, top }
+    }
+
     // `chart-tick`, `chart-unit` and `chart-date` below are deliberate no-rule markers, recorded
     // as such in classname.guard: the tests select each text role by the thing it means rather
     // than by font size. The paint the retired classes carried rides each element as a utility.
+    // touch-pan-y rides the SVG root, not the pointer surface: Chrome ignores touch-action on
+    // inner SVG elements when it decides who owns a drag, and answered a horizontal scrub over
+    // the rect with pointercancel — measured over CDP, ten identical drags, two pointermoves
+    // then the cancel. On the root it splits exactly as intended: horizontal drags scrub,
+    // vertical drags scroll the page.
     return (
       <svg
-        className="mx-auto block h-auto w-full max-w-full"
+        className="mx-auto block h-auto w-full max-w-full touch-pan-y"
         viewBox={`0 0 ${chartWidth} ${chartHeight}`}
         role="img"
         aria-label={description}
@@ -215,6 +252,19 @@ export default function PriceHistoryChart({ productId, currency }) {
           )
         })}
 
+        {/* The crosshair goes in under the line and the points: it is a gridline the scrub
+            summons, not data ink. */}
+        {active !== null && (
+          <line
+            x1={points[active].x}
+            x2={points[active].x}
+            y1={padding.top}
+            y2={padding.top + innerHeight}
+            className="stroke-line"
+            strokeWidth="1"
+          />
+        )}
+
         <path
           d={pathData}
           fill="none"
@@ -222,19 +272,17 @@ export default function PriceHistoryChart({ productId, currency }) {
           strokeWidth="2"
         />
 
-        {/* `r` is an SVG2 presentation property, so the grow-on-hover is CSS: Tailwind has no `r`
-            utility, hence both halves in arbitrary form — `[transition:r_.2s]` and `hover:[r:6]`,
-            the retired rule verbatim. */}
+        {/* The scrubbed point grows by attribute, not by :hover — `r` is what the retired CSS
+            transitioned, and a finger never hovers. `[transition:r_.2s]` keeps the growth
+            animated; the pointer surface owns the events, so the circles carry none. */}
         {points.map((p, i) => (
           <circle
             key={i}
             cx={p.x}
             cy={p.y}
-            r="4"
-            className="cursor-pointer fill-oxblood [transition:r_.2s] hover:[r:6]"
-          >
-            <title>{`${formatPrice(p.price, currency)} - ${new Date(p.recordedAt).toLocaleString()}`}</title>
-          </circle>
+            r={i === active ? 6 : 4}
+            className="fill-oxblood [transition:r_.2s]"
+          />
         ))}
 
         {/* The last date sits 20 units from the right edge, so a label wider than 40 units ran past
@@ -252,6 +300,56 @@ export default function PriceHistoryChart({ productId, currency }) {
             {dates[i]}
           </text>
         ))}
+
+        {/* The pointer surface, over everything it reports on. Pointer events unify mouse and
+            touch, so this is the whole input story; the root's touch-pan-y leaves a vertical
+            drag to the page — scrolling past the chart still works — while a horizontal one
+            scrubs. pointercancel is the browser claiming that vertical drag, and the scrub
+            yields. */}
+        <rect
+          x={padding.left}
+          y={padding.top}
+          width={innerWidth}
+          height={innerHeight}
+          className="cursor-crosshair fill-transparent"
+          onPointerDown={scrubTo}
+          onPointerMove={scrubTo}
+          onPointerLeave={clearScrub}
+          onPointerCancel={clearScrub}
+        />
+
+        {/* aria-hidden: the aria sentence on the SVG is the accessible interface, and this box is
+            a visual affordance over it. pointer-events-none so the finger under the tooltip keeps
+            scrubbing the surface instead of the box swallowing the drag. */}
+        {tooltip && (
+          <g aria-hidden="true" className="pointer-events-none">
+            <rect
+              x={tooltip.left}
+              y={tooltip.top}
+              width={tooltip.box.width}
+              height={tooltip.box.height}
+              rx="6"
+              className="fill-paper stroke-line"
+              strokeWidth="1"
+            />
+            <text
+              x={tooltip.left + TOOLTIP_PAD_X}
+              y={tooltip.top + tooltip.box.priceBaseline}
+              fontSize={TICK_FONT_SIZE}
+              className="fill-ink font-bold"
+            >
+              {tooltip.priceLabel}
+            </text>
+            <text
+              x={tooltip.left + TOOLTIP_PAD_X}
+              y={tooltip.top + tooltip.box.dateBaseline}
+              fontSize={DATE_FONT_SIZE}
+              className="fill-ink-soft"
+            >
+              {tooltip.dateLabel}
+            </text>
+          </g>
+        )}
       </svg>
     )
   }

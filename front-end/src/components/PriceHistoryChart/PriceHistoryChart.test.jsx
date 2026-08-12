@@ -1,7 +1,8 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { act, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import PriceHistoryChart from './PriceHistoryChart'
+import { formatPrice } from '../../utils/formatters'
 import widths from './widths.fixture.json'
 import {
   currencySymbol,
@@ -308,6 +309,91 @@ describe('PriceHistoryChart x-axis', () => {
         unmount()
       }
     }
+  })
+})
+
+describe('PriceHistoryChart scrub', () => {
+  // jsdom lays nothing out, so the SVG's on-screen box is stated by hand: the identity mapping,
+  // one user unit per CSS pixel, which is exactly what the px-true viewBox produces live.
+  const surfaceOf = (container) => {
+    const svg = container.querySelector('svg[role="img"]')
+    svg.getBoundingClientRect = () => ({ left: 0, top: 0, width: 800, height: 300 })
+    // The pointer surface is the first rect the chart draws; the tooltip's backing rect only
+    // exists once a scrub is live, and is drawn after it.
+    return container.querySelector('rect')
+  }
+  const tooltipOf = (container) => container.querySelector('g[aria-hidden="true"]')
+
+  it('grows the reading nearest the pointer and states its price and instant', async () => {
+    const history = series(12900000, 45000000, 8)
+    const { container } = await renderChart(history)
+    const surface = surfaceOf(container)
+    const circles = [...container.querySelectorAll('circle')]
+
+    // Aim a little short of the sixth reading: the nearest one answers, not the one before.
+    const x = attr(circles[5], 'cx')
+    fireEvent.pointerMove(surface, { clientX: x - 10, clientY: 150 })
+
+    expect(circles.map((node) => attr(node, 'r'))).toEqual([4, 4, 4, 4, 4, 6, 4, 4])
+
+    // The crosshair stands on the reading's own x, full plot height.
+    const crosshair = [...container.querySelectorAll('line')]
+      .filter((node) => attr(node, 'x1') === attr(node, 'x2') && attr(node, 'x1') === x)
+    expect(crosshair).toHaveLength(1)
+
+    // The price every phone reader was owed: bold line, then the instant, in whatever words the
+    // running locale uses — both sides of the assertion resolve through the same Intl calls.
+    const tooltip = tooltipOf(container)
+    expect(tooltip).not.toBeNull()
+    expect(tooltip.textContent).toContain(formatPrice(history[5].price, 'VND'))
+    expect(tooltip.textContent).toContain(new Date(history[5].recordedAt).toLocaleString())
+  })
+
+  it('clears the scrub when the pointer leaves or the gesture is taken over', async () => {
+    const { container } = await renderChart(series(12900000, 45000000, 8))
+    const surface = surfaceOf(container)
+    const circles = [...container.querySelectorAll('circle')]
+
+    fireEvent.pointerMove(surface, { clientX: attr(circles[3], 'cx'), clientY: 150 })
+    expect(tooltipOf(container)).not.toBeNull()
+    fireEvent.pointerLeave(surface)
+    expect(tooltipOf(container)).toBeNull()
+    expect(circles.map((node) => attr(node, 'r'))).toEqual([4, 4, 4, 4, 4, 4, 4, 4])
+
+    // pointercancel is what a browser fires when it claims the drag for vertical scrolling.
+    fireEvent.pointerDown(surface, { clientX: attr(circles[3], 'cx'), clientY: 150 })
+    expect(tooltipOf(container)).not.toBeNull()
+    fireEvent.pointerCancel(surface)
+    expect(tooltipOf(container)).toBeNull()
+  })
+
+  it('keeps every digit of the tooltip inside the viewBox at both ends', async () => {
+    const { container } = await renderChart(series(12900000, 45000000, 8))
+    const surface = surfaceOf(container)
+    const circles = [...container.querySelectorAll('circle')]
+
+    for (const index of [0, circles.length - 1]) {
+      fireEvent.pointerMove(surface, { clientX: attr(circles[index], 'cx'), clientY: 150 })
+      const backing = tooltipOf(container).querySelector('rect')
+      const left = attr(backing, 'x')
+      expect(left, `tooltip on reading ${index}`).toBeGreaterThanOrEqual(0)
+      expect(left + attr(backing, 'width'), `tooltip on reading ${index}`).toBeLessThanOrEqual(800)
+    }
+  })
+
+  it('leaves the sentence as the accessible interface and hovers up no second tooltip', async () => {
+    const { container } = await renderChart(series(12900000, 45000000, 8))
+    const surface = surfaceOf(container)
+    const circles = [...container.querySelectorAll('circle')]
+
+    fireEvent.pointerDown(surface, { clientX: attr(circles[2], 'cx'), clientY: 150 })
+
+    // The aria sentence still carries the chart; the tooltip is a visual affordance only.
+    expect(screen.getByRole('img').getAttribute('aria-label')).toContain('Price history over')
+    expect(tooltipOf(container).getAttribute('aria-hidden')).toBe('true')
+    // The per-point <title> elements are gone: they were hover-only — no phone ever saw one —
+    // and leaving them would float a second, native tooltip next to this one on desktop.
+    expect(container.querySelectorAll('svg title')).toHaveLength(0)
   })
 })
 

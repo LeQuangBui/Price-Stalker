@@ -24,6 +24,20 @@ if (typeof Element !== 'undefined' && !Element.prototype.scrollIntoView) {
   Element.prototype.scrollIntoView = function scrollIntoView() {}
 }
 
+// jsdom 26 has no PointerEvent constructor, and without one fireEvent.pointerMove falls back to
+// a bare Event that drops clientX — the one field a scrub test exists to deliver. Pointer events
+// are mouse events plus pointer identity, so a MouseEvent subclass carries the coordinates and
+// React's onPointer* handlers, which route by event name, receive it unchanged.
+if (typeof window !== 'undefined' && typeof window.PointerEvent === 'undefined') {
+  window.PointerEvent = class PointerEvent extends window.MouseEvent {
+    constructor(type, init = {}) {
+      super(type, init)
+      this.pointerId = init.pointerId ?? 1
+      this.pointerType = init.pointerType ?? 'mouse'
+    }
+  }
+}
+
 // jsdom 26 ships no HTMLDialogElement behaviour: `showModal` and `close` are undefined, so a
 // component built on the native <dialog> throws the moment it opens one. useConfirm (Bookmarks,
 // Alerts, ProductDetail) opens one from an effect. Track `open` so `useConfirm`'s
