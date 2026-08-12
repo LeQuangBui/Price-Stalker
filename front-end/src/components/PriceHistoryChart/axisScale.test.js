@@ -5,6 +5,7 @@ import {
   axisGutter,
   axisTicks,
   currencySymbol,
+  datedIndices,
   dateLabels,
   dateLabelX,
   estimateLabelWidth,
@@ -64,9 +65,15 @@ const POINT_COUNTS = Array.from({ length: 19 }, (_, i) => i + 2)
 
 const CURRENCIES = ['VND', 'USD', 'EUR', 'JPY', 'KRW', 'AUD', 'XPF', 'CHF']
 
-// Chart geometry, copied from the component: the viewBox is 800 wide, the plot ends 20 units short
-// of its right edge, and it starts at whatever gutter the y-axis labels asked for.
+// Chart geometry, copied from the component: the viewBox is as wide as the container measured —
+// 800 by default and until measured — the plot ends 20 units short of its right edge, and it
+// starts at whatever gutter the y-axis labels asked for. 320 and 360 are nominal phone widths,
+// but the widths the app actually renders are narrower: on the product page the shell and card
+// padding eat 122px, so 320/360/390px viewports measure the chart at 198/238/268 units. Those are
+// the widths a reader holds, so they are in the sweep — behind the widest gutter in the matrix,
+// 198 leaves a plot in the seventies, which is the tightest date row that ships anywhere.
 const CHART_WIDTH = 800
+const VIEW_WIDTHS = [198, 238, 268, 320, 360, CHART_WIDTH]
 const RIGHT_PADDING = 20
 
 function eachChart(visit) {
@@ -107,33 +114,38 @@ const WIDEST_GUTTER = (() => {
 })()
 const GUTTERS = [44, Math.round((44 + WIDEST_GUTTER) / 2), WIDEST_GUTTER]
 
-// Which readings get dated, and where their gridlines sit: the component's own arithmetic. Ten
-// readings or fewer are all dated; above that every nth one is, so ten labels is the most the axis
-// ever carries and twenty readings are drawn at half the spacing of ten.
-function datedIndices(count) {
-  const stride = count <= 10 ? 1 : Math.ceil(count / 10)
-  const indices = []
-  for (let i = 0; i < count; i += stride) indices.push(i)
-  return indices
-}
-
-// The same axes, laid out the way the component lays them out: the labels chosen knowing where they
-// will land. This is the path that ships — dateLabels without a layout only answers the
-// distinctness question.
-function eachDateLayout(visit) {
-  for (const gutter of GUTTERS) {
-    const innerWidth = CHART_WIDTH - gutter - RIGHT_PADDING
-    eachDateAxis(({ locale, history, count, times }) => {
-      const indices = datedIndices(count)
-      const dated = indices.map((i) => times[i])
-      const xs = indices.map((i) => gutter + (i / (count - 1)) * innerWidth)
-      visit({
-        locale, history, count, gutter, xs,
-        labels: dateLabels(dated, locale, { xs, viewWidth: CHART_WIDTH })
+// The same axes, laid out the way the component lays them out: the readings datedIndices picks
+// for the room, and the labels chosen knowing where they will land. This is the path that ships —
+// dateLabels without a layout only answers the distinctness question.
+function eachDateLayoutLive(visit) {
+  for (const viewWidth of VIEW_WIDTHS) {
+    for (const gutter of GUTTERS) {
+      // The same floor the component applies: a gutter wider than the view must not send the
+      // plot negative in the sweep either, or the sweep tests a geometry that cannot render.
+      const innerWidth = Math.max(1, viewWidth - gutter - RIGHT_PADDING)
+      eachDateAxis(({ locale, history, count, times }) => {
+        const indices = datedIndices(count, innerWidth)
+        const dated = indices.map((i) => times[i])
+        const xs = indices.map((i) => gutter + (i / (count - 1)) * innerWidth)
+        visit({
+          locale, history, count, gutter, viewWidth, innerWidth, xs,
+          labels: dateLabels(dated, locale, { xs, viewWidth })
+        })
       })
-    })
+    }
   }
 }
+
+// The layout sweep, run ONCE and cached. Four call sites used to each re-run it, which held under
+// vitest's 5s budget at three view widths and blew it on CI's slower runner the day the real page
+// widths joined the matrix — three tests timing out at 7-11s while green locally. Every consumer
+// iterates this array instead; the assertions are unchanged.
+const DATE_LAYOUTS = (() => {
+  const out = []
+  eachDateLayoutLive((chart) => out.push(chart))
+  return out
+})()
+const eachDateLayout = (visit) => { for (const chart of DATE_LAYOUTS) visit(chart) }
 
 // Every string the axes put on screen, mapped to where it came from. Built once: the layout-aware
 // sweep is the expensive one and two tests read it.
@@ -151,10 +163,10 @@ const AXIS_STRINGS = (() => {
   eachDateAxis(({ locale, history, count, labels }) => {
     for (const label of labels) add(label, `${locale} ${(history / DAY).toFixed(2)}d over ${count} points`)
   })
-  // The layout-aware ladder reaches wordings the distinctness ladder never gets to, and those are
-  // the ones the reader actually sees.
-  eachDateLayout(({ locale, gutter, count, labels }) => {
-    for (const label of labels) add(label, `${locale} gutter ${gutter}, ${count} readings`)
+  // The layout-aware ladder reaches wordings the distinctness ladder never gets to — narrower at
+  // 320 than 800 ever forced — and those are the ones the reader actually sees.
+  eachDateLayout(({ locale, gutter, viewWidth, count, labels }) => {
+    for (const label of labels) add(label, `${locale} ${viewWidth}w gutter ${gutter}, ${count} readings`)
   })
   for (const locale of LOCALES) {
     for (const code of CURRENCIES) {
@@ -169,9 +181,9 @@ const AXIS_STRINGS = (() => {
 // Where the browser will paint this label, given the x the chart clamped it to. The clamp works off
 // the estimate and the estimate never under-reserves, so the measured box always sits inside the
 // box the clamp reasoned about.
-function drawnSpan(label, x) {
+function drawnSpan(label, x, viewWidth) {
   const drawn = measuredWidth(label, DATE_FONT_SIZE)
-  const left = dateLabelX(x, label, CHART_WIDTH) - drawn / 2
+  const left = dateLabelX(x, label, viewWidth) - drawn / 2
   return [left, left + drawn]
 }
 
@@ -475,11 +487,11 @@ describe('x-axis date labels', () => {
   it('clamps the ends inward so no label leaves the viewBox', () => {
     const outside = []
 
-    eachDateLayout(({ locale, gutter, count, xs, labels }) => {
+    eachDateLayout(({ locale, gutter, viewWidth, count, xs, labels }) => {
       labels.forEach((label, index) => {
-        const [left, right] = drawnSpan(label, xs[index])
-        if (left < 0 || right > CHART_WIDTH) {
-          outside.push(`${locale} gutter ${gutter}, ${count} readings: "${label}" spans ${left.toFixed(1)}..${right.toFixed(1)}`)
+        const [left, right] = drawnSpan(label, xs[index], viewWidth)
+        if (left < 0 || right > viewWidth) {
+          outside.push(`${locale} ${viewWidth}w gutter ${gutter}, ${count} readings: "${label}" spans ${left.toFixed(1)}..${right.toFixed(1)}`)
         }
       })
     })
@@ -490,12 +502,12 @@ describe('x-axis date labels', () => {
   it('leaves a gap between one date and the next', () => {
     const collisions = []
 
-    eachDateLayout(({ locale, gutter, count, xs, labels }) => {
+    eachDateLayout(({ locale, gutter, viewWidth, count, xs, labels }) => {
       let previous = null
       labels.forEach((label, index) => {
-        const [left, right] = drawnSpan(label, xs[index])
+        const [left, right] = drawnSpan(label, xs[index], viewWidth)
         if (previous && left < previous.right) {
-          collisions.push(`${locale} gutter ${gutter}, ${count} readings: "${previous.label}" ends at ${previous.right.toFixed(1)} but "${label}" starts at ${left.toFixed(1)}`)
+          collisions.push(`${locale} ${viewWidth}w gutter ${gutter}, ${count} readings: "${previous.label}" ends at ${previous.right.toFixed(1)} but "${label}" starts at ${left.toFixed(1)}`)
         }
         previous = { label, right }
       })
@@ -510,15 +522,16 @@ describe('x-axis date labels', () => {
 
   it('buys the room with shorter wording, never with fewer labels or repeated ones', () => {
     // Making room by dropping gridlines is the other way to stop labels colliding, and it is the
-    // one that loses readings. Every gridline keeps a label, and that label still names an instant
+    // one that loses readings. How many readings get dated is settled by datedIndices before the
+    // wording is chosen; every one of them keeps a label, and that label still names an instant
     // no other one names, however tight the plot gets.
     const lost = []
 
-    eachDateLayout(({ locale, gutter, count, labels }) => {
-      const expected = datedIndices(count).length
-      if (labels.length !== expected) lost.push(`${locale} gutter ${gutter}: ${labels.length} labels for ${expected} dated readings`)
+    eachDateLayout(({ locale, gutter, viewWidth, innerWidth, count, labels }) => {
+      const expected = datedIndices(count, innerWidth).length
+      if (labels.length !== expected) lost.push(`${locale} ${viewWidth}w gutter ${gutter}: ${labels.length} labels for ${expected} dated readings`)
       if (new Set(labels).size !== labels.length) {
-        lost.push(`${locale} gutter ${gutter}, ${count} readings: ${labels.join(' | ')}`)
+        lost.push(`${locale} ${viewWidth}w gutter ${gutter}, ${count} readings: ${labels.join(' | ')}`)
       }
     })
 
@@ -558,6 +571,68 @@ describe('x-axis date labels', () => {
       shortened.length,
       `no locale shortened its dates when the plot narrowed, out of ${new Set(LOCALES.map((l) => new Intl.DateTimeFormat(l).resolvedOptions().locale)).size} this runtime tells apart`
     ).toBeGreaterThan(0)
+  })
+})
+
+describe('date point thinning', () => {
+  // The two plot widths a VND chart actually leaves: 800 and 320 wide minus the "50 Tr" gutter
+  // (56) and the 20-unit right padding.
+  const FULL_PLOT = 724
+  const PHONE_PLOT = 244
+
+  it('keeps the ten-date density the 800-unit chart always had', () => {
+    expect(datedIndices(8, FULL_PLOT)).toEqual([0, 1, 2, 3, 4, 5, 6, 7])
+    expect(datedIndices(10, FULL_PLOT)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+    expect(datedIndices(20, FULL_PLOT)).toEqual([0, 2, 4, 6, 8, 10, 12, 14, 16, 18])
+  })
+
+  it('dates four points, not ten, in the plot a 320px phone leaves', () => {
+    // Ten labels sharing 244 units get 24 apiece against the 83 the widest short-format date
+    // needs; four get 81. The reader loses six gridline dates and gains the ability to read the
+    // remaining four.
+    expect(datedIndices(8, PHONE_PLOT)).toEqual([0, 2, 4, 6])
+    expect(datedIndices(20, PHONE_PLOT)).toEqual([0, 5, 10, 15])
+  })
+
+  it('never asks for a gap narrower than the narrowest date wording', () => {
+    // 157 units is the tightest plot in the matrix: 320 wide behind the widest fuzzed gutter.
+    // Four of twelve readings would sit 57.1 units apart — under the 58 the widest day+hour
+    // rendering measures — and no format on the ladder can lay that out, so the stride grows
+    // and three dates share the room instead.
+    expect(datedIndices(12, 157)).toEqual([0, 5, 10])
+  })
+
+  it('holds the three-date floor on the tightest plots', () => {
+    expect(datedIndices(6, 157)).toEqual([0, 2, 4])
+    // 116 units is exactly two 58-unit gaps, the narrowest room where three labels lay out.
+    expect(datedIndices(3, 116)).toEqual([0, 1, 2])
+    // One unit narrower and the gap floor thins even a three-reading series to its ends — the
+    // early path that used to date every small series skipped the floor, and the sweep caught
+    // real overlaps at the product page's own widths.
+    expect(datedIndices(3, 100)).toEqual([0, 2])
+  })
+
+  // The floor under the floor. The product page's shell and card padding leave a 320px phone a
+  // 198-unit chart, and behind a 9-digit plain-label gutter that is a plot in the seventies —
+  // under two MIN_DATE_GAPs, so the overlap-proof stride outranks the three-label target and TWO
+  // dates ship. Two a format can lay out beat three that collide; this pins the trade so a future
+  // "fix" to the count re-derives the geometry instead of reintroducing the overlap.
+  it('drops to two dates, never fewer, when the plot cannot hold three 58-unit gaps', () => {
+    for (const plot of [72, 90, 115]) {
+      const indices = datedIndices(20, plot)
+      expect(indices.length, `${plot}-unit plot`).toBe(2)
+    }
+    // The 3-label boundary is count-dependent because the stride is an integer: with 20 readings
+    // the third label needs stride ≤ 9, i.e. room ≥ ceil(58 · 19 / 9) = 123 units, not 2 · 58.
+    expect(datedIndices(20, 123).length).toBeGreaterThanOrEqual(3)
+    // 72 units is the narrowest plot the product page can produce (198-unit chart behind a
+    // 9-digit plain-label gutter); from there up, two dates always ship. Below one 58-unit gap
+    // even a pair cannot lay out, and the floor honestly draws one label rather than two that
+    // collide — reachable by no real viewport, pinned so the trade is deliberate.
+    for (const plot of [72, 115, 157, 244, 724]) {
+      expect(datedIndices(20, plot).length, `${plot}-unit plot`).toBeGreaterThanOrEqual(2)
+    }
+    expect(datedIndices(20, 40)).toEqual([0])
   })
 })
 

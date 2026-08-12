@@ -1,7 +1,8 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import PriceHistoryChart from './PriceHistoryChart'
+import { formatPrice } from '../../utils/formatters'
 import widths from './widths.fixture.json'
 import {
   currencySymbol,
@@ -87,6 +88,37 @@ function span(node, fontSize) {
 
 beforeEach(() => {
   getPriceHistory.mockReset()
+})
+
+// jsdom performs no layout — getBoundingClientRect answers 0 — so the measurement effect never
+// fires on its own and every other describe in this file exercises the 800-unit default. The
+// resize path is driven by hand through the recorded observer stub in setup.js.
+describe('PriceHistoryChart layout', () => {
+  const viewBox = (container) => container.querySelector('svg[role="img"]').getAttribute('viewBox')
+
+  it('lays out at 800 units until the container is measured', async () => {
+    const { container } = await renderChart(series(12900000, 45000000))
+    expect(viewBox(container)).toBe('0 0 800 300')
+  })
+
+  it('adopts the measured width, whole units only, and dates fewer points in it', async () => {
+    const { container } = await renderChart(series(12900000, 45000000, 20))
+    expect(nodes(container, 'chart-date')).toHaveLength(10)
+
+    // 320.4 is what a real phone reports mid-rotation; the viewBox takes the integer. The chart's
+    // own observer is the only one this render registers.
+    act(() => {
+      for (const observer of globalThis.ResizeObserver.instances) {
+        observer.callback([{ contentRect: { width: 320.4 } }], observer)
+      }
+    })
+
+    expect(viewBox(container)).toBe('0 0 320 300')
+    // Twenty readings kept ten dates at 800 units; the 244-unit plot a 320 phone leaves after
+    // the VND gutter holds four. datedIndices owns the arithmetic; this pins that the component
+    // actually feeds it the measured width.
+    expect(nodes(container, 'chart-date')).toHaveLength(4)
+  })
 })
 
 describe('PriceHistoryChart y-axis', () => {
@@ -277,6 +309,110 @@ describe('PriceHistoryChart x-axis', () => {
         unmount()
       }
     }
+  })
+})
+
+describe('PriceHistoryChart scrub', () => {
+  // jsdom lays nothing out, so the SVG's on-screen box is stated by hand: the identity mapping,
+  // one user unit per CSS pixel, which is exactly what the px-true viewBox produces live.
+  const surfaceOf = (container) => {
+    const svg = container.querySelector('svg[role="img"]')
+    svg.getBoundingClientRect = () => ({ left: 0, top: 0, width: 800, height: 300 })
+    // The pointer surface is the first rect the chart draws; the tooltip's backing rect only
+    // exists once a scrub is live, and is drawn after it.
+    return container.querySelector('rect')
+  }
+  const tooltipOf = (container) => container.querySelector('g[aria-hidden="true"]')
+
+  it('grows the reading nearest the pointer and states its price and instant', async () => {
+    const history = series(12900000, 45000000, 8)
+    const { container } = await renderChart(history)
+    const surface = surfaceOf(container)
+    const circles = [...container.querySelectorAll('circle')]
+
+    // Aim a little short of the sixth reading: the nearest one answers, not the one before.
+    const x = attr(circles[5], 'cx')
+    fireEvent.pointerMove(surface, { clientX: x - 10, clientY: 150 })
+
+    expect(circles.map((node) => attr(node, 'r'))).toEqual([4, 4, 4, 4, 4, 6, 4, 4])
+
+    // The crosshair stands on the reading's own x, full plot height.
+    const crosshair = [...container.querySelectorAll('line')]
+      .filter((node) => attr(node, 'x1') === attr(node, 'x2') && attr(node, 'x1') === x)
+    expect(crosshair).toHaveLength(1)
+
+    // The price every phone reader was owed: bold line, then the instant, in whatever words the
+    // running locale uses — both sides of the assertion resolve through the same Intl calls.
+    const tooltip = tooltipOf(container)
+    expect(tooltip).not.toBeNull()
+    expect(tooltip.textContent).toContain(formatPrice(history[5].price, 'VND'))
+    expect(tooltip.textContent).toContain(new Date(history[5].recordedAt).toLocaleString())
+  })
+
+  it('clears the scrub when the pointer leaves or the gesture is taken over', async () => {
+    const { container } = await renderChart(series(12900000, 45000000, 8))
+    const surface = surfaceOf(container)
+    const circles = [...container.querySelectorAll('circle')]
+
+    fireEvent.pointerMove(surface, { clientX: attr(circles[3], 'cx'), clientY: 150 })
+    expect(tooltipOf(container)).not.toBeNull()
+    fireEvent.pointerLeave(surface)
+    expect(tooltipOf(container)).toBeNull()
+    expect(circles.map((node) => attr(node, 'r'))).toEqual([4, 4, 4, 4, 4, 4, 4, 4])
+
+    // pointercancel is what a browser fires when it claims the drag for vertical scrolling.
+    fireEvent.pointerDown(surface, { clientX: attr(circles[3], 'cx'), clientY: 150 })
+    expect(tooltipOf(container)).not.toBeNull()
+    fireEvent.pointerCancel(surface)
+    expect(tooltipOf(container)).toBeNull()
+  })
+
+  it('keeps the tooltip up after a finger lifts, so a tap can be read', async () => {
+    // A lift IS a leave for a non-hovering pointer — the spec mandates pointerup → pointerout →
+    // pointerleave, and Chrome fires exactly that train, tooltip gone 150ms after the tap. The
+    // one gesture a phone reader has must leave the price on screen; only a mouse's leave, a
+    // hover really ending, clears.
+    const { container } = await renderChart(series(12900000, 45000000, 8))
+    const surface = surfaceOf(container)
+    const circles = [...container.querySelectorAll('circle')]
+
+    fireEvent.pointerDown(surface, { clientX: attr(circles[4], 'cx'), clientY: 150, pointerType: 'touch' })
+    expect(tooltipOf(container)).not.toBeNull()
+    fireEvent.pointerLeave(surface, { pointerType: 'touch' })
+    expect(tooltipOf(container)).not.toBeNull()
+
+    fireEvent.pointerMove(surface, { clientX: attr(circles[4], 'cx'), clientY: 150, pointerType: 'mouse' })
+    fireEvent.pointerLeave(surface, { pointerType: 'mouse' })
+    expect(tooltipOf(container)).toBeNull()
+  })
+
+  it('keeps every digit of the tooltip inside the viewBox at both ends', async () => {
+    const { container } = await renderChart(series(12900000, 45000000, 8))
+    const surface = surfaceOf(container)
+    const circles = [...container.querySelectorAll('circle')]
+
+    for (const index of [0, circles.length - 1]) {
+      fireEvent.pointerMove(surface, { clientX: attr(circles[index], 'cx'), clientY: 150 })
+      const backing = tooltipOf(container).querySelector('rect')
+      const left = attr(backing, 'x')
+      expect(left, `tooltip on reading ${index}`).toBeGreaterThanOrEqual(0)
+      expect(left + attr(backing, 'width'), `tooltip on reading ${index}`).toBeLessThanOrEqual(800)
+    }
+  })
+
+  it('leaves the sentence as the accessible interface and hovers up no second tooltip', async () => {
+    const { container } = await renderChart(series(12900000, 45000000, 8))
+    const surface = surfaceOf(container)
+    const circles = [...container.querySelectorAll('circle')]
+
+    fireEvent.pointerDown(surface, { clientX: attr(circles[2], 'cx'), clientY: 150 })
+
+    // The aria sentence still carries the chart; the tooltip is a visual affordance only.
+    expect(screen.getByRole('img').getAttribute('aria-label')).toContain('Price history over')
+    expect(tooltipOf(container).getAttribute('aria-hidden')).toBe('true')
+    // The per-point <title> elements are gone: they were hover-only — no phone ever saw one —
+    // and leaving them would float a second, native tooltip next to this one on desktop.
+    expect(container.querySelectorAll('svg title')).toHaveLength(0)
   })
 })
 

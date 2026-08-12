@@ -279,6 +279,62 @@ export function axisTicks(min, max, locale) {
 
 const DAY_MS = 24 * 60 * 60 * 1000
 
+// How many readings get a date is decided by the plot width, in the same units the labels are
+// drawn in. Both constants are measurements at DATE_FONT_SIZE (11px), taken with
+// estimateLabelWidth over the seven suite locales:
+//
+//   83 — the widest label the coarsest rungs write, "thg 10 26" (vi-VN, 72.49), plus TICK_GAP.
+//        A label every 83 units is the density at which the wordiest format still lays out, so
+//        it is the spacing worth aiming for — a plot that can only fit shorter wordings under it
+//        is already spending readability to keep its count.
+//   58 — the widest label the day+hour rung writes, "30日 23時" (ja-JP, 57.42), rounded up. A
+//        2-3 day span cannot be told apart with less than day+hour, so gaps under 58 units have
+//        NO format that lays out and the ladder is left choosing an overlap. That gap must never
+//        be produced.
+const DATE_LABEL_SPACING = 83
+const MIN_DATE_GAP = 58
+// Three is the target floor, not a guarantee. The MIN_DATE_GAP stride outranks it, so a plot
+// narrower than two 58-unit gaps — which the real product page produces at a 320px viewport,
+// where padding and a 9-digit gutter can leave 72 units of plot — draws TWO dates. That is the
+// honest floor: two labels a format can lay out beat three that overlap, and the geometry sweeps
+// pin the narrow widths clean. MIN_DATE_GAP is also deliberately the ACROSS-day rung's widest
+// label; a within-day series' widest is ~34 units, so at extreme narrowness a time-only chart
+// gets 2 labels where 3 would fit. Threading the span into this function would buy that one label
+// back at those widths; the conservatism is chosen instead, because the floor exists to make
+// overlap impossible under every rung the ladder might still pick.
+const MIN_DATE_LABELS = 3
+const MAX_DATE_LABELS = 10
+
+/**
+ * Which readings get a date, given the room the plot really has.
+ *
+ * The target is the label count whose spacing lands nearest DATE_LABEL_SPACING — k labels cost
+ * k-1 gaps, hence the +1 — so 800 units keep the ten dates the chart has always drawn and a 320px
+ * phone gets three or four it can actually read, instead of ten at a quarter scale. The stride is
+ * then the classic every-nth, floored so the gap it produces never falls under MIN_DATE_GAP: the
+ * stride rounding up (ceil) squeezes the dated readings toward the start of the plot, and at the
+ * tightest widths that squeeze alone pushed the gap 1-3 units past what any format could lay out.
+ */
+export function datedIndices(count, plotWidth) {
+  const room = Math.max(1, plotWidth)
+  const target = Math.min(MAX_DATE_LABELS,
+    Math.max(MIN_DATE_LABELS, Math.round(room / DATE_LABEL_SPACING) + 1))
+
+  // One stride for every count. The gap floor applies even when the series is small enough to
+  // date every reading — an early "count <= target, date them all" path skipped it, and the
+  // geometry sweep caught the miss at the widths the product page really renders: three readings
+  // on a 198-unit chart are 42 units apart, and no wording on the ladder lays that out. Thinning
+  // a 3-reading series to its ends is the same trade the floor always makes: two labels a format
+  // can draw beat three that collide.
+  const stride = Math.max(
+    count <= target ? 1 : Math.ceil(count / target),
+    Math.ceil((MIN_DATE_GAP * Math.max(1, count - 1)) / room)
+  )
+  const indices = []
+  for (let i = 0; i < count; i += stride) indices.push(i)
+  return indices
+}
+
 // Coarsest first: the least detail that still tells two gridlines apart is the most readable one.
 // A clock time with no date is only offered when the whole series fits inside a day, because
 // outside one it says nothing about which day the reading belongs to.
