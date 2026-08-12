@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom'
 import ProductDetail from './ProductDetail'
@@ -533,6 +533,168 @@ describe('ProductDetail markup after the CSS retirement', () => {
     const input = await screen.findByLabelText(/threshold price/i)
     for (const utility of ['rounded-xl', 'px-4', 'py-3']) {
       expect(classesOf(input), `${utility} — Field's own box`).toContain(utility)
+    }
+  })
+})
+
+// Drag events are built by hand rather than through fireEvent's shorthands for one reason: jsdom
+// stamps timeStamp with the wall clock at dispatch, so two moves fired by a test land inside the
+// same millisecond and a 20px nudge reads as an enormous flick — or as none, on the run where the
+// clock ticks over. A pinned clock makes the velocity arithmetic deterministic. jsdom has no
+// PointerEvent constructor, so these are MouseEvents carrying the type and the fields the pointer
+// handlers read; React routes by event name and never checks the constructor.
+const dragEvent = (type, x, t) => {
+  const event = new window.MouseEvent(type, { bubbles: true, cancelable: true, clientX: x })
+  Object.defineProperty(event, 'pointerId', { value: 1 })
+  Object.defineProperty(event, 'timeStamp', { value: t })
+  return event
+}
+
+describe('ProductDetail gallery drag', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    getProduct.mockResolvedValue(product({ images: threeImages }))
+    findAlertForProduct.mockResolvedValue(null)
+  })
+
+  // The frame is what the handlers ride and what the settle measures against. jsdom performs no
+  // layout, so the width is pinned to what a 390px viewport really renders: 390 minus px-6 both
+  // sides is 342, which puts the 20% commit line at 68.4px.
+  const mountGallery = async () => {
+    const { container } = renderPage()
+    await screen.findByRole('button', { name: /next image/i })
+    const frame = track(container).parentElement
+    frame.getBoundingClientRect = () =>
+      ({ left: 0, top: 0, right: 342, bottom: 342, width: 342, height: 342 })
+    return { container, frame }
+  }
+
+  it('follows the finger with the transition off, then eases to the next slide', async () => {
+    const { container, frame } = await mountGallery()
+    fireEvent(frame, dragEvent('pointerdown', 300, 1000))
+    fireEvent(frame, dragEvent('pointermove', 260, 1016))
+    fireEvent(frame, dragEvent('pointermove', 180, 1032))
+
+    // Mid-drag the track is at the finger, in px, with the transition classes off — an eased
+    // track would still be crawling out of its 400ms curve while the finger is already 120px
+    // away, and the settle test below would pass anyway. This is the assertion that pins the
+    // conditional class.
+    expect(track(container).style.transform).toBe('translateX(calc(-0% + -120px))')
+    expect(classesOf(track(container))).not.toContain('transition-transform')
+
+    fireEvent(frame, dragEvent('pointerup', 180, 1048))
+    expect(track(container).style.transform).toBe('translateX(-100%)')
+    expect(classesOf(track(container))).toContain('transition-transform')
+    expect(screen.getByRole('button', { name: 'Go to image 2' })).toHaveAttribute('aria-current', 'true')
+  })
+
+  it('snaps a short slow drag back to the slide it started on', async () => {
+    const { container, frame } = await mountGallery()
+    fireEvent(frame, dragEvent('pointerdown', 300, 1000))
+    // 20px in 100ms: under the 68.4px line and, at 0.2 px/ms, under the flick line too.
+    fireEvent(frame, dragEvent('pointermove', 280, 1100))
+    fireEvent(frame, dragEvent('pointerup', 280, 1180))
+    expect(track(container).style.transform).toBe('translateX(-0%)')
+    expect(screen.getByRole('button', { name: 'Go to image 1' })).toHaveAttribute('aria-current', 'true')
+  })
+
+  it('advances on a fast flick that never reaches the distance line', async () => {
+    const { container, frame } = await mountGallery()
+    fireEvent(frame, dragEvent('pointerdown', 300, 1000))
+    fireEvent(frame, dragEvent('pointermove', 295, 1500))
+    fireEvent(frame, dragEvent('pointermove', 250, 1560))
+    fireEvent(frame, dragEvent('pointerup', 250, 1580))
+    // 50px is under the 68.4px line; the final 45px in 60ms is 0.75 px/ms, over the flick line —
+    // and the drift that came before it sits outside the window, so it cannot average that away.
+    expect(track(container).style.transform).toBe('translateX(-100%)')
+  })
+
+  it('rubber-bands instead of wrapping at either end', async () => {
+    const { container, frame } = await mountGallery()
+    // Rightward at the first slide: a third of the travel shows, and the lift — at 7.5 px/ms, a
+    // flick by any measure — still settles home, because there is nothing to its left.
+    fireEvent(frame, dragEvent('pointerdown', 100, 1000))
+    fireEvent(frame, dragEvent('pointermove', 220, 1016))
+    expect(track(container).style.transform).toBe('translateX(calc(-0% + 40px))')
+    fireEvent(frame, dragEvent('pointerup', 220, 1032))
+    expect(track(container).style.transform).toBe('translateX(-0%)')
+
+    // Leftward at the last slide, past every commit line: still no wrap. The arrows keep their
+    // modulo; the drag does not share it.
+    await userEvent.click(screen.getByRole('button', { name: 'Go to image 3' }))
+    fireEvent(frame, dragEvent('pointerdown', 300, 2000))
+    fireEvent(frame, dragEvent('pointermove', 100, 2016))
+    expect(track(container).style.transform).toBe(`translateX(calc(-200% + ${-200 / 3}px))`)
+    fireEvent(frame, dragEvent('pointerup', 100, 2032))
+    expect(track(container).style.transform).toBe('translateX(-200%)')
+  })
+
+  it('leaves a drag that starts on an arrow to the arrow', async () => {
+    const { container } = await mountGallery()
+    const arrow = screen.getByRole('button', { name: /next image/i })
+    fireEvent(arrow, dragEvent('pointerdown', 300, 1000))
+    fireEvent(arrow, dragEvent('pointermove', 100, 1016))
+    expect(track(container).style.transform).toBe('translateX(-0%)')
+    expect(classesOf(track(container))).toContain('transition-transform')
+    fireEvent(arrow, dragEvent('pointerup', 100, 1032))
+    expect(track(container).style.transform).toBe('translateX(-0%)')
+  })
+
+  it('snaps back when the browser claims the gesture, however far it got', async () => {
+    const { container, frame } = await mountGallery()
+    fireEvent(frame, dragEvent('pointerdown', 300, 1000))
+    fireEvent(frame, dragEvent('pointermove', 150, 1016))
+    expect(track(container).style.transform).toBe('translateX(calc(-0% + -150px))')
+    // touch-action hands a vertical drag to the scroller mid-gesture and the train ends in
+    // pointercancel, not pointerup. The reader was scrolling; 150px of incidental horizontal
+    // travel settling as a slide change would turn every diagonal scroll into a page turn.
+    fireEvent(frame, dragEvent('pointercancel', 150, 1032))
+    expect(track(container).style.transform).toBe('translateX(-0%)')
+    expect(classesOf(track(container))).toContain('transition-transform')
+  })
+
+  it('announces the visible image politely however it changes', async () => {
+    const { container, frame } = await mountGallery()
+    const live = container.querySelector('[aria-live="polite"]')
+    expect(live).not.toBeNull()
+    expect(classesOf(live)).toContain('sr-only')
+    expect(live).toHaveTextContent('Image 1 of 3')
+
+    await userEvent.click(screen.getByRole('button', { name: /next image/i }))
+    expect(live).toHaveTextContent('Image 2 of 3')
+
+    fireEvent(frame, dragEvent('pointerdown', 300, 1000))
+    fireEvent(frame, dragEvent('pointermove', 180, 1016))
+    fireEvent(frame, dragEvent('pointerup', 180, 1032))
+    expect(live).toHaveTextContent('Image 3 of 3')
+  })
+
+  it('gives a single image neither a drag response nor an announcement', async () => {
+    getProduct.mockResolvedValue(product())
+    const { container } = renderPage()
+    await screen.findByRole('img', { name: /espresso machine 1/i })
+    expect(container.querySelector('[aria-live="polite"]')).toBeNull()
+
+    const frame = track(container).parentElement
+    frame.getBoundingClientRect = () =>
+      ({ left: 0, top: 0, right: 342, bottom: 342, width: 342, height: 342 })
+    fireEvent(frame, dragEvent('pointerdown', 300, 1000))
+    fireEvent(frame, dragEvent('pointermove', 100, 1016))
+    expect(track(container).style.transform).toBe('translateX(-0%)')
+  })
+
+  it('keeps vertical scrolling and reduced motion honest on the drag layer', async () => {
+    const { container, frame } = await mountGallery()
+    // touch-action on the FRAME, an HTML div: the chart had to hoist it to the SVG root because
+    // Chrome ignores it on inner SVG elements when deciding who owns a drag. Here the frame is
+    // the surface, so the split is horizontal-drags-page, vertical-drags-scroll.
+    expect(classesOf(frame)).toContain('touch-pan-y')
+    expect(classesOf(track(container))).toContain('motion-reduce:transition-none')
+    // Mouse drags ride the same pointer events, and the native image drag would eat them: a
+    // mousedown-and-move on a bare <img> starts a browser drag and the pointer stream ends in a
+    // cancel before any settle.
+    for (const img of screen.getAllByRole('img', { name: /espresso machine/i })) {
+      expect(img).toHaveAttribute('draggable', 'false')
     }
   })
 })

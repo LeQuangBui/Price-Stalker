@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { createAlert, deleteAlert, findAlertForProduct, updateAlert } from '../../api/alerts'
 import { isUnauthorizedError } from '../../api/auth'
@@ -16,6 +16,7 @@ import ErrorState from '../../components/primitives/ErrorState'
 import CheckboxRow from '../../components/primitives/CheckboxRow'
 import Field from '../../components/primitives/Field'
 import { cx } from '../../lib/cx'
+import { dragOffset, releaseVelocity, settleSlide } from './swipe'
 import {
   formatDate,
   formatDateTime,
@@ -246,6 +247,60 @@ export default function ProductDetail({ isSignedIn }) {
   const prevSlide = () => setSlide((value) => (value - 1 + images.length) % images.length)
   const nextSlide = () => setSlide((value) => (value + 1) % images.length)
 
+  // The gallery answers a finger as well as the arrows. `drag` is the live px offset the track
+  // shows while a pointer holds it — null when settled, and the null is load-bearing: it is what
+  // switches the transition classes back on, and 0 is a real offset (a press that has not moved
+  // yet). The per-gesture bookkeeping lives in a ref because none of it should paint: the start
+  // x, the frame's width at pointerdown (the settle line is 20% of it — measured once, not per
+  // move, because a mid-drag rotation re-measuring the line under the finger helps nobody), and
+  // the last few moves for the flick reading. The arithmetic is swipe.js's, swept in jsdom.
+  const gesture = useRef(null)
+  const [drag, setDrag] = useState(null)
+
+  const dragBegin = (event) => {
+    if (!hasMultiple || gesture.current) return
+    // A press that starts on an arrow stays a press. The dots cannot conflict — the rail is a
+    // sibling below the frame — but the arrows live inside it.
+    if (event.target.closest('button')) return
+    // Optional-chained: jsdom has no pointer capture. In a browser it keeps the moves coming
+    // when the finger crosses the frame's edge mid-drag.
+    event.currentTarget.setPointerCapture?.(event.pointerId)
+    gesture.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      width: event.currentTarget.getBoundingClientRect().width,
+      samples: [{ x: event.clientX, t: event.timeStamp }]
+    }
+    setDrag(0)
+  }
+
+  const dragMove = (event) => {
+    const g = gesture.current
+    if (!g || event.pointerId !== g.pointerId) return
+    g.samples.push({ x: event.clientX, t: event.timeStamp })
+    // The flick window is 100ms; eight samples at pointer-event cadence more than span it.
+    if (g.samples.length > 8) g.samples.shift()
+    setDrag(dragOffset(event.clientX - g.startX, slide, images.length))
+  }
+
+  const dragEnd = (event) => {
+    const g = gesture.current
+    if (!g || event.pointerId !== g.pointerId) return
+    gesture.current = null
+    setDrag(null)
+    setSlide(settleSlide(event.clientX - g.startX, releaseVelocity(g.samples), slide, images.length, g.width))
+  }
+
+  // pointercancel is the browser claiming the gesture — with pan-y on the frame, a drag that
+  // turned out to be vertical is handed to the scroller and the pointer stream ends here rather
+  // than in pointerup. Whatever offset was showing snaps back; settling a claimed drag would
+  // turn every diagonal scroll that crossed the frame into a page turn.
+  const dragCancel = () => {
+    if (!gesture.current) return
+    gesture.current = null
+    setDrag(null)
+  }
+
   const handleAlertSubmit = async (event) => {
     event.preventDefault()
 
@@ -381,23 +436,51 @@ export default function ProductDetail({ isSignedIn }) {
             and both beat the utilities written on this element, which have therefore never
             rendered. The plausible-looking replacement resolves to `var(--radius-lg)`, which
             index.css's UNLAYERED :root sets to 12px, so it would have grown the radius by half in
-            the conversion that exists to keep it. No named step maps to plain `--radius`. */}
+            the conversion that exists to keep it. No named step maps to plain `--radius`.
+            The frame is also the drag surface: the handlers ride it rather than the track because
+            the frame is the box whose rendered width the settle line is 20% of, and because it is
+            an HTML div — the chart had to hoist touch-action to its SVG root, Chrome ignoring it
+            on inner SVG elements, but here `touch-pan-y` sits on the surface itself and splits
+            the gesture as written: horizontal drags page, vertical drags scroll. */}
         <div>
           {hasImages ? (
             <>
-              <div className="relative aspect-square overflow-hidden rounded-[var(--radius)] border border-line bg-tertiary">
+              <div
+                className="relative aspect-square touch-pan-y overflow-hidden rounded-[var(--radius)] border border-line bg-tertiary"
+                onPointerDown={dragBegin}
+                onPointerMove={dragMove}
+                onPointerUp={dragEnd}
+                onPointerCancel={dragCancel}
+              >
+                {/* While a finger holds the track the transition classes come OFF and the offset
+                    rides the transform in px — a track easing 400ms behind the finger reads as
+                    broken — and the settle turns them back on in the same commit, so the snap
+                    from wherever the finger left it is the one movement that animates.
+                    `motion-reduce:transition-none` stays unconditional: the settle is the only
+                    transition, and it is exactly the movement that preference declines. */}
                 <div
-                  className="absolute inset-0 flex transition-transform duration-[400ms] ease-[ease]"
-                  style={{ transform: `translateX(-${slide * 100}%)` }}
+                  className={cx(
+                    'absolute inset-0 flex motion-reduce:transition-none',
+                    drag === null && 'transition-transform duration-[400ms] ease-[ease]'
+                  )}
+                  style={{
+                    transform: drag === null
+                      ? `translateX(-${slide * 100}%)`
+                      : `translateX(calc(-${slide * 100}% + ${drag}px))`
+                  }}
                 >
                   {images.map((image, index) => (
                     /* `min-w-full` is what makes the flex track one slide per viewport. Without it
-                       every image collapses to intrinsic width on a single row. */
+                       every image collapses to intrinsic width on a single row.
+                       `draggable={false}` is for the mouse half of the pointer events: a
+                       mousedown-and-move on a bare <img> starts the browser's own image drag and
+                       the pointer stream ends in pointercancel before any settle. */
                     <div key={index} className="min-w-full">
                       <img
                         src={image}
                         alt={`${product.name} ${index + 1}`}
                         loading="lazy"
+                        draggable={false}
                         className="h-full w-full object-cover"
                       />
                     </div>
@@ -444,6 +527,15 @@ export default function ProductDetail({ isSignedIn }) {
                     </button>
                   ))}
                 </div>
+              )}
+              {/* The one non-visual signal that the slide CHANGED, by whichever hand — arrow,
+                  dot or drag — all of which funnel through `slide`. The arrows and dots carry
+                  labels and the images alt text, so position was already readable; movement was
+                  not. Polite, because a slide change never outranks whatever is being read.
+                  No region/roledescription ceremony on the frame: unverifiable announcement
+                  behaviour is how a gallery ends up narrating itself twice. */}
+              {hasMultiple && (
+                <p className="sr-only" aria-live="polite">Image {slide + 1} of {images.length}</p>
               )}
             </>
           ) : (
