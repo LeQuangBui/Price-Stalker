@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import PriceHistoryChart from './PriceHistoryChart'
 import widths from './widths.fixture.json'
 import {
@@ -62,14 +63,14 @@ async function renderChart(history, currency = 'VND') {
   getPriceHistory.mockResolvedValue(history)
   const props = currency === NO_CURRENCY ? {} : { currency }
   const view = render(<PriceHistoryChart productId="p1" {...props} />)
-  await waitFor(() => expect(view.container.querySelector('svg.price-chart')).not.toBeNull())
+  await waitFor(() => expect(view.container.querySelector('svg[role="img"]')).not.toBeNull())
   return view
 }
 
-// The three text roles carry their own class, so a test asks for the thing it means rather than
-// for a font size — the ticks, the unit caption and the dates share `.chart-label` and two of the
-// three share a size.
-const nodes = (container, role) => [...container.querySelectorAll(`text.chart-label.${role}`)]
+// The three text roles carry their own marker class — no-rule handles, recorded as such in
+// classname.guard — so a test asks for the thing it means rather than for a font size: the ticks,
+// the unit caption and the dates are all `text`, and two of the three share a size.
+const nodes = (container, role) => [...container.querySelectorAll(`text.${role}`)]
 const textsOf = (list) => list.map((node) => node.textContent)
 const attr = (node, name) => Number(node.getAttribute(name))
 
@@ -189,10 +190,17 @@ describe('PriceHistoryChart y-axis', () => {
 })
 
 describe('PriceHistoryChart plot', () => {
+  // Structural selectors, not class handles: every horizontal `line` is a gridline plus the
+  // x-axis, and the axis shares the lowest gridline's y (the ratio-0 tick), so the sorted ends —
+  // the only entries these tests read — are unchanged by including it. Every `circle` is a data
+  // point.
   const gridlines = (container) =>
-    [...container.querySelectorAll('line.chart-grid')].map((node) => attr(node, 'y1')).sort((a, b) => a - b)
+    [...container.querySelectorAll('line')]
+      .filter((node) => attr(node, 'y1') === attr(node, 'y2'))
+      .map((node) => attr(node, 'y1'))
+      .sort((a, b) => a - b)
   const pointYs = (container) =>
-    [...container.querySelectorAll('circle.chart-point')].map((node) => attr(node, 'cy')).sort((a, b) => a - b)
+    [...container.querySelectorAll('circle')].map((node) => attr(node, 'cy')).sort((a, b) => a - b)
 
   it('draws a reading that lands on a gridline value on that gridline', async () => {
     // 10M to 50M snaps to itself, so the lowest and highest readings sit exactly on the outer
@@ -269,5 +277,67 @@ describe('PriceHistoryChart x-axis', () => {
         unmount()
       }
     }
+  })
+})
+
+// Characterization of the shell — header, range buttons, error and empty branches — written ahead
+// of the CSS retirement and green against the unconverted component. Queries are by role, name and
+// text. The one look at className is an invariant, not a token: "the selected button is styled
+// unlike the other five" is true of `.active` today and stays true of whatever utilities carry the
+// selected fill afterwards, so nothing here needs an edit when the stylesheet goes.
+describe('PriceHistoryChart shell', () => {
+  const RANGE_LABELS = ['1 Day', '5 Days', '1 Month', '6 Months', '1 Year', 'All']
+
+  it('renders the heading and all six range buttons', async () => {
+    await renderChart(series(12900000, 45000000))
+    expect(screen.getByRole('heading', { level: 3, name: 'Price History' })).toBeInTheDocument()
+    for (const label of RANGE_LABELS) {
+      expect(screen.getByRole('button', { name: label })).toBeInTheDocument()
+    }
+  })
+
+  it('styles exactly the selected range apart, and moves the mark on click', async () => {
+    await renderChart(series(12900000, 45000000))
+    expect(getPriceHistory).toHaveBeenLastCalledWith('p1', '1d')
+
+    // The button whose className no other range button shares. Exactly one must exist — zero
+    // would mean the selected range is not marked at all, two that the mark failed to move.
+    const marked = () => {
+      const classes = RANGE_LABELS.map((label) => screen.getByRole('button', { name: label }).className)
+      const unique = classes.filter((cls) => classes.indexOf(cls) === classes.lastIndexOf(cls))
+      expect(unique, 'exactly one range button styled apart from the rest').toHaveLength(1)
+      return RANGE_LABELS[classes.indexOf(unique[0])]
+    }
+    expect(marked()).toBe('1 Day')
+
+    await userEvent.click(screen.getByRole('button', { name: 'All' }))
+    await waitFor(() => expect(getPriceHistory).toHaveBeenLastCalledWith('p1', 'all'))
+    expect(marked()).toBe('All')
+    await screen.findByRole('img')
+  })
+
+  it('shows the fetch error with a Retry that refetches', async () => {
+    getPriceHistory.mockRejectedValueOnce(new Error('History fetch failed'))
+    getPriceHistory.mockResolvedValueOnce(series(12900000, 45000000))
+    render(<PriceHistoryChart productId="p1" currency="VND" />)
+
+    expect(await screen.findByText('History fetch failed')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    expect(await screen.findByRole('img')).toBeInTheDocument()
+    expect(screen.queryByText('History fetch failed')).toBeNull()
+  })
+
+  it('says so when there is no history', async () => {
+    getPriceHistory.mockResolvedValue([])
+    render(<PriceHistoryChart productId="p1" currency="VND" />)
+    expect(await screen.findByText('No price history available')).toBeInTheDocument()
+  })
+
+  it('holds a skeleton while the fetch is pending', () => {
+    getPriceHistory.mockReturnValue(new Promise(() => {}))
+    const { container } = render(<PriceHistoryChart productId="p1" currency="VND" />)
+    const skeleton = container.querySelector('.skeleton')
+    expect(skeleton).not.toBeNull()
+    expect(skeleton).toHaveAttribute('aria-hidden', 'true')
   })
 })
