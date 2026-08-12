@@ -40,7 +40,10 @@ const TOOLTIP_HEIGHT = DATE_BASELINE + 3 + TOOLTIP_PAD_Y
  */
 export function scrubIndex(x, plotLeft, plotWidth, count) {
   if (count <= 1) return 0
-  const step = plotWidth / (count - 1)
+  // The width is floored at one unit for the same reason the component floors innerWidth: a
+  // container narrower than the gutter would otherwise send step to zero or negative, and
+  // round((x - left) / 0) is NaN — an index that dereferences nothing.
+  const step = Math.max(1, plotWidth) / (count - 1)
   return Math.min(count - 1, Math.max(0, Math.round((x - plotLeft) / step)))
 }
 
@@ -69,10 +72,17 @@ export function tooltipBox(priceLabel, dateLabel) {
  * clear of the crosshair. Vertically it centres on the reading and clamps the same way.
  */
 export function tooltipPlacement(x, y, box, viewWidth, viewHeight) {
+  // Clamped to half a unit, not zero: the border is a 1-unit stroke centred on the rect's edge,
+  // so a rect flush against the viewBox loses the outer half of its stroke. Half a unit keeps the
+  // whole border on the paper; the digits were never at risk either way.
+  const inset = 0.5
   let left = x + TOOLTIP_GAP
   if (left + box.width > viewWidth) left = x - TOOLTIP_GAP - box.width
-  left = Math.min(Math.max(0, left), Math.max(0, viewWidth - box.width))
+  left = Math.min(Math.max(inset, left), Math.max(inset, viewWidth - box.width - inset))
 
-  const top = Math.min(Math.max(0, y - box.height / 2), Math.max(0, viewHeight - box.height))
+  const top = Math.min(
+    Math.max(inset, y - box.height / 2),
+    Math.max(inset, viewHeight - box.height - inset)
+  )
   return { left, top }
 }

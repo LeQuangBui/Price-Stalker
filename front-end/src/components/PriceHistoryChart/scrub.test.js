@@ -76,8 +76,10 @@ describe('scrub tooltip geometry', () => {
   })
 
   it('clamps vertically instead of leaving the viewBox', () => {
-    expect(tooltipPlacement(400, 5, box, 800, 300).top).toBe(0)
-    expect(tooltipPlacement(400, 295, box, 800, 300).top).toBe(300 - box.height)
+    // Half a unit in, not flush: the border is a 1-unit stroke centred on the rect's edge, so a
+    // rect at 0 paints half its stroke outside the viewBox.
+    expect(tooltipPlacement(400, 5, box, 800, 300).top).toBe(0.5)
+    expect(tooltipPlacement(400, 295, box, 800, 300).top).toBe(300 - box.height - 0.5)
   })
 
   it('never puts a digit outside the viewBox, wherever the crosshair lands', () => {

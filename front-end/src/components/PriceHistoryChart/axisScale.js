@@ -293,6 +293,15 @@ const DAY_MS = 24 * 60 * 60 * 1000
 //        be produced.
 const DATE_LABEL_SPACING = 83
 const MIN_DATE_GAP = 58
+// Three is the target floor, not a guarantee. The MIN_DATE_GAP stride outranks it, so a plot
+// narrower than two 58-unit gaps — which the real product page produces at a 320px viewport,
+// where padding and a 9-digit gutter can leave 72 units of plot — draws TWO dates. That is the
+// honest floor: two labels a format can lay out beat three that overlap, and the geometry sweeps
+// pin the narrow widths clean. MIN_DATE_GAP is also deliberately the ACROSS-day rung's widest
+// label; a within-day series' widest is ~34 units, so at extreme narrowness a time-only chart
+// gets 2 labels where 3 would fit. Threading the span into this function would buy that one label
+// back at those widths; the conservatism is chosen instead, because the floor exists to make
+// overlap impossible under every rung the ladder might still pick.
 const MIN_DATE_LABELS = 3
 const MAX_DATE_LABELS = 10
 
@@ -311,13 +320,17 @@ export function datedIndices(count, plotWidth) {
   const target = Math.min(MAX_DATE_LABELS,
     Math.max(MIN_DATE_LABELS, Math.round(room / DATE_LABEL_SPACING) + 1))
 
+  // One stride for every count. The gap floor applies even when the series is small enough to
+  // date every reading — an early "count <= target, date them all" path skipped it, and the
+  // geometry sweep caught the miss at the widths the product page really renders: three readings
+  // on a 198-unit chart are 42 units apart, and no wording on the ladder lays that out. Thinning
+  // a 3-reading series to its ends is the same trade the floor always makes: two labels a format
+  // can draw beat three that collide.
+  const stride = Math.max(
+    count <= target ? 1 : Math.ceil(count / target),
+    Math.ceil((MIN_DATE_GAP * Math.max(1, count - 1)) / room)
+  )
   const indices = []
-  if (count <= target) {
-    for (let i = 0; i < count; i += 1) indices.push(i)
-    return indices
-  }
-
-  const stride = Math.max(Math.ceil(count / target), Math.ceil((MIN_DATE_GAP * (count - 1)) / room))
   for (let i = 0; i < count; i += stride) indices.push(i)
   return indices
 }

@@ -120,7 +120,11 @@ export default function PriceHistoryChart({ productId, currency }) {
     const gutter = axisGutter([...ticks.map(tick => tick.label), unit])
     // Top padding leaves room for the unit caption to clear the highest tick.
     const padding = { top: 26, right: 20, bottom: 60, left: gutter }
-    const innerWidth = chartWidth - padding.left - padding.right
+    // Floored at one unit: a pathological container narrower than the gutter plus the right
+    // padding would send this negative, which collapses every point onto one x (duplicate React
+    // keys) and zeroes the scrub step. Unreachable at any real viewport on this page — the guard
+    // is for the next page that embeds the chart somewhere smaller.
+    const innerWidth = Math.max(1, chartWidth - padding.left - padding.right)
     const innerHeight = chartHeight - padding.top - padding.bottom
 
     // role="img" makes the SVG opaque to assistive tech, so this sentence — not the gridlines — is
@@ -314,7 +318,15 @@ export default function PriceHistoryChart({ productId, currency }) {
           className="cursor-crosshair fill-transparent"
           onPointerDown={scrubTo}
           onPointerMove={scrubTo}
-          onPointerLeave={clearScrub}
+          // A finger LIFT is a leave: the spec mandates pointerup → pointerout → pointerleave for
+          // non-hovering pointers, and Chrome fires exactly that train — so clearing here
+          // unconditionally killed the tooltip 150ms after a tap, which is the one gesture a
+          // phone reader has. Touch lifts keep the tooltip up for reading (it is inert:
+          // aria-hidden, pointer-events-none; the next tap moves it, a refetch clears it). A
+          // mouse leaving really has left, and clears.
+          onPointerLeave={(event) => {
+            if (event.pointerType !== 'touch') clearScrub()
+          }}
           onPointerCancel={clearScrub}
         />
 

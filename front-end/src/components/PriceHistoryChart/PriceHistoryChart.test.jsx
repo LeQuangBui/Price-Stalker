@@ -367,6 +367,25 @@ describe('PriceHistoryChart scrub', () => {
     expect(tooltipOf(container)).toBeNull()
   })
 
+  it('keeps the tooltip up after a finger lifts, so a tap can be read', async () => {
+    // A lift IS a leave for a non-hovering pointer — the spec mandates pointerup → pointerout →
+    // pointerleave, and Chrome fires exactly that train, tooltip gone 150ms after the tap. The
+    // one gesture a phone reader has must leave the price on screen; only a mouse's leave, a
+    // hover really ending, clears.
+    const { container } = await renderChart(series(12900000, 45000000, 8))
+    const surface = surfaceOf(container)
+    const circles = [...container.querySelectorAll('circle')]
+
+    fireEvent.pointerDown(surface, { clientX: attr(circles[4], 'cx'), clientY: 150, pointerType: 'touch' })
+    expect(tooltipOf(container)).not.toBeNull()
+    fireEvent.pointerLeave(surface, { pointerType: 'touch' })
+    expect(tooltipOf(container)).not.toBeNull()
+
+    fireEvent.pointerMove(surface, { clientX: attr(circles[4], 'cx'), clientY: 150, pointerType: 'mouse' })
+    fireEvent.pointerLeave(surface, { pointerType: 'mouse' })
+    expect(tooltipOf(container)).toBeNull()
+  })
+
   it('keeps every digit of the tooltip inside the viewBox at both ends', async () => {
     const { container } = await renderChart(series(12900000, 45000000, 8))
     const surface = surfaceOf(container)

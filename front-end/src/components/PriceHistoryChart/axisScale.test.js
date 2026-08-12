@@ -67,10 +67,13 @@ const CURRENCIES = ['VND', 'USD', 'EUR', 'JPY', 'KRW', 'AUD', 'XPF', 'CHF']
 
 // Chart geometry, copied from the component: the viewBox is as wide as the container measured —
 // 800 by default and until measured — the plot ends 20 units short of its right edge, and it
-// starts at whatever gutter the y-axis labels asked for. 320 and 360 are the phone widths the
-// layout has to survive now that the viewBox follows the container.
+// starts at whatever gutter the y-axis labels asked for. 320 and 360 are nominal phone widths,
+// but the widths the app actually renders are narrower: on the product page the shell and card
+// padding eat 122px, so 320/360/390px viewports measure the chart at 198/238/268 units. Those are
+// the widths a reader holds, so they are in the sweep — behind the widest gutter in the matrix,
+// 198 leaves a plot in the seventies, which is the tightest date row that ships anywhere.
 const CHART_WIDTH = 800
-const VIEW_WIDTHS = [320, 360, CHART_WIDTH]
+const VIEW_WIDTHS = [198, 238, 268, 320, 360, CHART_WIDTH]
 const RIGHT_PADDING = 20
 
 function eachChart(visit) {
@@ -117,7 +120,9 @@ const GUTTERS = [44, Math.round((44 + WIDEST_GUTTER) / 2), WIDEST_GUTTER]
 function eachDateLayout(visit) {
   for (const viewWidth of VIEW_WIDTHS) {
     for (const gutter of GUTTERS) {
-      const innerWidth = viewWidth - gutter - RIGHT_PADDING
+      // The same floor the component applies: a gutter wider than the view must not send the
+      // plot negative in the sweep either, or the sweep tests a geometry that cannot render.
+      const innerWidth = Math.max(1, viewWidth - gutter - RIGHT_PADDING)
       eachDateAxis(({ locale, history, count, times }) => {
         const indices = datedIndices(count, innerWidth)
         const dated = indices.map((i) => times[i])
@@ -588,7 +593,35 @@ describe('date point thinning', () => {
 
   it('holds the three-date floor on the tightest plots', () => {
     expect(datedIndices(6, 157)).toEqual([0, 2, 4])
-    expect(datedIndices(3, 100)).toEqual([0, 1, 2])
+    // 116 units is exactly two 58-unit gaps, the narrowest room where three labels lay out.
+    expect(datedIndices(3, 116)).toEqual([0, 1, 2])
+    // One unit narrower and the gap floor thins even a three-reading series to its ends — the
+    // early path that used to date every small series skipped the floor, and the sweep caught
+    // real overlaps at the product page's own widths.
+    expect(datedIndices(3, 100)).toEqual([0, 2])
+  })
+
+  // The floor under the floor. The product page's shell and card padding leave a 320px phone a
+  // 198-unit chart, and behind a 9-digit plain-label gutter that is a plot in the seventies —
+  // under two MIN_DATE_GAPs, so the overlap-proof stride outranks the three-label target and TWO
+  // dates ship. Two a format can lay out beat three that collide; this pins the trade so a future
+  // "fix" to the count re-derives the geometry instead of reintroducing the overlap.
+  it('drops to two dates, never fewer, when the plot cannot hold three 58-unit gaps', () => {
+    for (const plot of [72, 90, 115]) {
+      const indices = datedIndices(20, plot)
+      expect(indices.length, `${plot}-unit plot`).toBe(2)
+    }
+    // The 3-label boundary is count-dependent because the stride is an integer: with 20 readings
+    // the third label needs stride ≤ 9, i.e. room ≥ ceil(58 · 19 / 9) = 123 units, not 2 · 58.
+    expect(datedIndices(20, 123).length).toBeGreaterThanOrEqual(3)
+    // 72 units is the narrowest plot the product page can produce (198-unit chart behind a
+    // 9-digit plain-label gutter); from there up, two dates always ship. Below one 58-unit gap
+    // even a pair cannot lay out, and the floor honestly draws one label rather than two that
+    // collide — reachable by no real viewport, pinned so the trade is deliberate.
+    for (const plot of [72, 115, 157, 244, 724]) {
+      expect(datedIndices(20, plot).length, `${plot}-unit plot`).toBeGreaterThanOrEqual(2)
+    }
+    expect(datedIndices(20, 40)).toEqual([0])
   })
 })
 
