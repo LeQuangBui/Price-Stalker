@@ -36,4 +36,18 @@ describe('EmptyState', () => {
     expect(container.firstChild.className).toContain('mt-10')
     expect(container.firstChild.className).toContain('empty-state')
   })
+
+  it('renders the heading at the level the page asks for, defaulting to three', () => {
+    // The level belongs to the page: directly under an h1 on Bookmarks and Alerts it is 2, under
+    // an h2 section it stays the default 3, under the chart card's h3 title it is 4. The size is
+    // keyed to the panel (`.empty-state > :is(h2, h3, h4)`), not the tag, so every level renders
+    // identically.
+    const { container, rerender } = render(<EmptyState title="X" />)
+    expect(container.querySelector('h3')).not.toBeNull()
+    rerender(<EmptyState title="X" level={2} />)
+    expect(container.querySelector('h2')).not.toBeNull()
+    expect(container.querySelector('h3')).toBeNull()
+    rerender(<EmptyState title="X" level={4} />)
+    expect(container.querySelector('h4')).not.toBeNull()
+  })
 })

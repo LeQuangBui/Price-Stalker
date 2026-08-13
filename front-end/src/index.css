@@ -314,7 +314,10 @@ button:focus-visible,
   border-radius: 16px;
 }
 
-.empty-state h3 {
+/* Unkeyed from the h3 tag: the heading LEVEL belongs to the page (EmptyState renders under an h1
+   on some pages and an h3 card title on another), while the size belongs to the panel. :is() adds
+   no class token, so the classname guard's vocabulary is untouched. */
+.empty-state > :is(h2, h3, h4) {
   margin: 0;
   font-size: 20px;
   color: var(--text-primary);

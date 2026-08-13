@@ -228,6 +228,7 @@ export default function Alerts() {
       {emptyState && (
         <EmptyState
           title="No price alerts yet"
+          level={2}
           /* The house button, not `.empty-state-cta`. That class was the last sub-44px CTA in the
              tree — 10px padding around inherited 16px type computes to 42px — and this was its
              only remaining call site, so the rule left with it. Bookmarks' empty state had
