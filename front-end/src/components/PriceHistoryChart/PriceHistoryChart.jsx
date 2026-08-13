@@ -96,7 +96,7 @@ export default function PriceHistoryChart({ productId, currency }) {
       return <ErrorState message={error} onRetry={() => setReloadKey((value) => value + 1)} />
     }
     if (!priceHistory || priceHistory.length === 0) {
-      return <EmptyState title="No price history available" />
+      return <EmptyState title="No price history available" level={4} />
     }
 
     const prices = priceHistory.map(h => h.price)

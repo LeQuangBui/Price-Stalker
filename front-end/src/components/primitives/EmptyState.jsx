@@ -8,15 +8,15 @@ import { cx } from '../../lib/cx'
 // silent. A screen reader hears "Loading bookmarks…" and then nothing at all — the result of the
 // fetch is the one thing it never says. `status` and not `alert`: an empty list is an outcome, not
 // a problem, and `alert` is assertive enough to interrupt.
-export default function EmptyState({ title, children, action, className }) {
+export default function EmptyState({ title, children, action, className, level = 3 }) {
+  // The heading level belongs to the page, not the panel: this renders directly under an h1 on
+  // Bookmarks and Alerts (level 2), under an h2 section on Home and /profile (the default 3), and
+  // under the chart card's own h3 (level 4). index.css's rule was unkeyed from the h3 tag
+  // (`.empty-state > :is(h2, h3, h4)`) so the size follows the panel, not the level.
+  const Heading = `h${level}`
   return (
     <div className={cx('empty-state', className)} role="status">
-      {/* Still h3 while its four consumers sit at three different depths, and while `.empty-state
-          h3` in index.css keys the 20px size to the tag. Under /profile's Bookmarks h2 that reads
-          correctly; on Bookmarks' own empty state it is an h1 -> h3 skip, the last one left on
-          either page. Fixing it means a level prop AND unkeying that rule, which is a change to
-          every consumer — not something to fold into a card-title promotion. */}
-      <h3>{title}</h3>
+      <Heading>{title}</Heading>
       {children ? <p>{children}</p> : null}
       {action}
     </div>

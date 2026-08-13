@@ -18,7 +18,13 @@ const BUTTON = [
 export default function Pagination({ page, totalPages, onPrev, onNext, className }) {
   if (totalPages <= 1) return null
   return (
-    <div className={cx('mt-8 flex items-center justify-center gap-4', className)}>
+    // flex-wrap is safe HERE and was a documented regression on `.page-error`: line breaking uses
+    // each item's unwrapped width, which for prose meant a long message threw the button to its
+    // own row on desktop. These three items are fixed-content, so their unwrapped width IS their
+    // width — the row wraps exactly when it genuinely cannot fit, which is a 320px viewport at a
+    // raised browser font (measured 47px of page overflow at root 24 before this), and never on
+    // desktop.
+    <div className={cx('mt-8 flex flex-wrap items-center justify-center gap-4', className)}>
       <button type="button" onClick={onPrev} disabled={page === 0} className={BUTTON}>
         Previous
       </button>

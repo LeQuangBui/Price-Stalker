@@ -29,9 +29,12 @@ export default function Header({ isSignedIn, theme, onToggleTheme }) {
           P
         </span>
         <div>
-          <h1 className="m-0 font-display text-[22px] font-extrabold leading-[1.05] text-ink">
+          {/* A <p>, not an <h1>: the brand is chrome, and a heading here gave every page in the
+              app two h1s — this one plus the page's own. The link already names it for a screen
+              reader; the page keeps the one true h1. */}
+          <p className="m-0 font-display text-[22px] font-extrabold leading-[1.05] text-ink">
             Price<span className="text-oxblood">Stalker</span>
-          </h1>
+          </p>
           <span className="hidden font-meta text-[10px] font-semibold uppercase tracking-[0.18em] text-ink-mute sm:block">
             Track smarter
           </span>

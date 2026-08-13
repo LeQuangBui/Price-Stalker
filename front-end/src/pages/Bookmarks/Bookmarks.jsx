@@ -345,6 +345,7 @@ export default function Bookmarks() {
       {bookmarks.length === 0 ? (
         <EmptyState
           title="No bookmarks yet"
+          level={2}
           action={
             <button type="button" className="btn btn-primary" onClick={() => setShowCreateForm(true)}>
               New Bookmark
